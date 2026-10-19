@@ -78,7 +78,7 @@ struct ClipoStartupView: View {
 enum ClipoTab: Int, CaseIterable {
     case home, discover, studio, library
     var name: String { ["Home", "Discover", "Studio", "Library"][rawValue] }
-    var glyph: ClipoGlyph { [.home, .feed, .edit, .library][rawValue] }
+    var artwork: String { ["TabHome", "TabDiscover", "TabStudio", "TabLibrary"][rawValue] }
 }
 
 struct ClipoTabBar: View {
@@ -90,16 +90,15 @@ struct ClipoTabBar: View {
             ForEach(ClipoTab.allCases, id: \.rawValue) { item in
                 Button { select(item) } label: {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(selection == item ? ClipoStyle.accent.opacity(0.12) : Color.clear)
-                            .frame(width: 48, height: 44)
-                            .allowsHitTesting(false)
-                        Glyph(symbol: item.glyph, size: 21,
-                              tint: selection == item ? ClipoStyle.accent : ClipoStyle.secondary)
+                        // Invisible layout surface; all visible tab artwork is in the PNG.
+                        Color.clear
+                        Image(item.artwork + (selection == item ? "Selected" : "Normal"))
+                            .renderingMode(.original).resizable().interpolation(.high).scaledToFit()
+                            .frame(width: 64, height: 64)
                             .allowsHitTesting(false)
                     }
-                    .frame(maxWidth: .infinity).frame(height: 60)
-                    // The button owns the entire cell, including the space around its artwork.
+                    .frame(maxWidth: .infinity).frame(height: 68)
+                    // Hit-test geometry only (not drawn): include transparent image margins.
                     .contentShape(.interaction, Rectangle())
                 }
                 .buttonStyle(PressStyle())
@@ -112,9 +111,6 @@ struct ClipoTabBar: View {
         .padding(.top, 6).padding(.bottom, 2)
         .frame(maxWidth: .infinity)
         .background(ClipoStyle.background)
-        .overlay(alignment: .top) {
-            ClipoStyle.line.frame(height: 1).allowsHitTesting(false)
-        }
     }
 }
 
