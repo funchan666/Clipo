@@ -12,13 +12,9 @@ struct MembershipView: View {
             VStack(alignment: .leading, spacing: 24) {
                 SheetHeading(title: "Membership") { dismiss() }.padding(.horizontal, -20).padding(.top, -12)
                 VStack(alignment: .leading, spacing: 24) {
-                    HStack {
-                        Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 56, height: 56)
-                            .accessibilityHidden(true)
-                        Spacer()
-                        Text("CLIPO PLUS").font(.caption.weight(.bold)).tracking(1.4)
-                            .foregroundStyle(ClipoStyle.paperSecondary)
-                    }
+                    Text("CLIPO PLUS").font(.caption.weight(.bold)).tracking(1.4)
+                        .foregroundStyle(ClipoStyle.paperSecondary)
+                    ClipoIllustration(name: "ClipoArtPlus", height: 168)
                     VStack(alignment: .leading, spacing: 12) {
                         Text(commerce.premium ? "You’re on Plus." : "Stay in the flow.")
                             .font(.largeTitle.weight(.bold)).tracking(-1.2).foregroundStyle(ClipoStyle.ink)
@@ -117,7 +113,6 @@ struct AccountView: View {
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var quota: QuotaStore
     @EnvironmentObject private var ads: RewardedAds
-    @Environment(\.dismiss) private var dismiss
     var signedOut: () -> Void
     @State private var paywall = false
     @State private var confirmSignOut = false
@@ -125,20 +120,40 @@ struct AccountView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                SheetHeading(title: "Account") { dismiss() }.padding(.horizontal, -20).padding(.top, -12)
-                PageHeading(eyebrow: "Your space", title: "Make yourself at home.")
+                PageHeading(eyebrow: "Your space", title: "Me")
                 if let session = api.session {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Guest account").font(.title3.bold())
-                        Text("ID · \(session.userId.value)").font(.caption.monospaced()).foregroundStyle(ClipoStyle.secondary).textSelection(.enabled)
-                        Text("Your library stays on this device.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    HStack(alignment: .top, spacing: 16) {
+                        Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 52, height: 52)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Guest account").font(.title3.bold())
+                            Text("ID · \(session.userId.value)").font(.caption.monospaced()).foregroundStyle(ClipoStyle.secondary).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("Your library stays on this device.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    ActionButton(title: commerce.premium ? "Manage Clipo Plus" : "Discover Clipo Plus") { paywall = true }
+                    Button { paywall = true } label: {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(commerce.premium ? "YOUR MEMBERSHIP" : "MAKE ROOM FOR MORE")
+                                .font(.caption.weight(.semibold)).tracking(1.2).foregroundStyle(ClipoStyle.paperSecondary)
+                            ClipoIllustration(name: "ClipoArtPlus", height: 120)
+                            Text("Clipo Plus").font(.title.weight(.bold)).foregroundStyle(ClipoStyle.ink)
+                            Text(commerce.premium ? "Your membership is active." : "Unlimited views. Unlimited saves.")
+                                .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
+                            Text(commerce.premium ? "Manage membership" : "Explore plans")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+                        }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                            .background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
+                    }.buttonStyle(PressStyle())
                     MessagePanel(title: "Today’s allowance", message: commerce.premium || quota.unlimited ? "Unlimited viewing. Daily rewards reset at 5 AM." : "\(quota.watchesLeft) views and \(quota.favoritesLeft) saves remaining. Daily rewards reset at 5 AM.")
+                    if !commerce.premium {
+                        ActionButton(title: "View daily rewards", primary: false) { paywall = true }
+                    }
+                    SectionLabel(title: "Account & privacy")
                     if confirmSignOut {
                         MessagePanel(title: "Sign out of this installation?", message: "Local files and saved clips will remain on this device. This does not delete your server account.")
                         ActionButton(title: "Sign out") {
-                            do { try api.signOut(); signedOut(); dismiss() } catch { self.error = error.localizedDescription }
+                            do { try api.signOut(); signedOut() } catch { self.error = error.localizedDescription }
                         }
                         ActionButton(title: "Stay signed in", primary: false) { confirmSignOut = false }
                     } else {

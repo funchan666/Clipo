@@ -2,12 +2,89 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
+enum VideoTool: String, Identifiable, CaseIterable {
+    case audio, speed, frame, studio
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .audio: return "Extract audio"
+        case .speed: return "Change speed"
+        case .frame: return "Reframe video"
+        case .studio: return "Full editor"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .audio: return "Keep the sound as an M4A file."
+        case .speed: return "Slow it down or pick up the pace."
+        case .frame: return "Portrait, square or landscape."
+        case .studio: return "Trim, rotate and combine your changes."
+        }
+    }
+    var editorTab: String {
+        switch self {
+        case .audio: return "Audio"
+        case .speed: return "Speed"
+        case .frame: return "Frame"
+        case .studio: return "Trim"
+        }
+    }
+    var glyph: ClipoGlyph {
+        switch self {
+        case .audio: return .sound
+        case .speed: return .play
+        case .frame: return .feed
+        case .studio: return .edit
+        }
+    }
+}
+
+struct ToolsView: View {
+    @State private var selectedTool: VideoTool?
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                PageHeading(eyebrow: "Made for your media", title: "Tools")
+                ClipoIllustration(name: "ClipoArtTools", height: 176)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Choose what to change.").font(.title2.weight(.bold))
+                    Text("Quick tools for videos on your device. Your original stays untouched.")
+                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                }
+                VStack(spacing: 0) {
+                    ForEach([VideoTool.audio, .speed, .frame]) { tool in
+                        Button { selectedTool = tool } label: {
+                            HStack(spacing: 16) {
+                                Glyph(symbol: tool.glyph, size: 26).allowsHitTesting(false)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(tool.title).font(.headline)
+                                    Text(tool.detail).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                            }.padding(.vertical, 20).padding(.horizontal, 20)
+                                .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+                                .contentShape(.interaction, Rectangle())
+                        }.buttonStyle(PressStyle()).accessibilityIdentifier("tools.\(tool.rawValue)")
+                        if tool != .frame { Divider().overlay(ClipoStyle.line).padding(.horizontal, 20) }
+                    }
+                }.background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+                ActionButton(title: "Open full editor", primary: false) { selectedTool = .studio }
+                Text("Processed on your device. Finished files appear in Library under Exports.")
+                    .font(.footnote).foregroundStyle(ClipoStyle.secondary)
+            }.clipoPage()
+        }.background(ClipoStyle.background)
+            .sheet(item: $selectedTool) { EditorSheet(initialTool: $0) }
+    }
+}
+
 struct EditorSheet: View {
     @Environment(\.dismiss) private var dismiss
+    var initialMovie: LocalMovie? = nil
+    var initialTool: VideoTool = .studio
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeading(title: "Clipo Studio") { dismiss() }
-            EditorWorkspace()
+            SheetHeading(title: initialTool.title) { dismiss() }
+            EditorWorkspace(initialMovie: initialMovie, initialTool: initialTool)
         }.background(ClipoStyle.background).foregroundStyle(.white)
     }
 }
@@ -15,6 +92,7 @@ struct EditorWorkspace: View {
     @EnvironmentObject private var library: LibraryStore
     @Environment(\.scenePhase) private var scenePhase
     var initialMovie: LocalMovie? = nil
+    var initialTool: VideoTool = .studio
     @StateObject private var editor = VideoEditor()
     @State private var selected: LocalMovie?
     @State private var picker: PhotosPickerItem?
@@ -25,12 +103,17 @@ struct EditorWorkspace: View {
     @State private var tool = "Trim"
     @State private var exportTask: Task<Void, Never>?
     private let tools = ["Trim", "Frame", "Speed", "Audio", "Export"]
+    init(initialMovie: LocalMovie? = nil, initialTool: VideoTool = .studio) {
+        self.initialMovie = initialMovie
+        self.initialTool = initialTool
+        _tool = State(initialValue: initialTool.editorTab)
+    }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Create with Clipo", title: "Studio")
+                PageHeading(eyebrow: "On your device", title: initialTool == .studio ? "Studio" : initialTool.title)
                 if selected == nil {
-                    Text("Your footage. Your point of view.")
+                    Text(initialTool.detail)
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary).padding(.top, -12)
                 }
                 if let selected {
@@ -45,13 +128,15 @@ struct EditorWorkspace: View {
                         .aspectRatio(4.0 / 3.0, contentMode: .fit).background(.black).clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay(alignment: .bottomTrailing) { PreviewButton(playback: editor.preview).padding(8) }
                     if editor.isLoading { Text("Preparing your video…").foregroundStyle(ClipoStyle.secondary) }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(tools, id: \.self) { name in
-                                Button(name) { tool = name }.font(.subheadline.weight(.semibold)).padding(.horizontal, 20).frame(minHeight: 48)
-                                    .foregroundStyle(tool == name ? ClipoStyle.ink : .white)
-                                    .background(tool == name ? ClipoStyle.accent : ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
-                                    .accessibilityAddTraits(tool == name ? .isSelected : [])
+                    if initialTool == .studio {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(tools, id: \.self) { name in
+                                    Button(name) { tool = name }.font(.subheadline.weight(.semibold)).padding(.horizontal, 20).frame(minHeight: 48)
+                                        .foregroundStyle(tool == name ? ClipoStyle.ink : .white)
+                                        .background(tool == name ? ClipoStyle.accent : ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
+                                        .accessibilityAddTraits(tool == name ? .isSelected : [])
+                                }
                             }
                         }
                     }
@@ -68,7 +153,9 @@ struct EditorWorkspace: View {
                             ActionButton(title: "Cancel export", primary: false) { editor.cancelExport() }
                         }
                     } else {
-                        ActionButton(title: "Export video") { export(audio: false, title: selected.title) }
+                        ActionButton(title: initialTool == .audio ? "Export audio as M4A" : "Export video") {
+                            export(audio: initialTool == .audio, title: selected.title)
+                        }
                             .disabled(editor.isLoading || editor.duration <= 0)
                         ActionButton(title: "Preview changes", primary: false) { Task { await editor.applyPreview() } }
                             .disabled(editor.isLoading || editor.duration <= 0)
@@ -76,14 +163,7 @@ struct EditorWorkspace: View {
                     Text("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 } else {
                     VStack(alignment: .leading, spacing: 24) {
-                        HStack(alignment: .top) {
-                            Glyph(symbol: .edit, size: 34)
-                                .frame(width: 64, height: 64)
-                                .background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 20))
-                            Spacer()
-                            Text("LOCAL WORKSPACE").font(.caption2.weight(.medium)).tracking(1.2)
-                                .foregroundStyle(ClipoStyle.secondary).padding(.top, 8)
-                        }
+                        ClipoIllustration(name: initialTool == .studio ? "ClipoArtStudio" : "ClipoArtTools", height: 176)
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Start with a video.").font(.title2.weight(.bold)).tracking(-0.5)
                             Text("Choose a clip from your device. We’ll keep your original untouched.")
@@ -99,10 +179,20 @@ struct EditorWorkspace: View {
                             ActionButton(title: "Browse Files", primary: false, busy: importing) { filePicker = true }
                         }
                     }.padding(24).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
-                    VStack(alignment: .leading, spacing: 18) {
-                        SectionLabel(title: "From raw to ready")
-                        FeatureRow(symbol: .edit, title: "Keep the best part", detail: "Trim the timing, crop the frame, change the pace.")
-                        FeatureRow(symbol: .download, title: "Export your way", detail: "Save a video or extract an audio track.")
+                    if initialTool == .studio {
+                        VStack(alignment: .leading, spacing: 18) {
+                            SectionLabel(title: "From raw to ready")
+                            FeatureRow(symbol: .edit, title: "Keep the best part", detail: "Trim the timing, crop the frame, change the pace.")
+                            HStack(spacing: 16) {
+                                ClipoIllustration(name: "ClipoArtExport", height: 72).frame(width: 108)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Export your way").font(.subheadline.weight(.semibold))
+                                    Text("Save a video or extract an audio track.").font(.caption)
+                                        .foregroundStyle(ClipoStyle.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
                     }
                     if let error { ErrorNote(message: error) }
                     if !library.movies.filter({ !$0.isExport }).isEmpty {
@@ -177,10 +267,16 @@ struct EditorWorkspace: View {
                 Text("Set the pace.").font(.title3.bold())
                 FlowChoices(values: ["0.5×", "0.75×", "1×", "1.5×", "2×"], selected: String(format: "%g×", editor.recipe.speed)) { value in editor.recipe.speed = Double(value.replacingOccurrences(of: "×", with: "")) ?? 1 }
             case "Audio":
-                Text("Let it speak. Or don’t.").font(.title3.bold())
-                ActionButton(title: editor.recipe.muted ? "Audio: Muted" : "Audio: Original", primary: false) { editor.recipe.muted.toggle() }
-                ActionButton(title: "Extract audio as M4A", primary: false) { export(audio: true, title: selected?.title ?? "Audio") }
-                Text("Audio extraction uses your trim and speed settings.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                if initialTool == .audio {
+                    Text("Keep the soundtrack.").font(.title3.bold())
+                    Text("Extract the original audio track into an M4A file. Videos without an audio track cannot be converted.")
+                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                } else {
+                    Text("Let it speak. Or don’t.").font(.title3.bold())
+                    ActionButton(title: editor.recipe.muted ? "Audio: Muted" : "Audio: Original", primary: false) { editor.recipe.muted.toggle() }
+                    ActionButton(title: "Extract audio as M4A", primary: false) { export(audio: true, title: selected?.title ?? "Audio") }
+                    Text("Audio extraction uses your trim and speed settings.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                }
             default:
                 Text("Ready for its next screen.").font(.title3.bold())
                 FlowChoices(values: ExportQuality.allCases.map(\.rawValue), selected: editor.recipe.quality.rawValue) { value in editor.recipe.quality = ExportQuality(rawValue: value) ?? .full }

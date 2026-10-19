@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Link",
+    "asset": "ClipoArtLink",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-fd2414e3-0155-4266-87b7-d7992599ed56.png"
+  },
+  {
+    "name": "Discover",
+    "asset": "ClipoArtDiscover",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-255a5c48-0602-47ca-aa92-6be32453e0bc.png"
+  },
+  {
+    "name": "Studio",
+    "asset": "ClipoArtStudio",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-84807030-c4e3-4a4c-83d5-dc77553ef2d2.png"
+  },
+  {
+    "name": "Channels",
+    "asset": "ClipoArtChannels",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-9ec28a26-44f1-417d-94ba-acfe7af27005.png"
+  },
+  {
+    "name": "Library",
+    "asset": "ClipoArtLibrary",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-de4b72fd-98e8-42c5-9b34-84271bbcf482.png"
+  },
+  {
+    "name": "Export",
+    "asset": "ClipoArtExport",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-4baabb00-05a7-4c3e-94ba-0b92d03b9be2.png"
+  },
+  {
+    "name": "Plus",
+    "asset": "ClipoArtPlus",
+    "source": "/Users/chengdupengyuyan/.codex/generated_images/01a15324-4b2e-7363-a3a7-bb8e8dc4e201/exec-ca6c7c7f-5496-4a4f-9a62-2c2e190420d3.png"
+  }
+]

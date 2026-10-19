@@ -41,15 +41,28 @@ struct DiscoverView: View {
     var body: some View {
         ZStack(alignment: .top) {
             if api.session == nil {
-                ScrollView { VStack(spacing: 24) { PageHeading(eyebrow: "Made for watching", title: "Discover"); SignInPanel() }.clipoPage() }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        PageHeading(eyebrow: "Made for watching", title: "Discover")
+                        ClipoIllustration(name: "ClipoArtDiscover", height: 208)
+                        Text("A whole world of clips.").font(.title2.weight(.bold))
+                        Text("Sign in, find your next favorite, and keep swiping.")
+                            .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                        SignInPanel()
+                    }.clipoPage()
+                }
             } else if feed.clips.isEmpty {
-                VStack(spacing: 20) {
-                    Spacer()
-                    MessagePanel(title: feed.loading ? "Finding your next clip…" : "A fresh feed starts here.",
-                                 message: feed.error ?? (feed.loading ? "Loading videos from Clipo." : "No videos are available for this search."),
-                                 actionTitle: feed.loading ? nil : "Try again") { Task { await feed.load(api: api, search: search) } }
-                    Spacer()
-                }.padding(24)
+                VStack(spacing: 0) {
+                    feedHeader
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            ClipoIllustration(name: "ClipoArtDiscover", height: 208)
+                            MessagePanel(title: feed.loading ? "Finding your next clip…" : "A fresh feed starts here.",
+                                         message: feed.error ?? (feed.loading ? "Loading videos from Clipo." : "No videos are available for this search."),
+                                         actionTitle: feed.loading ? nil : "Try again") { Task { await feed.load(api: api, search: search) } }
+                        }.clipoPage()
+                    }
+                }
             } else {
                 GeometryReader { geometry in
                     ScrollView(.vertical) {
@@ -73,23 +86,8 @@ struct DiscoverView: View {
                         }
                 }
             }
-            if api.session != nil {
-                VStack(spacing: 10) {
-                    HStack {
-                        Text("For you").font(.headline.weight(.bold))
-                            .padding(.vertical, 10)
-                            .overlay(alignment: .bottom) { Capsule().fill(ClipoStyle.accent).frame(width: 24, height: 3) }
-                        Spacer()
-                        IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
-                    }
-                    if searchOpen {
-                        HStack {
-                            TextField("Search videos", text: $search).clipoField().submitLabel(.search)
-                                .onSubmit { runSearch() }
-                            Button("Go") { runSearch() }.frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle()).foregroundStyle(ClipoStyle.accent)
-                        }
-                    }
-                }.padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 10).background(Color.black.opacity(0.55))
+            if api.session != nil, !feed.clips.isEmpty {
+                feedHeader
             }
         }.background(Color.black)
             .task(id: api.session?.userId.value) {
@@ -98,6 +96,24 @@ struct DiscoverView: View {
                 activeID = feed.clips.first?.id
             }
             .onChange(of: feed.clips) { _, clips in if activeID == nil { activeID = clips.first?.id } }
+    }
+    private var feedHeader: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text("For you").font(.headline.weight(.bold))
+                    .padding(.vertical, 10)
+                    .overlay(alignment: .bottom) { Capsule().fill(ClipoStyle.accent).frame(width: 24, height: 3) }
+                Spacer()
+                IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
+            }
+            if searchOpen {
+                HStack {
+                    TextField("Search videos", text: $search).clipoField().submitLabel(.search)
+                        .onSubmit { runSearch() }
+                    Button("Go") { runSearch() }.frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle()).foregroundStyle(ClipoStyle.accent)
+                }
+            }
+        }.padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 10).background(Color.black.opacity(0.55))
     }
     private func runSearch() {
         searchOpen = false

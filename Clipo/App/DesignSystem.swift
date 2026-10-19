@@ -166,6 +166,22 @@ struct SectionLabel: View {
     }
 }
 
+// Original raster artwork. Its layout never participates in navigation hit testing.
+struct ClipoIllustration: View {
+    let name: String
+    var height: CGFloat = 180
+    var body: some View {
+        Image(name)
+            .renderingMode(.original)
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 struct FeatureRow: View {
     let symbol: ClipoGlyph
     let title: String

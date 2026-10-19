@@ -76,9 +76,9 @@ struct ClipoStartupView: View {
 }
 
 enum ClipoTab: Int, CaseIterable {
-    case home, discover, studio, library
-    var name: String { ["Home", "Discover", "Studio", "Library"][rawValue] }
-    var artwork: String { ["TabHome", "TabDiscover", "TabStudio", "TabLibrary"][rawValue] }
+    case home, discover, tools, library, me
+    var name: String { ["Home", "Discover", "Tools", "Library", "Me"][rawValue] }
+    var artwork: String { ["TabHome", "TabDiscover", "TabTools", "TabLibrary", "TabMe"][rawValue] }
 }
 
 struct ClipoTabBar: View {
@@ -94,7 +94,7 @@ struct ClipoTabBar: View {
                         Color.clear
                         Image(item.artwork + (selection == item ? "Selected" : "Normal"))
                             .renderingMode(.original).resizable().interpolation(.high).scaledToFit()
-                            .frame(width: 64, height: 64)
+                            .frame(maxWidth: 64, maxHeight: 64)
                             .allowsHitTesting(false)
                     }
                     .frame(maxWidth: .infinity).frame(height: 68)
@@ -122,7 +122,6 @@ struct ClipoRootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var localWorkspace = false
     @State private var tab: ClipoTab = .home
-    @State private var settings = false
     @State private var editing: LocalMovie?
     var body: some View {
         ZStack {
@@ -130,23 +129,23 @@ struct ClipoRootView: View {
             if api.session != nil || localWorkspace {
                 Group {
                     switch tab {
-                    case .home: HomeView(openSettings: { settings = true }, discover: { tab = .discover }, edit: { tab = .studio })
+                    case .home: HomeView(openAccount: { tab = .me }, discover: { tab = .discover }, openTools: { tab = .tools })
                     case .discover: DiscoverView()
-                    case .studio: EditorWorkspace(initialMovie: editing)
-                    case .library: LibraryView { movie in editing = movie; tab = .studio }
+                    case .tools: ToolsView()
+                    case .library: LibraryView { movie in editing = movie }
+                    case .me: AccountView { localWorkspace = false; editing = nil; tab = .home }
                     }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     ClipoTabBar(selection: tab) { item in
                         tab = item
-                        if item != .studio { editing = nil }
                     }
                 }
             } else {
-                WelcomeView { localWorkspace = true; tab = .studio }
+                WelcomeView { localWorkspace = true; tab = .tools }
             }
         }.foregroundStyle(.white)
-            .sheet(isPresented: $settings) { AccountView { localWorkspace = false; settings = false } }
+            .sheet(item: $editing) { EditorSheet(initialMovie: $0) }
             .task(id: api.session?.userId.value) { await commerce.refresh() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { quota.resetIfNeeded(); Task { await commerce.refresh() } }

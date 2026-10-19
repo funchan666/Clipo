@@ -4,6 +4,14 @@ The two English policy files are drafts tailored to the current iOS source. They
 
 ## Replace before publishing
 
+The reformatted English copies are `Clipo Privacy Policy.docx` and `Clipo Terms of Use.docx`. Matching `.txt` files are available for plain-text website editors. They preserve the policy text, remove raw Markdown formatting from the delivered copy, and use these readable placeholders instead of the source Markdown tokens:
+
+- `your-email@example.com`: replace every occurrence with your monitored contact email; keep the contact line first.
+- `Your legal name or company name`: replace with the real operator name.
+- `Month Day, Year`: replace with the effective date.
+
+The `.md` files below remain the source drafts. Do not paste their raw Markdown into an editor that does not render Markdown.
+
 - `[CONTACT_EMAIL]`: a working, monitored support and privacy email. Keep the bold contact line first on both pages. Make the address a mailto link in your website editor.
 - `[OPERATOR_LEGAL_NAME]`: the actual individual or company legally operating Clipo, consistent with the service and developer identity.
 - `[EFFECTIVE_DATE]`: the real date the policies take effect.

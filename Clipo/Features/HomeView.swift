@@ -5,9 +5,9 @@ struct HomeView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var quota: QuotaStore
-    var openSettings: () -> Void
+    var openAccount: () -> Void
     var discover: () -> Void
-    var edit: () -> Void
+    var openTools: () -> Void
     @State private var link = ""
     @State private var password = ""
     @State private var usePassword = false
@@ -30,9 +30,10 @@ struct HomeView: View {
                         .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
                         .padding(.horizontal, 16).frame(minHeight: 44)
                         .background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
-                    IconButton(symbol: .settings, label: "Account and settings", action: openSettings)
+                    IconButton(symbol: .settings, label: "Open Me and account settings", action: openAccount)
                 }
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ClipoIllustration(name: "ClipoArtLink", height: 156)
                     Text("What’s your next find?").font(.title.weight(.bold)).tracking(-0.8)
                     Text("A good clip starts with a link.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 }
@@ -42,12 +43,18 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     SectionLabel(title: "Watch or create")
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
-                        quickAction(symbol: .feed, title: "Discover", detail: "Swipe into something new", action: discover)
-                        quickAction(symbol: .edit, title: "Studio", detail: "Make your next edit", action: edit)
+                        quickAction(artwork: "ClipoArtDiscover", title: "Discover", detail: "Swipe into something new", action: discover)
+                        quickAction(artwork: "ClipoArtTools", title: "Tools", detail: "Audio, speed and framing", action: openTools)
                     }
                 }
                 if !channels.isEmpty {
-                    SectionLabel(title: "Channels to explore")
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Channels to explore").font(.headline)
+                            Text("Find a new point of view.").font(.caption).foregroundStyle(ClipoStyle.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                        ClipoIllustration(name: "ClipoArtChannels", height: 76).frame(width: 114)
+                    }
                     ForEach(Array(channels.enumerated()), id: \.offset) { _, item in
                         if let info = item.extraInfo, let title = info.channelName, let short = info.externalLinks {
                             Button { channel = ChannelRoute(link: short, title: title) } label: {
@@ -156,10 +163,10 @@ struct HomeView: View {
             .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
             .frame(minHeight: 44).buttonStyle(PressStyle())
     }
-    private func quickAction(symbol: ClipoGlyph, title: String, detail: String, action: @escaping () -> Void) -> some View {
+    private func quickAction(artwork: String, title: String, detail: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 18) {
-                Glyph(symbol: symbol, size: 27)
+                ClipoIllustration(name: artwork, height: 100)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title).font(.headline).foregroundStyle(.white)
                     Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
@@ -208,6 +215,7 @@ struct ChannelView: View {
             SheetHeading(title: route.title) { dismiss() }
             ScrollView {
                 LazyVStack(spacing: 18) {
+                    ClipoIllustration(name: "ClipoArtChannels", height: 140)
                     if items.isEmpty, !loading, error == nil { MessagePanel(title: "Nothing here yet", message: "This channel has no available videos.") }
                     ForEach(items, id: \.stableID) { item in
                         Button { open(item) } label: {
