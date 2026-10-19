@@ -18,17 +18,106 @@ struct ClipoApp: App {
     }
     var body: some Scene {
         WindowGroup {
-            ClipoRootView().environmentObject(api).environmentObject(library)
+            ClipoStartupHost().environmentObject(api).environmentObject(library)
                 .environmentObject(quota).environmentObject(commerce).environmentObject(ads)
                 .preferredColorScheme(.dark).tint(ClipoStyle.accent)
         }
     }
 }
+
+// This brief local transition does not sign in or wait for the network.
+struct ClipoStartupHost: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var finished = false
+
+    var body: some View {
+        ZStack {
+            Color("LaunchBackground").ignoresSafeArea()
+            if finished {
+                ClipoRootView().transition(.opacity)
+            } else {
+                ClipoStartupView().transition(.opacity)
+            }
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active, !finished else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(reduceMotion ? 150 : 750))
+                try Task.checkCancellation()
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { finished = true }
+            } catch { /* Leaving the foreground cancels this transition. */ }
+        }
+    }
+}
+
+struct ClipoStartupView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        Image("ClipoLaunchMark")
+            .resizable().scaledToFit().frame(width: 108, height: 108)
+            .overlay(alignment: .bottom) {
+                Image("ClipoLoadingMark")
+                    .resizable().scaledToFill().frame(width: 40, height: 5).clipped()
+                    .phaseAnimator([false, true]) { content, dimmed in
+                        content.opacity(reduceMotion || scenePhase != .active ? 1 : (dimmed ? 0.35 : 1))
+                    } animation: { _ in
+                        reduceMotion || scenePhase != .active ? nil : .easeInOut(duration: 0.6)
+                    }
+                    .offset(y: 32)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Clipo is starting")
+            .background(Color("LaunchBackground").ignoresSafeArea())
+    }
+}
+
 enum ClipoTab: Int, CaseIterable {
     case home, discover, studio, library
     var name: String { ["Home", "Discover", "Studio", "Library"][rawValue] }
     var glyph: ClipoGlyph { [.home, .feed, .edit, .library][rawValue] }
 }
+
+struct ClipoTabBar: View {
+    let selection: ClipoTab
+    var select: (ClipoTab) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(ClipoTab.allCases, id: \.rawValue) { item in
+                Button { select(item) } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(selection == item ? ClipoStyle.accent.opacity(0.12) : Color.clear)
+                            .frame(width: 48, height: 44)
+                            .allowsHitTesting(false)
+                        Glyph(symbol: item.glyph, size: 21,
+                              tint: selection == item ? ClipoStyle.accent : ClipoStyle.secondary)
+                            .allowsHitTesting(false)
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 60)
+                    // The button owns the entire cell, including the space around its artwork.
+                    .contentShape(.interaction, Rectangle())
+                }
+                .buttonStyle(PressStyle())
+                .accessibilityLabel(item.name)
+                .accessibilityAddTraits(selection == item ? .isSelected : [])
+                .accessibilityIdentifier("tab.\(item.name.lowercased())")
+            }
+        }
+        .frame(maxWidth: 480).padding(.horizontal, 16)
+        .padding(.top, 6).padding(.bottom, 2)
+        .frame(maxWidth: .infinity)
+        .background(ClipoStyle.background)
+        .overlay(alignment: .top) {
+            ClipoStyle.line.frame(height: 1).allowsHitTesting(false)
+        }
+    }
+}
+
 struct ClipoRootView: View {
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var library: LibraryStore
@@ -52,22 +141,10 @@ struct ClipoRootView: View {
                     }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    HStack(spacing: 0) {
-                        ForEach(ClipoTab.allCases, id: \.rawValue) { item in
-                            Button {
-                                tab = item
-                                if item != .studio { editing = nil }
-                            } label: {
-                                VStack(spacing: 2) {
-                                    Glyph(symbol: item.glyph, size: 25)
-                                    Color.clear.frame(height: 3).background(tab == item ? ClipoStyle.accent : Color.clear)
-                                        .frame(width: 18)
-                                }.frame(maxWidth: .infinity).frame(height: 60)
-                                    .background(tab == item ? ClipoStyle.raised : Color.clear, in: RoundedRectangle(cornerRadius: 18))
-                            }.buttonStyle(PressStyle()).accessibilityLabel(item.name)
-                                .accessibilityAddTraits(tab == item ? .isSelected : [])
-                        }
-                    }.padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 8).background(ClipoStyle.background)
+                    ClipoTabBar(selection: tab) { item in
+                        tab = item
+                        if item != .studio { editing = nil }
+                    }
                 }
             } else {
                 WelcomeView { localWorkspace = true; tab = .studio }
@@ -95,37 +172,58 @@ struct WelcomeView: View {
     @State private var busy = false
     @State private var error: String?
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                HStack {
-                    Text("Clipo").font(.system(.title, design: .rounded).weight(.heavy))
-                    Spacer()
-                    Text("PLAY / CREATE").font(.system(.caption, design: .monospaced)).foregroundStyle(ClipoStyle.secondary)
-                }
-                Image("ClipoMark").resizable().scaledToFit().frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 28)).padding(.top, 36)
-                Text("Find a clip.\nMake it yours.").font(.system(size: 45, weight: .bold, design: .rounded)).minimumScaleFactor(0.85)
-                Text("Open a link. Get lost in the feed.\nTurn your videos into something worth keeping.")
-                    .font(.title3).foregroundStyle(ClipoStyle.secondary).lineSpacing(5)
-                VStack(alignment: .leading, spacing: 14) {
-                    if let error { ErrorNote(message: error) }
-                    ActionButton(title: "One-tap sign in", busy: busy) {
-                        busy = true
-                        error = nil
-                        Task {
-                            do { try await api.signIn() } catch { self.error = error.localizedDescription }
-                            busy = false
-                        }
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 10) {
+                        Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 36, height: 36)
+                            .accessibilityHidden(true)
+                        Text("Clipo").font(.system(.title2, design: .rounded).weight(.heavy))
+                        Spacer()
+                        Text("PLAY / CREATE").font(.caption2.weight(.medium)).tracking(1.5)
+                            .foregroundStyle(ClipoStyle.secondary)
                     }
-                    Text("A guest account, securely linked to this installation.")
-                        .font(.footnote).foregroundStyle(ClipoStyle.secondary)
-                    ActionButton(title: "Edit a local video", primary: false, action: openLocal)
-                    PolicyLinks()
-                }.padding(.top, 20)
-            }.padding(28)
+                    Spacer(minLength: 36)
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text("Watch it.\nMake it yours.")
+                            .font(.largeTitle.weight(.bold)).tracking(-1.2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Watch what you love. Make something of your own.")
+                            .font(.body).foregroundStyle(ClipoStyle.secondary).lineSpacing(4)
+                    }
+                    VStack(spacing: 20) {
+                        FeatureRow(symbol: .link, title: "Open a link", detail: "Go straight to a video or channel.")
+                        FeatureRow(symbol: .feed, title: "Find your next favorite", detail: "A full-screen feed, one swipe at a time.")
+                        FeatureRow(symbol: .edit, title: "Make the cut", detail: "Trim, reframe and export your own videos.")
+                    }.padding(.vertical, 28)
+                    Spacer(minLength: 24)
+                    VStack(alignment: .leading, spacing: 14) {
+                        if let error { ErrorNote(message: error) }
+                        ActionButton(title: "One-tap sign in", busy: busy) {
+                            busy = true
+                            error = nil
+                            Task {
+                                do { try await api.signIn() } catch { self.error = error.localizedDescription }
+                                busy = false
+                            }
+                        }
+                        Text("A guest account. No password needed.")
+                            .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            .frame(maxWidth: .infinity)
+                        Button(action: openLocal) {
+                            Text("Edit a local video first").font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 48)
+                        }.buttonStyle(PressStyle())
+                        PolicyLinks().frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(28).frame(minHeight: geometry.size.height)
+                .frame(maxWidth: 560).frame(maxWidth: .infinity)
+            }
         }.background(ClipoStyle.background)
     }
 }
+
 struct SignInPanel: View {
     @EnvironmentObject private var api: APIClient
     @State private var busy = false

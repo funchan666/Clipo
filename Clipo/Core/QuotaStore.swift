@@ -75,7 +75,7 @@ final class QuotaStore: ObservableObject {
         guard storageOK, favoritesLeft > 0, var next = usage else { return false }
         next.favoritesUsed += 1
         do { try commit(next); return true }
-        catch { error = error.localizedDescription; return false }
+        catch { self.error = error.localizedDescription; return false }
     }
     func refundFavorite() {
         guard var next = usage, next.favoritesUsed > 0 else { return }

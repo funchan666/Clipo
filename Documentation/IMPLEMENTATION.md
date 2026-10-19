@@ -33,8 +33,10 @@
 
 | 方案 | 商品 ID | 后端 usdPrice | 建议 App Store 参考 USD 价格 |
 |---|---|---|---|
-| Monthly | com.clipo.video.premium.monthly | 999 | 9.99 |
-| Yearly | com.clipo.video.premium.yearly | 9999 | 99.99 |
+| Monthly | ypsmwxmscbzeixig | 999 | 9.99 |
+| Yearly | xfpkaphmqxhtgzvx | 9999 | 99.99 |
+
+商品 ID 按用户要求使用 16 位纯小写字母；App Store Connect 登记时必须逐字一致。StoreKit 查询和创建订单的 rightsName 共用 Commerce.json 中的 ID，既有交易账本保留原商品 ID，不改写历史订单。
 
 商品类型：自动续期订阅，建议同一订阅组。以上是待在 App Store Connect 创建的配置建议；页面只展示 StoreKit 返回的实际本地化价格，没有硬编码成交价或虚构优惠。
 
@@ -58,15 +60,70 @@
 
 1. 在 Apple/后端注册最终 Bundle ID；当前按用户要求先使用 com.clipo.video。设置开发团队与签名。
 2. 在 App Store Connect 创建上述商品并在后端登记价格映射；确认完整交易幂等行为与跨安装恢复接口。
-3. 提供 AdMob iOS App ID，写入 xcconfig，后端对应 appId 必须匹配。奖励广告单元从发布配置读取。SDK 已通过官方 SPM 依赖声明，尚未下载/解析。其他广告平台的中介适配器需按实际平台另外配置。
+3. 当前已启用 Google 官方 iOS 测试广告（详见下节）。上线前将 CLIPO_ADS_TEST_MODE 改为 NO，并将 CLIPO_GOOGLE_ADS_APP_ID 替换为正式 App ID；正式模式从后台读取 adType=2、advertiser=google 的广告单元，appId 必须与本机一致。官方 SPM 依赖已解析，并参与本次 iOS 编译。其他广告平台的中介适配器需按实际平台另外配置。
 4. 设置可访问的隐私政策和服务条款 URL；未设置时购买流程会明确暂停。账号删除/支持接口未在文档中提供，未虚构账号删除功能。
 5. 广告隐私通过 UMP 处理并提供必要的隐私选项入口。上架前结合最终广告中介、后端收集情况确认隐私清单与 App Store 隐私披露，补齐需要的 SKAdNetwork IDs。
 
+## 启动界面（2026-10-19 增量）
+
+- `Clipo/Resources/LaunchScreen.storyboard`：安全区中央 108pt 图标，下方留 27pt 后显示静态细短 loading；背景为现有 LaunchBackground 深墨绿（sRGB 0.055 / 0.065 / 0.060）。系统 Launch 不执行动画代码，也不发网络请求。
+- `ClipoStartupHost` / `ClipoStartupView`：同一组图像、位置和背景，loading 以透明度轻柔呼吸。普通启动展示 750ms 后淡入原界面，减少动态效果时缩短为 150ms、取消动画。这是本地品牌过渡，不是网络进度或验单进度。
+- 用户已明确保留一键登录：未登录时进入原 WelcomeView，仍需点击登录按钮；已有会话沿用原有路由。接口不可用不会让启动动画一直等待。
+- 启动状态属于稳定的 SwiftUI Host；仅背景延伸到安全区外，图标相对当前安全区域居中，不依赖设备屏幕常量。进入首页后，前后台切换不重新展示启动页；暂停于启动期间则取消并在回到前台时恢复短过渡。没有新增 scene、摄像头或支付所有者。
+- 使用 UI 长期规范、UI Taste 简化/iOS/craft、Claude Design 设计方向、Duo 和 Garden / Image 2 Host-Native 工作流；保留原 ClipoMark/AppIcon。新增圆角透明展示副本 `ClipoLaunchMark.imageset/clipo-launch-mark.png` 与原创 loading 资产 `ClipoLoadingMark.imageset/clipo-loading-mark.png`，均位于 `Clipo/Resources/Assets.xcassets/`。提示词保存在 `ProjectMaterials/UIAssets/Prompts/clipo-launch-mark.txt` 与 `clipo-loading-mark.txt`。
+- 本次检查了图片、透明通道、plist/JSON/XML、Storyboard 资源引用与 target 归属、git diff。此次 UI 增量未编译、未运行模拟器/真机、未实际渲染启动页，未验证 Duo 姿态；下方此前的 BUILD SUCCEEDED 仅针对此前版本。
+- Apple 依据：[Launching](https://developer.apple.com/design/human-interface-guidelines/launching)，系统 Launch 与首个应用界面保持一致；本项目按照用户要求保留启动图标。
+
+## 界面视觉整理（2026-10-19 后续增量）
+
+- 方向：低饱和炭黑底色、浅鼠尾草色操作面板、单一荧光绿强调。品牌保留圆角字标，正文与标题使用支持 Dynamic Type 的原生字体；缩短大段宣传文案，操作优先。密度 5/10、动效 1/10，不新增装饰动画。
+- 登录页：缩小品牌标记，精简标题，三条功能说明；一键游客登录为主操作，本地编辑为次操作。启动页仍保持中央图标与 loading，结束后走原有登录/会话路由。
+- 首页：独立浅色链接输入面板、深色打开按钮，粘贴与密码操作可在窄容器换行；浏览和剪辑入口分组。错误文本保留在深色背景，避免浅底上的红色低对比。
+- Studio：紧凑的导入面板、清楚的 Photos/Files 入口；预览从固定 300pt 高度改为跟随可用宽度的 4:3 容器，视频仍保持原比例适配。工具栏和导出处理没有更换数据源。
+- Library：清晰的 Saved/Imports/Exports 分类、真实本地条目数和对应空状态；删除确认支持滚动与 medium/large 系统弹层尺寸。
+- Plus：浅色权益区域、Apple 商品名称/周期/本地价格方案行；广告补充额度单独呈现。恢复购买与重试验单入口保留，未更改支付、奖励或权益判断。
+- 底栏：收紧图标间距与高度，独立深色导航容器，选中状态保留位置标记和辅助功能语义。沿用原生 safeAreaInset，占位不覆盖页面内容。
+- 容器适配：主要工具页最大宽度 680pt、登录页 560pt、导航内容 480pt，均是本项目阅读宽度选择，不是假定设备尺寸。尺寸变化只影响布局，没有添加尺寸驱动的 id、登录或购买调用。未声称完成 Duo 折叠区域、遮挡及姿态实测。
+- 技能：UI Design Reference、UI Taste 的 iOS/craft/polish、Redesign、Design、Duo；评估 Taste/Claude Design/Garden 范围后复用既有原创图像，没有引入 Web 实现、系统图标或代码绘制的替代美术。
+- 静态检查：git diff 空白检查通过；图像引用全部存在，资产 Contents.json/图片文件及 Info.plist 可读。色值计算中次级文字/深色面板为 7.77:1，次级文字/raised 为 6.59:1，浅底次级文字为 6.00:1。数值不替代实际屏幕、VoiceOver 或大字体运行验收。
+- 此次未编译、测试、启动 App/模拟器或执行服务验证；此前编译成功不覆盖这次 UI 改动。未对实际页面截图作视觉验收。
+
+### 底栏点击与样式修正
+
+- 根据用户实际截图，替换双层胶囊底栏为平整底色、细分隔线、四个等宽按钮；原创图标缩至 size=21，当前项以荧光绿图标和 48×44pt 淡色底标识，不增加文字或新图像素材。
+- 新的 `ClipoTabBar` 在每个 60pt 高按钮 label 的最终布局之后指定 `.contentShape(.interaction, Rectangle())`。图标、选中底色和分隔线不参与命中，点击范围由按钮完整单元格拥有。
+- 共享 Glyph 内的四倍图集不再参与点击判定，图标外层限定为当前裁切单元格；共享 IconButton 明确声明 48×48pt 热区。这覆盖了原代码中图集越界命中及透明留白没有明确热区的风险，尚未通过运行确认用户报障的唯一根因。
+- 四个按钮沿用原先 tab 状态及编辑项清理回调，safeAreaInset 保留；没有新增登录门槛、遮罩手势或尺寸驱动的页面重建。
+- 已核查源码按钮路由、装饰层命中设置及 git diff；未编译、未启动模拟器、未执行真实点击或视觉截图验证。待运行验收：四个图标中心及周围留白点击、Studio → Home → Discover → Library 往返、窄宽容器与大字体。
+- 官方 API 依据：[interaction](https://developer.apple.com/documentation/swiftui/contentshapekinds/interaction)、[allowsHitTesting](https://developer.apple.com/documentation/swiftui/view/allowshittesting(_:))。
+
+## Google 官方测试广告
+
+当前 `Config/Clipo.xcconfig` 的 `CLIPO_ADS_TEST_MODE = YES`，Debug 和 Release 均按此显式开关使用测试广告，便于先做内部测试。
+
+- iOS 测试 App ID：`ca-app-pub-3940256099942544~1458002511`。
+- iOS 激励测试广告单元：`ca-app-pub-3940256099942544/1712485313`。
+- 测试模式只允许上述官方 App ID 和广告单元，不依赖后台 adList，不使用后台下发的正式广告。仍需一键登录，额度按现有用户保存；不会创建虚假游客或绕过奖励回调。
+- 官方 demo App 没有 Clipo 自有 UMP 消息配置，因此此限定分支不发起 UMP 同意请求；正式模式完整保留 UMP 门控。测试广告不代表正式 UMP 流程验证通过。
+- 测试入口：一键登录 → Clipo Plus → Watch ad for more views。完整观看后由 SDK 的奖励回调增加额度，提前关闭不主动发奖，加载失败不发奖。阈值和 adType=2 不变。
+- 已添加 Google 的 SKAdNetwork 标识；发行前再按实际广告来源补齐第三方列表。
+- 上线前切换开关并替换正式 ID；本次未运行 App、未实际加载/播放测试广告。
+
+官方来源：[iOS SDK 配置](https://developers.google.com/admob/ios/quick-start)、[iOS 测试广告](https://developers.google.com/admob/ios/test-ads)。
+
 ## 已做与未做的验证
 
-已做源码/配置/资源静态检查（接口原文保留既有尾随空格）：plist 和 pbxproj 可解析，Swift 文件与资源显式 target 归属、资源文件存在、原始资料排除、主域名与ID一致、素材尺寸、JSON 结构、差异与空白检查、交易结束顺序人工检查。当前15个Swift源文件、3项显式资源引用，运行时源资源合计约2.59 MiB；这不是IPA或安装体积。
+已做源码/配置/资源静态检查（接口原文保留既有尾随空格）：plist 和 pbxproj 可解析，Swift 文件与资源显式 target 归属、资源文件存在、原始资料排除、主域名与ID一致、素材尺寸、JSON 结构、差异与空白检查、交易结束顺序人工检查。首版盘点为15个Swift源文件、3项显式资源引用、源资源约2.59 MiB；新增启动 Storyboard 后现为4项显式资源引用并增加两张图像，旧资源体积不代表当前包大小。
 
-未做编译、类型检查、自动测试、Xcode/模拟器/设备运行、真实界面渲染、业务接口请求、StoreKit 沙盒购买/恢复、广告播放、视频解码/导出实测。源码完成不等于上述运行结果已通过。
+2026-10-19 按用户本次授权执行编译：Xcode 27.1（27A9275），Clipo scheme / Debug / generic iOS arm64，关闭签名。修复视频编辑器 CMTimeRangeGetIntersection 缺少 otherRange: 标签后，xcodebuild 返回 0，结果为 BUILD SUCCEEDED。此前 fraction、播放器闭包显式 self、QuotaStore 的 catch 变量遮蔽问题未再报错。构建日志仅剩未依赖 AppIntents.framework 而跳过元数据提取的工具提示，无源码编译错误。
+
+复现命令：
+
+```sh
+xcodebuild -project Clipo.xcodeproj -scheme Clipo -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath /tmp/clipo-build-check/DerivedData CODE_SIGNING_ALLOWED=NO build
+```
+
+本机编译日志：`/tmp/clipo-build-check/debug-build.log`（临时文件）。未执行自动测试、模拟器/设备或 App 启动、真实界面渲染、业务接口请求、StoreKit 沙盒购买/恢复、广告播放、视频解码/导出实测，也未验证 Release Archive 或发行签名。编译通过不等于这些运行与发行验证通过。
 
 ## 参考
 

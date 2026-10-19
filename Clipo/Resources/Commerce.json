@@ -1,7 +1,7 @@
 {
   "products": [
-    {"id": "com.clipo.video.premium.monthly", "usdPrice": "999", "label": "Monthly"},
-    {"id": "com.clipo.video.premium.yearly", "usdPrice": "9999", "label": "Yearly"}
+    {"id": "ypsmwxmscbzeixig", "usdPrice": "999", "label": "Monthly"},
+    {"id": "xfpkaphmqxhtgzvx", "usdPrice": "9999", "label": "Yearly"}
   ],
   "rewardedAdType": 2,
   "unlimitedAfterCompletedAds": 4,

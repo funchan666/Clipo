@@ -10,8 +10,24 @@ struct MembershipView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                SheetHeading(title: "Clipo Plus") { dismiss() }
-                PageHeading(eyebrow: "Keep your flow", title: commerce.premium ? "You’re on Plus." : "More watching.\nLess waiting.")
+                SheetHeading(title: "Membership") { dismiss() }.padding(.horizontal, -20).padding(.top, -12)
+                VStack(alignment: .leading, spacing: 24) {
+                    HStack {
+                        Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 56, height: 56)
+                            .accessibilityHidden(true)
+                        Spacer()
+                        Text("CLIPO PLUS").font(.caption.weight(.bold)).tracking(1.4)
+                            .foregroundStyle(ClipoStyle.paperSecondary)
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(commerce.premium ? "You’re on Plus." : "Stay in the flow.")
+                            .font(.largeTitle.weight(.bold)).tracking(-1.2).foregroundStyle(ClipoStyle.ink)
+                        Text("Unlimited views. Unlimited saves.")
+                            .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
                 if commerce.premium {
                     MessagePanel(title: "Membership is active", message: "Unlimited viewing and saves, without rewarded-ad interruptions.")
                     if let expiration = commerce.expiration {
@@ -19,29 +35,45 @@ struct MembershipView: View {
                             .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                     }
                 } else {
-                    Text("Unlimited viewing and saves. Keep your focus on the next clip.").foregroundStyle(ClipoStyle.secondary)
+                    SectionLabel(title: "Choose your plan", detail: "Billed by Apple")
                     if api.session == nil { SignInPanel() }
                     if commerce.products.isEmpty {
                         MessagePanel(title: "Plans are loading", message: "Prices and availability come directly from the App Store.", actionTitle: "Reload plans") { commerce.loadProducts() }
                     } else {
                         ForEach(commerce.products, id: \.productIdentifier) { product in
                             Button { Task { await commerce.buy(product) } } label: {
-                                HStack(alignment: .center) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(product.localizedTitle).font(.title3.bold())
-                                        Text(commerce.period(product)).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                                VStack(alignment: .leading, spacing: 18) {
+                                    ViewThatFits(in: .horizontal) {
+                                        HStack(alignment: .firstTextBaseline, spacing: 20) {
+                                            planTitle(product)
+                                            Spacer(minLength: 0)
+                                            Text(commerce.price(product)).font(.title2.weight(.bold))
+                                                .foregroundStyle(ClipoStyle.accent).fixedSize()
+                                        }
+                                        VStack(alignment: .leading, spacing: 12) {
+                                            planTitle(product)
+                                            Text(commerce.price(product)).font(.title2.weight(.bold))
+                                                .foregroundStyle(ClipoStyle.accent)
+                                        }
                                     }
-                                    Spacer()
-                                    Text(commerce.price(product)).font(.title2.bold()).foregroundStyle(ClipoStyle.accent)
-                                }.padding(22).frame(minHeight: 88).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+                                    Text("Subscribe with Apple").font(.caption.weight(.medium))
+                                        .foregroundStyle(ClipoStyle.secondary)
+                                }.padding(22).frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 20))
+                                    .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(ClipoStyle.line, lineWidth: 1) }
+
                             }.buttonStyle(PressStyle()).disabled(commerce.busy || !commerce.purchasesAllowed)
                         }
                     }
                     if commerce.busy { Text("Waiting for Apple or confirming your purchase…").font(.subheadline).foregroundStyle(ClipoStyle.accent) }
                     if api.session != nil {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Or, take an ad break.").font(.title3.bold())
-                            Text(quota.rewardSummary).foregroundStyle(ClipoStyle.secondary)
+                            HStack {
+                                Text("A little more, for free").font(.headline)
+                                Spacer(minLength: 8)
+                                Glyph(symbol: .play, size: 19)
+                            }
+                            Text(quota.rewardSummary).font(.subheadline).foregroundStyle(ClipoStyle.secondary).lineSpacing(3)
                             ActionButton(title: "Watch ad for more views", primary: false, busy: ads.busy || ads.isPresenting) {
                                 Task { await ads.watch(commerce: commerce, quota: quota) }
                             }
@@ -55,18 +87,29 @@ struct MembershipView: View {
                 if let error = quota.error { ErrorNote(message: error) }
                 if let message = commerce.message { Text(message).font(.subheadline).foregroundStyle(ClipoStyle.accent) }
                 if let message = ads.message { Text(message).font(.subheadline).foregroundStyle(ClipoStyle.accent) }
-                ActionButton(title: "Restore purchases", primary: false, busy: commerce.busy) { commerce.restore() }
-                ActionButton(title: "Retry purchase confirmation", primary: false) { commerce.retryPending() }
+                VStack(alignment: .leading, spacing: 0) {
+                    Button(commerce.busy ? "Please wait…" : "Restore purchases") { commerce.restore() }
+                        .disabled(commerce.busy).frame(minHeight: 44)
+                    Button("Retry purchase confirmation") { commerce.retryPending() }.frame(minHeight: 44)
+                }.font(.subheadline.weight(.medium)).foregroundStyle(ClipoStyle.secondary).buttonStyle(PressStyle())
                 Link("Manage Apple subscriptions", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
                     .font(.subheadline).foregroundStyle(ClipoStyle.accent)
                 Text("Subscriptions renew automatically unless cancelled in your Apple account at least 24 hours before the current period ends. Payment is charged to your Apple account after confirmation. Local video editing does not require a subscription.")
                     .font(.footnote).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
                 PolicyLinks()
-            }.padding(22)
+            }.clipoPage()
         }.background(ClipoStyle.background).foregroundStyle(.white)
             .task { commerce.loadProducts(); await commerce.refresh() }
             .interactiveDismissDisabled(commerce.busy || ads.busy || ads.isPresenting)
     }
+    private func planTitle(_ product: SKProduct) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(product.localizedTitle).font(.headline).foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(commerce.period(product)).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+        }
+    }
+
 }
 
 struct AccountView: View {
@@ -82,8 +125,8 @@ struct AccountView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                SheetHeading(title: "Your space") { dismiss() }
-                PageHeading(eyebrow: "Clipo", title: "Made for your flow.")
+                SheetHeading(title: "Account") { dismiss() }.padding(.horizontal, -20).padding(.top, -12)
+                PageHeading(eyebrow: "Your space", title: "Make yourself at home.")
                 if let session = api.session {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Guest account").font(.title3.bold())
@@ -109,7 +152,7 @@ struct AccountView: View {
                 PolicyLinks()
                 if let error { ErrorNote(message: error) }
                 Text("Clipo \(api.configuration.version)").font(.footnote).foregroundStyle(ClipoStyle.secondary)
-            }.padding(22)
+            }.clipoPage()
         }.background(ClipoStyle.background).foregroundStyle(.white)
             .sheet(isPresented: $paywall) { MembershipView() }
     }

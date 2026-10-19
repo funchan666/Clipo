@@ -21,57 +21,33 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                HStack {
-                    Text("Clipo").font(.system(.title, design: .rounded).weight(.heavy))
+                HStack(spacing: 10) {
+                    Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 32, height: 32)
+                        .accessibilityHidden(true)
+                    Text("Clipo").font(.system(.title2, design: .rounded).weight(.heavy))
                     Spacer()
-                    Button(commerce.premium ? "PLUS" : "GET PLUS") { paywall = true }
-                        .font(.system(.caption, design: .monospaced).weight(.bold)).foregroundStyle(ClipoStyle.accent)
-                        .padding(12).background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
+                    Button(commerce.premium ? "PLUS" : "Get Plus") { paywall = true }
+                        .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
+                        .padding(.horizontal, 16).frame(minHeight: 44)
+                        .background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
                     IconButton(symbol: .settings, label: "Account and settings", action: openSettings)
                 }
-                PageHeading(eyebrow: "Start with a link", title: "What’s worth\nwatching?")
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Glyph(symbol: .link, size: 22)
-                        Text("VIDEO OR CHANNEL LINK").font(.system(.caption, design: .monospaced)).foregroundStyle(ClipoStyle.secondary)
-                    }
-                    TextField("Paste a link or short code", text: $link, axis: .vertical)
-                        .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .focused($focused).clipoField().accessibilityLabel("Video or channel link")
-                    HStack {
-                        Button("Paste link") {
-                            if let text = UIPasteboard.general.string { link = text.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        }
-                        Spacer()
-                        Button(usePassword ? "Hide password" : "Has a password?") { usePassword.toggle() }
-                    }.font(.subheadline.weight(.medium)).foregroundStyle(ClipoStyle.accent).buttonStyle(PressStyle())
-                    if usePassword { SecureField("Access password", text: $password).clipoField() }
-                    ActionButton(title: "Open link", busy: loading) { resolve() }.disabled(link.nilIfBlank == nil)
-                    if let error { ErrorNote(message: error) }
-                    if api.session != nil {
-                        Text(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
-                            .font(.footnote).foregroundStyle(ClipoStyle.secondary)
-                    }
-                }.padding(20).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 26))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What’s your next find?").font(.title.weight(.bold)).tracking(-0.8)
+                    Text("A good clip starts with a link.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                }
+                linkComposer
+                if let error { ErrorNote(message: error) }
                 if api.session == nil { SignInPanel() }
-                HStack(alignment: .top, spacing: 20) {
-                    Button(action: discover) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Glyph(symbol: .feed, size: 31)
-                            Text("Just watch").font(.title3.bold())
-                            Text("A full-screen stream.\nOne clip at a time.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 16) {
+                    SectionLabel(title: "Watch or create")
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
+                        quickAction(symbol: .feed, title: "Discover", detail: "Swipe into something new", action: discover)
+                        quickAction(symbol: .edit, title: "Studio", detail: "Make your next edit", action: edit)
                     }
-                    Button(action: edit) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Glyph(symbol: .edit, size: 31)
-                            Text("Make a cut").font(.title3.bold())
-                            Text("Trim, reframe and\nmake your next edit.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }.buttonStyle(PressStyle()).padding(.vertical, 6)
+                }
                 if !channels.isEmpty {
-                    Text("Channels to explore").font(.title3.bold())
+                    SectionLabel(title: "Channels to explore")
                     ForEach(Array(channels.enumerated()), id: \.offset) { _, item in
                         if let info = item.extraInfo, let title = info.channelName, let short = info.externalLinks {
                             Button { channel = ChannelRoute(link: short, title: title) } label: {
@@ -88,7 +64,7 @@ struct HomeView: View {
                     }
                 }
                 if let sites = commerce.release?.recommend, !sites.isEmpty {
-                    Text("Explore a source").font(.title3.bold())
+                    SectionLabel(title: "Explore a source")
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             ForEach(sites) { site in
@@ -100,7 +76,7 @@ struct HomeView: View {
                 }
                 if !library.history.isEmpty {
                     HStack {
-                        Text("Recently opened").font(.title3.bold())
+                        Text("Recently opened").font(.headline)
                         Spacer()
                         Button("Clear") { library.clearHistory() }.font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                     }
@@ -116,7 +92,7 @@ struct HomeView: View {
                         }
                     }
                 }
-            }.padding(22).padding(.bottom, 18)
+            }.clipoPage()
         }.scrollDismissesKeyboard(.interactively)
             .sheet(item: $channel) { ChannelView(route: $0) }
             .fullScreenCover(item: $player) { PlayerScreen(route: $0) }
@@ -126,6 +102,72 @@ struct HomeView: View {
                 do { channels = try await api.channels(links: links) }
                 catch { self.error = error.localizedDescription }
             }
+    }
+    private var linkComposer: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 10) {
+                Glyph(symbol: .link, size: 20)
+                    .frame(width: 40, height: 40)
+                    .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
+                Text("Open a link").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+            }
+            TextField("Video link or short code", text: $link, axis: .vertical)
+                .lineLimit(2...4).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                .focused($focused).font(.body).foregroundStyle(ClipoStyle.ink)
+                .tint(ClipoStyle.ink).padding(16)
+                .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
+                .environment(\.colorScheme, .light)
+                .accessibilityLabel("Video or channel link")
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    pasteButton
+                    Spacer(minLength: 12)
+                    passwordButton
+                }
+                VStack(alignment: .leading, spacing: 0) { pasteButton; passwordButton }
+            }
+            if usePassword {
+                SecureField("Access password", text: $password)
+                    .font(.body).foregroundStyle(ClipoStyle.ink).tint(ClipoStyle.ink).padding(16)
+                    .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
+                    .environment(\.colorScheme, .light).accessibilityLabel("Access password")
+            }
+            Button(action: resolve) {
+                Text(loading ? "Opening link…" : "Open link")
+                    .font(.body.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 16)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .foregroundStyle(ClipoStyle.accent)
+                    .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 16))
+            }.buttonStyle(PressStyle()).disabled(loading || link.nilIfBlank == nil)
+            if api.session != nil {
+                Text(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
+                    .font(.caption).foregroundStyle(ClipoStyle.paperSecondary)
+            }
+        }.padding(22).background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
+    }
+    private var pasteButton: some View {
+        Button("Paste link") {
+            if let text = UIPasteboard.general.string { link = text.trimmingCharacters(in: .whitespacesAndNewlines) }
+        }.font(.subheadline.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+            .frame(minHeight: 44).buttonStyle(PressStyle())
+    }
+    private var passwordButton: some View {
+        Button(usePassword ? "Hide password" : "Has a password?") { usePassword.toggle() }
+            .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
+            .frame(minHeight: 44).buttonStyle(PressStyle())
+    }
+    private func quickAction(symbol: ClipoGlyph, title: String, detail: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 18) {
+                Glyph(symbol: symbol, size: 27)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title).font(.headline).foregroundStyle(.white)
+                    Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }.padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 20))
+        }.buttonStyle(PressStyle())
     }
     private func resolve() {
         guard let text = link.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank, !loading else { return }

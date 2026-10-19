@@ -28,7 +28,11 @@ struct EditorWorkspace: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Clipo studio", title: selected == nil ? "Your next cut." : "Make the moment.")
+                PageHeading(eyebrow: "Create with Clipo", title: "Studio")
+                if selected == nil {
+                    Text("Your footage. Your point of view.")
+                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary).padding(.top, -12)
+                }
                 if let selected {
                     HStack {
                         Text(selected.title).font(.subheadline).lineLimit(1)
@@ -38,15 +42,16 @@ struct EditorWorkspace: View {
                         }
                     }
                     VideoSurface(player: editor.preview.player, fill: false)
-                        .frame(height: 300).background(.black).clipShape(RoundedRectangle(cornerRadius: 22))
+                        .aspectRatio(4.0 / 3.0, contentMode: .fit).background(.black).clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay(alignment: .bottomTrailing) { PreviewButton(playback: editor.preview).padding(8) }
                     if editor.isLoading { Text("Preparing your video…").foregroundStyle(ClipoStyle.secondary) }
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(tools, id: \.self) { name in
-                                Button(name) { tool = name }.font(.subheadline.bold()).padding(.horizontal, 20).padding(.vertical, 12)
+                                Button(name) { tool = name }.font(.subheadline.weight(.semibold)).padding(.horizontal, 20).frame(minHeight: 48)
                                     .foregroundStyle(tool == name ? ClipoStyle.ink : .white)
                                     .background(tool == name ? ClipoStyle.accent : ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
+                                    .accessibilityAddTraits(tool == name ? .isSelected : [])
                             }
                         }
                     }
@@ -70,21 +75,38 @@ struct EditorWorkspace: View {
                     }
                     Text("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 } else {
-                    VStack(alignment: .leading, spacing: 22) {
-                        Glyph(symbol: .edit, size: 62)
-                        Text("A little less.\nA lot more you.").font(.system(.largeTitle, design: .rounded).weight(.semibold))
-                        Text("Trim the timing, change the frame, find the pace. Start with a video on your device.")
-                            .font(.body).foregroundStyle(ClipoStyle.secondary).lineSpacing(4)
-                        PhotosPicker(selection: $picker, matching: .videos, photoLibrary: .shared()) {
-                            Text(importing ? "Importing…" : "Choose from Photos").font(.body.bold())
-                                .frame(maxWidth: .infinity, minHeight: 54).foregroundStyle(ClipoStyle.ink)
-                                .background(ClipoStyle.accent, in: RoundedRectangle(cornerRadius: 18))
-                        }.disabled(importing).buttonStyle(PressStyle())
-                        ActionButton(title: "Browse Files", primary: false, busy: importing) { filePicker = true }
-                    }.padding(24).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 26))
+                    VStack(alignment: .leading, spacing: 24) {
+                        HStack(alignment: .top) {
+                            Glyph(symbol: .edit, size: 34)
+                                .frame(width: 64, height: 64)
+                                .background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 20))
+                            Spacer()
+                            Text("LOCAL WORKSPACE").font(.caption2.weight(.medium)).tracking(1.2)
+                                .foregroundStyle(ClipoStyle.secondary).padding(.top, 8)
+                        }
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Start with a video.").font(.title2.weight(.bold)).tracking(-0.5)
+                            Text("Choose a clip from your device. We’ll keep your original untouched.")
+                                .font(.subheadline).foregroundStyle(ClipoStyle.secondary).lineSpacing(3)
+                        }
+                        VStack(spacing: 10) {
+                            PhotosPicker(selection: $picker, matching: .videos, photoLibrary: .shared()) {
+                                Text(importing ? "Importing…" : "Choose from Photos").font(.body.weight(.semibold))
+                                    .padding(.horizontal, 16).padding(.vertical, 16)
+                                    .frame(maxWidth: .infinity, minHeight: 54).foregroundStyle(ClipoStyle.ink)
+                                    .background(ClipoStyle.accent, in: RoundedRectangle(cornerRadius: 16))
+                            }.disabled(importing).buttonStyle(PressStyle())
+                            ActionButton(title: "Browse Files", primary: false, busy: importing) { filePicker = true }
+                        }
+                    }.padding(24).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+                    VStack(alignment: .leading, spacing: 18) {
+                        SectionLabel(title: "From raw to ready")
+                        FeatureRow(symbol: .edit, title: "Keep the best part", detail: "Trim the timing, crop the frame, change the pace.")
+                        FeatureRow(symbol: .download, title: "Export your way", detail: "Save a video or extract an audio track.")
+                    }
                     if let error { ErrorNote(message: error) }
                     if !library.movies.filter({ !$0.isExport }).isEmpty {
-                        Text("Continue with a video").font(.title3.bold())
+                        SectionLabel(title: "Recent imports")
                         ForEach(library.movies.filter { !$0.isExport }) { movie in
                             Button { choose(movie) } label: {
                                 HStack(spacing: 14) {
@@ -100,7 +122,7 @@ struct EditorWorkspace: View {
                         }
                     }
                 }
-            }.padding(22).padding(.bottom, 18)
+            }.clipoPage()
         }.background(ClipoStyle.background)
             .fileImporter(isPresented: $filePicker, allowedContentTypes: [.movie], allowsMultipleSelection: false) { result in
                 do { if let url = try result.get().first { importURL(url) } }
@@ -164,7 +186,7 @@ struct EditorWorkspace: View {
                 FlowChoices(values: ExportQuality.allCases.map(\.rawValue), selected: editor.recipe.quality.rawValue) { value in editor.recipe.quality = ExportQuality(rawValue: value) ?? .full }
                 Text("MP4 · Up to the selected resolution · 30 fps\nSmaller resolutions reduce export size. Source videos are never upscaled.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
             }
-        }.padding(20).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+        }.padding(22).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 20))
     }
     private func choose(_ movie: LocalMovie) { selected = movie; error = nil; Task { await editor.open(library.url(for: movie)) } }
     private func importURL(_ url: URL) {
@@ -201,11 +223,13 @@ struct FlowChoices: View {
     let selected: String
     var action: (String) -> Void
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 88))], spacing: 8) {
             ForEach(values, id: \.self) { value in
-                Button(value) { action(value) }.font(.subheadline.bold()).frame(maxWidth: .infinity, minHeight: 48)
+                Button(value) { action(value) }.font(.subheadline.weight(.semibold))
+                    .multilineTextAlignment(.center).padding(.horizontal, 10).padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(value == selected ? ClipoStyle.ink : .white)
-                    .background(value == selected ? ClipoStyle.accent : ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 12))
+                    .background(value == selected ? ClipoStyle.accent : ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 14))
                     .buttonStyle(PressStyle()).accessibilityAddTraits(value == selected ? .isSelected : [])
             }
         }

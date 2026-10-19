@@ -41,7 +41,7 @@ struct DiscoverView: View {
     var body: some View {
         ZStack(alignment: .top) {
             if api.session == nil {
-                ScrollView { VStack(spacing: 24) { PageHeading(eyebrow: "Discover", title: "One more clip."); SignInPanel() }.padding(24) }
+                ScrollView { VStack(spacing: 24) { PageHeading(eyebrow: "Made for watching", title: "Discover"); SignInPanel() }.clipoPage() }
             } else if feed.clips.isEmpty {
                 VStack(spacing: 20) {
                     Spacer()
@@ -76,7 +76,9 @@ struct DiscoverView: View {
             if api.session != nil {
                 VStack(spacing: 10) {
                     HStack {
-                        Text("FOR YOU").font(.system(.subheadline, design: .monospaced).weight(.bold)).tracking(2)
+                        Text("For you").font(.headline.weight(.bold))
+                            .padding(.vertical, 10)
+                            .overlay(alignment: .bottom) { Capsule().fill(ClipoStyle.accent).frame(width: 24, height: 3) }
                         Spacer()
                         IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
                     }
@@ -84,10 +86,10 @@ struct DiscoverView: View {
                         HStack {
                             TextField("Search videos", text: $search).clipoField().submitLabel(.search)
                                 .onSubmit { runSearch() }
-                            Button("Go") { runSearch() }.buttonStyle(PressStyle()).foregroundStyle(ClipoStyle.accent)
+                            Button("Go") { runSearch() }.frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle()).foregroundStyle(ClipoStyle.accent)
                         }
                     }
-                }.padding(.horizontal, 22).padding(.top, 8).background(Color.black.opacity(0.72))
+                }.padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 10).background(Color.black.opacity(0.55))
             }
         }.background(Color.black)
             .task(id: api.session?.userId.value) {
@@ -241,6 +243,11 @@ struct ClipoScrubber: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     let label: String
+    private var fraction: CGFloat {
+        let span = range.upperBound - range.lowerBound
+        guard value.isFinite, range.lowerBound.isFinite, span.isFinite, span > 0 else { return 0 }
+        return CGFloat(min(1, max(0, (value - range.lowerBound) / span)))
+    }
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {

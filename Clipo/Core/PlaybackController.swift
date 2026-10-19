@@ -20,18 +20,18 @@ final class PlaybackController: ObservableObject {
     init() {
         player.automaticallyWaitsToMinimizeStalling = true
         timer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600), queue: .main) { [weak self] time in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
-                elapsed = time.seconds.isFinite ? time.seconds : 0
-                let seconds = player.currentItem?.duration.seconds ?? 0
-                duration = seconds.isFinite ? max(0, seconds) : 0
+                self.elapsed = time.seconds.isFinite ? time.seconds : 0
+                let seconds = self.player.currentItem?.duration.seconds ?? 0
+                self.duration = seconds.isFinite ? max(0, seconds) : 0
             }
         }
         timeStatus = player.observe(\.timeControlStatus, options: [.new]) { [weak self] player, _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
-                isPlaying = player.timeControlStatus == .playing
-                isLoading = player.timeControlStatus == .waitingToPlayAtSpecifiedRate || player.currentItem?.status == .unknown
+                self.isPlaying = player.timeControlStatus == .playing
+                self.isLoading = player.timeControlStatus == .waitingToPlayAtSpecifiedRate || player.currentItem?.status == .unknown
             }
         }
     }
@@ -47,22 +47,22 @@ final class PlaybackController: ObservableObject {
         wantsPlayback = autoplay
         player.replaceCurrentItem(with: item)
         status = item.observe(\.status, options: [.initial, .new]) { [weak self] observed, _ in
-            Task { @MainActor in
-                guard let self, player.currentItem === observed else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.player.currentItem === observed else { return }
                 if observed.status == .failed {
-                    error = observed.error?.localizedDescription ?? "This clip could not be played."
-                    isLoading = false
+                    self.error = observed.error?.localizedDescription ?? "This clip could not be played."
+                    self.isLoading = false
                 } else if observed.status == .readyToPlay {
-                    isLoading = false
-                    if wantsPlayback { play() }
+                    self.isLoading = false
+                    if self.wantsPlayback { self.play() }
                 }
             }
         }
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
-                player.seek(to: .zero)
-                if wantsPlayback { play() }
+                self.player.seek(to: .zero)
+                if self.wantsPlayback { self.play() }
             }
         }
     }

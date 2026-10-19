@@ -164,7 +164,7 @@ final class VideoEditor: ObservableObject {
             for audioSource in try await source.loadTracks(withMediaType: .audio) {
                 guard let audio = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else { continue }
                 let audioRange = try await audioSource.load(.timeRange)
-                let overlap = CMTimeRangeGetIntersection(range, audioRange)
+                let overlap = CMTimeRangeGetIntersection(range, otherRange: audioRange)
                 if overlap.duration.seconds > 0 {
                     try audio.insertTimeRange(overlap, of: audioSource, at: CMTimeSubtract(overlap.start, range.start))
                 }
