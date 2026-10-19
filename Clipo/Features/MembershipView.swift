@@ -12,8 +12,6 @@ struct MembershipView: View {
             VStack(alignment: .leading, spacing: 24) {
                 SheetHeading(title: "Membership") { dismiss() }.padding(.horizontal, -20).padding(.top, -12)
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("CLIPO PLUS").font(.caption.weight(.bold)).tracking(1.4)
-                        .foregroundStyle(ClipoStyle.paperSecondary)
                     ClipoIllustration(name: "ClipoArtPlus", height: 168)
                     VStack(alignment: .leading, spacing: 12) {
                         Text(commerce.premium ? "You’re on Plus." : "Stay in the flow.")
@@ -120,24 +118,19 @@ struct AccountView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Your space", title: "Me")
                 if let session = api.session {
-                    HStack(alignment: .top, spacing: 16) {
-                        Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 52, height: 52)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Guest account").font(.title3.bold())
-                            Text("ID · \(session.userId.value)").font(.caption.monospaced()).foregroundStyle(ClipoStyle.secondary).textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text("Your library stays on this device.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Guest account").font(.title3.bold())
+                        Text("ID · \(session.userId.value)").font(.caption.monospaced()).foregroundStyle(ClipoStyle.secondary).textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Your library stays on this device.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
                     Button { paywall = true } label: {
                         VStack(alignment: .leading, spacing: 16) {
                             Text(commerce.premium ? "YOUR MEMBERSHIP" : "MAKE ROOM FOR MORE")
                                 .font(.caption.weight(.semibold)).tracking(1.2).foregroundStyle(ClipoStyle.paperSecondary)
                             ClipoIllustration(name: "ClipoArtPlus", height: 120)
-                            Text("Clipo Plus").font(.title.weight(.bold)).foregroundStyle(ClipoStyle.ink)
+                            Text("Plus membership").font(.title.weight(.bold)).foregroundStyle(ClipoStyle.ink)
                             Text(commerce.premium ? "Your membership is active." : "Unlimited views. Unlimited saves.")
                                 .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
                             Text(commerce.premium ? "Manage membership" : "Explore plans")
@@ -166,7 +159,7 @@ struct AccountView: View {
                 }
                 PolicyLinks()
                 if let error { ErrorNote(message: error) }
-                Text("Clipo \(api.configuration.version)").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                Text("Version \(api.configuration.version)").font(.footnote).foregroundStyle(ClipoStyle.secondary)
             }.clipoPage()
         }.background(ClipoStyle.background).foregroundStyle(.white)
             .sheet(isPresented: $paywall) { MembershipView() }

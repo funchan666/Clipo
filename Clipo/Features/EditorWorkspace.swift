@@ -44,13 +44,9 @@ struct ToolsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Made for your media", title: "Tools")
                 ClipoIllustration(name: "ClipoArtTools", height: 176)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Choose what to change.").font(.title2.weight(.bold))
-                    Text("Quick tools for videos on your device. Your original stays untouched.")
-                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                }
+                Text("Quick tools for videos on your device. Your original stays untouched.")
+                    .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 VStack(spacing: 0) {
                     ForEach([VideoTool.audio, .speed, .frame]) { tool in
                         Button { selectedTool = tool } label: {
@@ -111,10 +107,9 @@ struct EditorWorkspace: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "On your device", title: initialTool == .studio ? "Studio" : initialTool.title)
                 if selected == nil {
                     Text(initialTool.detail)
-                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary).padding(.top, -12)
+                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 }
                 if let selected {
                     HStack {

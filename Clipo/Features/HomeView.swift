@@ -22,9 +22,6 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HStack(spacing: 10) {
-                    Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 32, height: 32)
-                        .accessibilityHidden(true)
-                    Text("Clipo").font(.system(.title2, design: .rounded).weight(.heavy))
                     Spacer()
                     Button(commerce.premium ? "PLUS" : "Get Plus") { paywall = true }
                         .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
@@ -32,11 +29,7 @@ struct HomeView: View {
                         .background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
                     IconButton(symbol: .settings, label: "Open Me and account settings", action: openAccount)
                 }
-                VStack(alignment: .leading, spacing: 12) {
-                    ClipoIllustration(name: "ClipoArtLink", height: 156)
-                    Text("What’s your next find?").font(.title.weight(.bold)).tracking(-0.8)
-                    Text("A good clip starts with a link.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                }
+                ClipoIllustration(name: "ClipoArtLink", height: 156)
                 linkComposer
                 if let error { ErrorNote(message: error) }
                 if api.session == nil { SignInPanel() }

@@ -13,9 +13,6 @@ struct LibraryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Your collection", title: "Library")
-                Text("All your keepers, in one place.").font(.subheadline)
-                    .foregroundStyle(ClipoStyle.secondary).padding(.top, -12)
                 if itemCount > 0 {
                     ClipoIllustration(name: "ClipoArtLibrary", height: 128)
                 }

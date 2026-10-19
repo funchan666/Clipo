@@ -170,15 +170,6 @@ struct WelcomeView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 10) {
-                        Image("ClipoLaunchMark").resizable().scaledToFit().frame(width: 36, height: 36)
-                            .accessibilityHidden(true)
-                        Text("Clipo").font(.system(.title2, design: .rounded).weight(.heavy))
-                        Spacer()
-                        Text("PLAY / CREATE").font(.caption2.weight(.medium)).tracking(1.5)
-                            .foregroundStyle(ClipoStyle.secondary)
-                    }
-                    Spacer(minLength: 36)
                     VStack(alignment: .leading, spacing: 18) {
                         Text("Watch it.\nMake it yours.")
                             .font(.largeTitle.weight(.bold)).tracking(-1.2)

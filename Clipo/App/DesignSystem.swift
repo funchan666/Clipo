@@ -71,18 +71,6 @@ struct ActionButton: View {
         }.buttonStyle(PressStyle()).disabled(busy)
     }
 }
-struct PageHeading: View {
-    let eyebrow: String
-    let title: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(eyebrow.uppercased()).font(.system(.caption, design: .monospaced).weight(.medium))
-                .tracking(1.6).foregroundStyle(ClipoStyle.secondary)
-            Text(title).font(.largeTitle.weight(.bold)).tracking(-1.2).foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
-        }.frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
 struct MessagePanel: View {
     let title: String
     let message: String

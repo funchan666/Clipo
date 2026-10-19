@@ -43,9 +43,7 @@ struct DiscoverView: View {
             if api.session == nil {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        PageHeading(eyebrow: "Made for watching", title: "Discover")
                         ClipoIllustration(name: "ClipoArtDiscover", height: 208)
-                        Text("A whole world of clips.").font(.title2.weight(.bold))
                         Text("Sign in, find your next favorite, and keep swiping.")
                             .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         SignInPanel()
@@ -100,9 +98,6 @@ struct DiscoverView: View {
     private var feedHeader: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("For you").font(.headline.weight(.bold))
-                    .padding(.vertical, 10)
-                    .overlay(alignment: .bottom) { Capsule().fill(ClipoStyle.accent).frame(width: 24, height: 3) }
                 Spacer()
                 IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
             }
