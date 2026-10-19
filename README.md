@@ -13,3 +13,5 @@ See `Documentation/IMPLEMENTATION.md` for feature scope, subscription/ad default
 Launch now uses a centered original Clipo icon and a static loading mark; the matching in-app splash gently pulses before showing the existing one-tap sign-in page. This subsequent splash UI change has been checked statically only and is not covered by the earlier successful build. See the startup section in `Documentation/IMPLEMENTATION.md`.
 
 The subsequent visual refresh unifies the welcome, home, Studio, Library and Plus pages with charcoal surfaces, pale link/benefit panels and a compact original-icon navigation bar. Source, asset references and color contrast were inspected; this refresh has not been compiled or rendered in a simulator/device.
+
+TabBar now uses eight newly generated original PNGs under `Clipo/Resources/Assets.xcassets/TabBar`, including baked-in selected backgrounds. Prompts and source provenance are in `ProjectMaterials/UIAssets/Prompts/TabBar`. Tab artwork no longer uses atlas cropping or code-drawn selection decorations; full-cell hit regions remain native. Runtime tapping has not been verified.

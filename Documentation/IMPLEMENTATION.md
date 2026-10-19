@@ -97,6 +97,15 @@
 - 已核查源码按钮路由、装饰层命中设置及 git diff；未编译、未启动模拟器、未执行真实点击或视觉截图验证。待运行验收：四个图标中心及周围留白点击、Studio → Home → Discover → Library 往返、窄宽容器与大字体。
 - 官方 API 依据：[interaction](https://developer.apple.com/documentation/swiftui/contentshapekinds/interaction)、[allowsHitTesting](https://developer.apple.com/documentation/swiftui/view/allowshittesting(_:))。
 
+### TabBar 原创图片版本（替代上面的绘制型选中状态）
+
+- 按用户最新要求，用 Garden / Image 2 Host-Native 内置生图工具重新生成 8 张独立透明 PNG：Home、Discover、Studio、Library 各包含 Normal/Selected；选中底片与深色图形已一起生成在 Selected 图片内。素材已经复制入 `Clipo/Resources/Assets.xcassets/TabBar/`，无外部临时路径依赖。
+- 每张 PNG 为 1254×1254 RGBA，imageset 设置 original rendering。没有通过 Python/SVG/Canvas/Core Graphics 绘制或修图；脚本仅复制文件、写资源描述和读取元数据。
+- 8 份提示词与生成来源清单位于 `ProjectMaterials/UIAssets/Prompts/TabBar/`。初始默认态分别原创生成；选中态以默认图形为编辑目标，并以 Home 选中底片作为一致性参考。
+- `ClipoTabBar` 直接显示 64×64pt PNG，替代原 Glyph 图集、tint、RoundedRectangle 背景及分隔线。除普通页面底色外，可见的 Tab 图形与选中装饰全部来自图片。
+- 每个按钮保留等宽、68pt 高原生热区及 accessibility 标记。`Color.clear` 是不可见布局占位，`contentShape(Rectangle())` 仅定义触摸范围，不会绘制矩形；图片不接管触摸，原 select(item) → tab → 四个页面路由保持连接。
+- 已目视检查 8 张生成素材，核对 alpha、尺寸、资源目录/名称、现有 xcassets target 归属及源码路由，git diff 空白检查通过。未编译、未运行模拟器/真机或做实际点击验收；静态检查不等于运行确认。
+
 ## Google 官方测试广告
 
 当前 `Config/Clipo.xcconfig` 的 `CLIPO_ADS_TEST_MODE = YES`，Debug 和 Release 均按此显式开关使用测试广告，便于先做内部测试。
