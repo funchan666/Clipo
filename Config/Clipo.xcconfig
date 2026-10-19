@@ -1,0 +1,15 @@
+// Replace these two values with the registered backend and Apple identifiers.
+// The bundle ID is provisional, as requested.
+PRODUCT_BUNDLE_IDENTIFIER = com.clipo.video
+CLIPO_API_HOST = devapi.io-d.cc
+CLIPO_PRIVACY_URL =
+CLIPO_TERMS_URL =
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+SWIFT_VERSION = 5.0
+TARGETED_DEVICE_FAMILY = 1
+MARKETING_VERSION = 1.0.0
+CURRENT_PROJECT_VERSION = 1
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM =
+CLIPO_GOOGLE_ADS_APP_ID =
+OTHER_LDFLAGS = $(inherited) -ObjC

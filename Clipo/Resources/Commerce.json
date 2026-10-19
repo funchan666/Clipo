@@ -1,0 +1,12 @@
+{
+  "products": [
+    {"id": "com.clipo.video.premium.monthly", "usdPrice": "999", "label": "Monthly"},
+    {"id": "com.clipo.video.premium.yearly", "usdPrice": "9999", "label": "Yearly"}
+  ],
+  "rewardedAdType": 2,
+  "unlimitedAfterCompletedAds": 4,
+  "favoriteReward": 5,
+  "dailyWatchLimit": 5,
+  "dailyFavoriteLimit": 5,
+  "watchRewards": [3, 3, 3]
+}
