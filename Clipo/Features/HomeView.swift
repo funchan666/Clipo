@@ -19,8 +19,7 @@ struct HomeView: View {
     @State private var player: PlayerRoute?
     @State private var paywall = false
     @State private var channels: [LandingInfo] = []
-    @State private var selectedPlatform: HomeLinkPlatform?
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var showingLinkGuide = false
     @FocusState private var focused: Bool
     var body: some View {
         ScrollView {
@@ -35,9 +34,10 @@ struct HomeView: View {
                     IconButton(symbol: .settings, label: "Open Me and account settings", action: openAccount)
                 }
                 linkComposer
-                platformGuide
+                linkGuide
                 if let error { ErrorNote(message: error) }
                 if api.session == nil { SignInPanel() }
+                recentLinks
                 VStack(alignment: .leading, spacing: 16) {
                     SectionLabel(title: "Watch or create")
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
@@ -68,24 +68,6 @@ struct HomeView: View {
                         }
                     }
                 }
-                if !library.history.isEmpty {
-                    HStack {
-                        Text("Recently opened").font(.headline)
-                        Spacer()
-                        Button("Clear") { library.clearHistory() }.font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                    }
-                    ForEach(library.history.prefix(5)) { visit in
-                        HStack {
-                            Button { link = visit.link; resolve() } label: {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(visit.title).font(.headline).lineLimit(1)
-                                    Text(visit.link).font(.caption).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
-                                }.frame(maxWidth: .infinity, alignment: .leading)
-                            }.buttonStyle(PressStyle())
-                            IconButton(symbol: .close, label: "Remove history item") { library.removeVisit(visit) }
-                        }
-                    }
-                }
             }.clipoPage()
         }.clipoScreenBackground().scrollDismissesKeyboard(.interactively)
             .sheet(item: $channel) { ChannelView(route: $0) }
@@ -96,7 +78,7 @@ struct HomeView: View {
                     .presentationBackground(.clear)
             }
             .sheet(isPresented: $paywall) { MembershipView() }
-            .sheet(item: $selectedPlatform) { LinkGuideSheet(platform: $0) }
+            .sheet(isPresented: $showingLinkGuide) { LinkGuideSheet() }
             .task(id: commerce.release?.lcList?["us"]) {
                 guard let links = commerce.release?.lcList?["us"], !links.isEmpty else { return }
                 do { channels = try await api.channels(links: links) }
@@ -111,7 +93,7 @@ struct HomeView: View {
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
                 Text("Open a link").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
             }
-            TextField("Video link or short code", text: $link, axis: .vertical)
+            TextField("Paste your shared link or code", text: $link, axis: .vertical)
                 .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .focused($focused).font(.body).foregroundStyle(ClipoStyle.ink)
                 .tint(ClipoStyle.ink).padding(16)
@@ -158,28 +140,57 @@ struct HomeView: View {
         }
         link = text
     }
-    private var platformGuide: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Paste a link from").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-            LazyVGrid(columns: dynamicTypeSize.isAccessibilitySize
-                      ? [GridItem(.flexible()), GridItem(.flexible())]
-                      : [GridItem(.adaptive(minimum: 68), spacing: 12)], spacing: 16) {
-                ForEach(HomeLinkPlatform.allCases) { platform in
-                    Button { selectedPlatform = platform } label: {
-                        VStack(spacing: 6) {
-                            HomePlatformIcon(platform: platform).frame(width: 68, height: 68)
-                            Text(platform.name).font(.caption.weight(.medium)).foregroundStyle(.white)
-                                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                        }.frame(maxWidth: .infinity, minHeight: 98, alignment: .top)
-                            .contentShape(.interaction, Rectangle())
-                    }.buttonStyle(PressStyle())
-                        .accessibilityLabel("How to use a \(platform.name) link")
-                }
-            }.frame(maxWidth: 330).frame(maxWidth: .infinity)
-            Text("Copy a video link, paste it above, and tap Open link.")
-                .font(.footnote).foregroundStyle(ClipoStyle.secondary)
+    private var linkGuide: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 18) {
+                linkGuideCopy
+                ClipoIllustration(name: "ClipoArtWelcome", height: 102).frame(width: 100)
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                ClipoIllustration(name: "ClipoArtWelcome", height: 88).frame(width: 88)
+                linkGuideCopy
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+    }
+    private var linkGuideCopy: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("From link to play.")
+                .font(.headline).foregroundStyle(.white)
+            Text("Use a link or code shared for Clipo.")
+                .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-        }.padding(18).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+            Button("How it works") { showingLinkGuide = true }
+                .font(.subheadline.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
+                .frame(minHeight: 44).buttonStyle(PressStyle())
+        }
+    }
+    @ViewBuilder private var recentLinks: some View {
+        if !library.history.isEmpty {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Recently opened").font(.headline)
+                    Spacer()
+                    Button("Clear") { library.clearHistory() }
+                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                        .frame(minHeight: 44).buttonStyle(PressStyle())
+                }
+                ForEach(library.history.prefix(5)) { visit in
+                    HStack {
+                        Button { link = visit.link; resolve() } label: {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(visit.title).font(.headline).lineLimit(1)
+                                Text(visit.link).font(.caption).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
+                            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }.buttonStyle(PressStyle()).disabled(loading)
+                        IconButton(symbol: .close, label: "Remove history item") { library.removeVisit(visit) }
+                    }
+                }
+            }
+        }
     }
     private var passwordButton: some View {
         Button(usePassword ? "Hide password" : "Has a password?") { usePassword.toggle() }
@@ -289,47 +300,18 @@ struct ChannelView: View {
     }
 }
 
-// Platform identifiers are static, user-requested source guidance, independent of backend recommendations.
-enum HomeLinkPlatform: Int, CaseIterable, Identifiable {
-    case tikTok, youTube, instagram, facebook, x, reddit
-    case vimeo, dailymotion, pinterest, twitch, snapchat, bilibili
-    var id: Int { rawValue }
-    var name: String {
-        ["TikTok", "YouTube", "Instagram", "Facebook", "X", "Reddit",
-         "Vimeo", "Dailymotion", "Pinterest", "Twitch", "Snapchat", "Bilibili"][rawValue]
-    }
-}
-
-struct HomePlatformIcon: View {
-    let platform: HomeLinkPlatform
-    var body: some View {
-        GeometryReader { geometry in
-            // Optical centers in the original 1086 × 1448 raster; display cropping only.
-            let centerX: CGFloat = [216, 543, 873][platform.rawValue % 3]
-            let centerY: CGFloat = [222, 552, 883, 1213][platform.rawValue / 3]
-            Image("ClipoPlatformAtlas").resizable().interpolation(.high)
-                .frame(width: geometry.size.width * 1086 / 330, height: geometry.size.height * 1448 / 330)
-                .offset(x: (165 - centerX) * geometry.size.width / 330,
-                        y: (165 - centerY) * geometry.size.height / 330)
-                .allowsHitTesting(false)
-        }.clipped().clipShape(RoundedRectangle(cornerRadius: 14)).accessibilityHidden(true)
-    }
-}
-
 struct LinkGuideSheet: View {
-    let platform: HomeLinkPlatform
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeading(title: "\(platform.name) links") { dismiss() }
+            SheetHeading(title: "From link to play") { dismiss() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
-                    HomePlatformIcon(platform: platform).frame(width: 96, height: 96)
-                        .frame(maxWidth: .infinity)
-                    FeatureRow(symbol: .search, title: "1. Copy the video link", detail: "Find a public video in \(platform.name), open its sharing options and copy the link.")
-                    FeatureRow(symbol: .link, title: "2. Paste it here", detail: "Return to the home screen and tap Paste link. If you have a short code instead, enter it exactly as shared. Uppercase and lowercase letters matter.")
-                    FeatureRow(symbol: .play, title: "3. Open your video", detail: "Tap Open link. A video opens in the player; a channel opens its videos and folders. Enter an access password if the shared content requires one.")
-                    Text("Availability depends on the source. Private, expired or restricted links may not open.")
+                    ClipoIllustration(name: "ClipoArtWelcome", height: 150)
+                    FeatureRow(symbol: .link, title: "1. Copy your shared link", detail: "Use the link or short code shared with you for Clipo.")
+                    FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste link or enter the code exactly as received. Uppercase and lowercase letters matter.")
+                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to view the video or browse its channel. Add the access password if one was provided.")
+                    Text("A link not opening? Check the code and password, or ask the sender for a new link.")
                         .font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Got it") { dismiss() }
                 }.clipoPage()

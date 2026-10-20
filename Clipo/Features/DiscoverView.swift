@@ -22,6 +22,7 @@ final class FeedStore: ObservableObject {
         defer { if generation == current { loading = false } }
         do {
             let response = try await api.feed(query: query, feedID: feedID, cursor: cursor)
+            try Task.checkCancellation()
             guard current == generation else { return }
             var seen = Set(clips.map(\.id))
             clips += response.list.compactMap(\.clip).filter { seen.insert($0.id).inserted }
@@ -29,12 +30,18 @@ final class FeedStore: ObservableObject {
             feedID = response.feedId
             cursor = response.nextCursor
             hasMore = response.hasMore && response.nextCursor?.nilIfBlank != nil && response.nextCursor != oldCursor && !response.list.isEmpty
-        } catch { if current == generation { self.error = error.localizedDescription } }
+        } catch is CancellationError {
+            // Leaving a screen/search is not a service failure.
+        } catch {
+            if current == generation, !Task.isCancelled { self.error = error.localizedDescription }
+        }
     }
 }
 struct DiscoverView: View {
     @EnvironmentObject private var api: APIClient
     @StateObject private var feed = FeedStore()
+    @StateObject private var players = PlaybackPool()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var search = ""
     @State private var searchOpen = false
     @State private var activeID: String?
@@ -67,9 +74,15 @@ struct DiscoverView: View {
                         ScrollView(.vertical) {
                             LazyVStack(spacing: 0) {
                                 ForEach(feed.clips) { clip in
-                                    ClipPage(clip: clip, active: activeID == clip.id && !searchOpen,
-                                             controlInsets: container.safeAreaInsets)
-                                        .frame(width: geometry.size.width, height: geometry.size.height).clipped().id(clip.id)
+                                    Group {
+                                        if let playback = players.controllers[clip.id] {
+                                            ClipPage(clip: clip, active: activeID == clip.id && !searchOpen,
+                                                     controlInsets: container.safeAreaInsets, playback: playback,
+                                                     didStartPlaying: { players.prepareNext(after: clip.id) })
+                                        } else {
+                                            MediaCover(url: clip.coverURL)
+                                        }
+                                    }.frame(width: geometry.size.width, height: geometry.size.height).clipped().id(clip.id)
                                 }
                                 if feed.error != nil || feed.hasMore {
                                     VStack(spacing: 16) {
@@ -81,6 +94,7 @@ struct DiscoverView: View {
                             }.scrollTargetLayout()
                         }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID, anchor: .top).scrollIndicators(.hidden)
                             .onChange(of: activeID) { _, id in
+                                players.update(clips: feed.clips, selectedID: id)
                                 if let index = feed.clips.firstIndex(where: { $0.id == id }), index >= feed.clips.count - 3 {
                                     Task { await feed.load(api: api) }
                                 }
@@ -95,15 +109,27 @@ struct DiscoverView: View {
             .task(id: api.session?.userId.value) {
                 guard api.session != nil else { return }
                 await feed.load(api: api, search: search)
+                guard !Task.isCancelled else { return }
                 activeID = feed.clips.first?.id
             }
-            .onChange(of: feed.clips) { _, clips in if activeID == nil { activeID = clips.first?.id } }
+            .onChange(of: feed.clips) { _, clips in
+                if !clips.contains(where: { $0.id == activeID }) { activeID = clips.first?.id }
+                players.update(clips: clips, selectedID: activeID)
+            }
+            .onDisappear { players.releaseAll() }
+            .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
     }
     private var feedHeader: some View {
         VStack(spacing: 10) {
             HStack {
                 IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
                 Spacer()
+                Button(feed.loading ? "Loading…" : "Refresh") { Task { await refreshFeed() } }
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    .padding(.horizontal, 12).frame(minHeight: 44)
+                    .background(Color.black.opacity(0.4), in: Capsule())
+                    .buttonStyle(PressStyle()).disabled(feed.loading)
             }
             if searchOpen {
                 HStack {
@@ -120,12 +146,21 @@ struct DiscoverView: View {
         activeID = nil
         Task { await feed.load(api: api, search: search); activeID = feed.clips.first?.id }
     }
+    private func refreshFeed() async {
+        players.releaseAll()
+        activeID = nil
+        await feed.load(api: api, search: search)
+        guard !Task.isCancelled else { return }
+        activeID = feed.clips.first?.id
+    }
 }
 
 struct PlayerScreen: View {
     @Environment(\.dismiss) private var dismiss
     let route: PlayerRoute
     @State private var activeID: String?
+    @StateObject private var players = PlaybackPool()
+    @Environment(\.scenePhase) private var scenePhase
     init(route: PlayerRoute) {
         self.route = route
         _activeID = State(initialValue: route.startID)
@@ -136,9 +171,15 @@ struct PlayerScreen: View {
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
                         ForEach(route.clips) { clip in
-                            ClipPage(clip: clip, active: activeID == clip.id,
-                                     controlInsets: container.safeAreaInsets)
-                                .containerRelativeFrame([.horizontal, .vertical])
+                            Group {
+                                if let playback = players.controllers[clip.id] {
+                                    ClipPage(clip: clip, active: activeID == clip.id,
+                                             controlInsets: container.safeAreaInsets, playback: playback,
+                                             didStartPlaying: { players.prepareNext(after: clip.id) })
+                                } else {
+                                    MediaCover(url: clip.coverURL)
+                                }
+                            }.containerRelativeFrame([.horizontal, .vertical])
                                 .clipped().id(clip.id)
                         }
                     }.scrollTargetLayout()
@@ -151,6 +192,11 @@ struct PlayerScreen: View {
         }.clipoScreenBackground(.black).overlay(alignment: .topLeading) {
             IconButton(symbol: .back, label: "Back") { dismiss() }.padding(12)
         }.preferredColorScheme(.dark)
+            .onAppear { players.update(clips: route.clips, selectedID: activeID) }
+            .onChange(of: activeID) { _, id in players.update(clips: route.clips, selectedID: id) }
+            .onDisappear { players.releaseAll() }
+            .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
     }
 }
 
@@ -164,8 +210,11 @@ struct ClipPage: View {
     let active: Bool
     // Read from the enclosing safe container; video fills the expanded viewport.
     var controlInsets = EdgeInsets()
-    @StateObject private var playback = PlaybackController()
-    @State private var loaded = false
+    @ObservedObject var playback: PlaybackController
+    var didStartPlaying: () -> Void = {}
+    @State private var visible = false
+    @State private var firstFrameReady = false
+    @State private var resumeAfterInterruption = false
     @State private var gate = false
     @State private var options = false
     @State private var editor = false
@@ -178,11 +227,14 @@ struct ClipPage: View {
     var body: some View {
         ZStack {
             Color.black
-            if loaded { VideoSurface(player: playback.player).clipped().allowsHitTesting(false) }
-            if playback.isLoading || !loaded {
-                MediaCover(url: clip.coverURL).opacity(0.45)
+            VideoSurface(player: playback.player, onReadyForDisplay: { firstFrameReady = $0 })
+                .clipped().allowsHitTesting(false)
+            if !firstFrameReady {
+                MediaCover(url: clip.coverURL)
+                    .allowsHitTesting(false)
             }
             Color.clear.contentShape(Rectangle()).onTapGesture {
+                guard active, phase == .active, !ads.isPresenting else { return }
                 if allowed { playback.toggle() } else { gate = true }
             }
             // Original raster scrim: a soft fade, never a hard panel across the video.
@@ -196,24 +248,32 @@ struct ClipPage: View {
                     Text("Keep watching").font(.title.bold())
                     ActionButton(title: "Get more views") { gate = true }
                 }.padding(32).background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
-            } else if !playback.isPlaying, !playback.isLoading, !scrubbing {
+            } else if active, allowed, !playback.isPlaying, !playback.isLoading, !scrubbing {
                 IconButton(symbol: .play, label: "Play video") { playback.play() }
                     .background(Color.black.opacity(0.4), in: Circle())
             }
             playerControls
             if active, playback.isLoading { Text("Loading…").font(.caption).padding(12).background(.black.opacity(0.6), in: Capsule()) }
         }.foregroundStyle(.white).clipped()
-            .onAppear { if active { activate() } }
-            .onChange(of: active) { _, active in if active { activate() } else { playback.release(); loaded = false } }
+            .onAppear { visible = true; if active { activate() } }
+            .onChange(of: active) { _, active in
+                resumeAfterInterruption = false
+                if active { activate() } else { playback.pause() }
+            }
             .onChange(of: playback.isPlaying) { _, playing in
-                if playing, !recorded {
+                if playing, active, visible, !recorded {
                     recorded = quota.recordWatch(clip.id, premium: commerce.premium)
                     if !recorded { playback.pause(); allowed = false; gate = true }
                 }
+                if playing, active, recorded { didStartPlaying() }
             }
-            .onChange(of: phase) { _, state in if state != .active { playback.pause() } }
-            .onChange(of: ads.isPresenting) { _, presenting in if presenting { playback.pause() } }
-            .onDisappear { playback.release() }
+            .onChange(of: phase) { _, state in
+                if state != .active { interruptPlayback() } else { resumeIfNeeded() }
+            }
+            .onChange(of: ads.isPresenting) { _, presenting in
+                if presenting { interruptPlayback() } else { resumeIfNeeded() }
+            }
+            .onDisappear { visible = false; resumeAfterInterruption = false; playback.pause() }
             .sheet(isPresented: $gate, onDismiss: { if active { activate() } }) { MembershipView() }
             .sheet(isPresented: $options) {
                 VStack(alignment: .leading, spacing: 24) {
@@ -225,7 +285,7 @@ struct ClipPage: View {
                                 .padding(14).background(playback.speed == speed ? ClipoStyle.raised : ClipoStyle.surface, in: Capsule())
                         }
                     }.buttonStyle(PressStyle())
-                    Text("Quality adapts automatically to your connection.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                    Text("Supported streams adjust quality to your connection.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Edit a local video", primary: false) { options = false; editor = true }
                     Text("Online streams stay online. Import a video you own to make an edit.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
@@ -270,7 +330,11 @@ struct ClipPage: View {
             }.padding(.leading, 4)
             ClipoScrubber(value: Binding(
                 get: { scrubbing ? scrubPosition : playback.elapsed },
-                set: { scrubPosition = $0; playback.seek($0) }
+                set: {
+                    scrubPosition = $0
+                    // During a drag, move the UI only. Seek once on release.
+                    if !scrubbing { playback.seek($0) }
+                }
             ), range: 0...max(1, playback.duration), label: "Playback position",
                          tint: .white, trackHeight: scrubbing ? 5 : 2,
                          onEditingChanged: { editing in
@@ -280,6 +344,7 @@ struct ClipPage: View {
                     scrubbing = true
                     playback.pause()
                 } else {
+                    playback.seek(scrubPosition)
                     scrubbing = false
                     if resumeAfterScrub && active && allowed && phase == .active && !ads.isPresenting {
                         playback.play()
@@ -301,12 +366,23 @@ struct ClipPage: View {
         .padding(controlInsets)
     }
     private func activate(reload: Bool = false) {
-        guard active, phase == .active else { return }
+        guard active, visible, phase == .active, !ads.isPresenting,
+              !options, !editor, !share else { return }
         recorded = false
         allowed = quota.mayWatch(clip.id, premium: commerce.premium)
         if !allowed { playback.pause(); gate = true; return }
-        if !loaded || reload { playback.load(clip.playbackURL, autoplay: true); loaded = true }
+        if playback.loadedURL != clip.playbackURL || reload { playback.load(clip.playbackURL, autoplay: true) }
         else { playback.play() }
+    }
+    private func interruptPlayback() {
+        if active, visible, playback.intendsPlayback { resumeAfterInterruption = true }
+        playback.pause()
+    }
+    private func resumeIfNeeded() {
+        guard resumeAfterInterruption, active, visible, phase == .active,
+              !ads.isPresenting, !gate, !options, !editor, !share else { return }
+        resumeAfterInterruption = false
+        activate()
     }
     private func save() {
         if library.isSaved(clip) { library.toggle(clip); return }

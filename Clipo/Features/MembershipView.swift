@@ -128,8 +128,8 @@ struct MembershipView: View {
 
     private func planRow(_ plan: CommerceConfiguration.Product) -> some View {
         let selected = selectedPlan?.id == plan.id
-        let product = commerce.products.first { $0.productIdentifier == plan.id }
-        let price = product.map { commerce.price($0) } ?? "$\(plan.displayPriceUSD)"
+        // The card remains a USD reference; purchase() requests the current Apple product.
+        let price = "US$\(plan.displayPriceUSD)"
         let foreground = selected ? ClipoStyle.ink : ClipoStyle.paper
         let secondary = selected ? ClipoStyle.paperSecondary : ClipoStyle.secondary
         return Button { selectedID = plan.id } label: {

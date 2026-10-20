@@ -177,7 +177,9 @@ extension String {
 struct IOSBillingConfiguration: Codable { let iosVerifyShareKey: String?; let sandBoxTest: Bool? }
 struct QuotaConfiguration: Decodable {
     let dailyWatchLimit: Int?
-    let favoriteBaseLimit: Int?
+    // Backend field names are misleading; the confirmed API comments define their roles.
+    let unlimitedAfterAdCount: Int? // Daily base favorite allowance, not the ad threshold.
+    let favoriteBaseLimit: Int? // Favorite reward per completed ad.
     let firstAdRewardWatchCount: Int?
     let secondAdRewardWatchCount: Int?
     let thirdAdRewardWatchCount: Int?
@@ -186,6 +188,26 @@ struct AdConfiguration: Decodable {
     let adType: Int
     let advertiser: String?
     let config: AdUnitConfiguration
+    let displayInterval: Double?
+
+    private enum CodingKeys: String, CodingKey { case adType, advertiser, config, displayInterval }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        adType = try values.decode(Int.self, forKey: .adType)
+        advertiser = try values.decodeIfPresent(String.self, forKey: .advertiser)
+        config = try values.decode(AdUnitConfiguration.self, forKey: .config)
+        displayInterval = try values.decodeMediaNumber(forKey: .displayInterval)
+    }
+}
+
+enum AppOpenTiming {
+    // Server interval is in minutes. Missing/negative configuration is not permission to show.
+    static func isDue(intervalMinutes: Double?, lastShown: Date?, now: Date = Date()) -> Bool {
+        guard let minutes = intervalMinutes, minutes.isFinite, minutes >= 0,
+              (minutes * 60).isFinite else { return false }
+        guard let lastShown else { return true }
+        return now.timeIntervalSince(lastShown) >= minutes * 60
+    }
 }
 struct AdUnitConfiguration: Decodable { let appId: String?; let adUnitId: String? }
 struct UserRights: Decodable {
@@ -210,7 +232,7 @@ struct CommerceConfiguration: Decodable {
     struct Product: Decodable, Identifiable {
         enum BillingPeriod: String, Decodable { case month, year }
         let id: String
-        let usdPrice: String
+        let usdPrice: String // Fixed USD plan value (999 / 9999); send unchanged, no currency conversion.
         let label: String
         // Reference display values are separate from the backend's usdPrice contract.
         let displayPriceUSD: String

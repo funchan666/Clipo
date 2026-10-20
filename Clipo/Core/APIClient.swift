@@ -60,6 +60,7 @@ enum SecureStorage {
 final class APIClient: ObservableObject {
     private let diagnostics = Logger(subsystem: "com.clipo.video", category: "API")
     @Published private(set) var session: VisitorSession?
+    @Published private(set) var hasEnteredApp = false
     let configuration: ClipoConfiguration
     private let transport: URLSession
     private var loginTask: Task<VisitorSession, Error>?
@@ -75,9 +76,32 @@ final class APIClient: ObservableObject {
         do {
             if let data = try SecureStorage.read("visitor") {
                 let saved = try JSONDecoder().decode(VisitorSession.self, from: data)
-                if !saved.accessToken.isEmpty { session = saved }
+                if !saved.accessToken.isEmpty {
+                    session = saved
+                    hasEnteredApp = try SecureStorage.read("visitor-awaiting-welcome") == nil
+                }
             }
-        } catch { storageFailure = error }
+        } catch {
+            session = nil
+            hasEnteredApp = false
+            storageFailure = error
+        }
+    }
+
+    // Prepare a real guest for package/ad configuration without bypassing the welcome gate.
+    func prepareVisitor() async throws {
+        guard session == nil else { return }
+        try SecureStorage.write(Data([1]), key: "visitor-awaiting-welcome")
+        _ = try await signIn()
+    }
+
+    // Only the explicit consent-checked welcome action may open the main interface.
+    func enterApp() async throws {
+        if session == nil { try await prepareVisitor() }
+        try Task.checkCancellation()
+        guard session != nil else { throw ClipoError.unauthorized }
+        try SecureStorage.remove("visitor-awaiting-welcome")
+        hasEnteredApp = true
     }
 
     @discardableResult func signIn() async throws -> VisitorSession {
@@ -114,6 +138,7 @@ final class APIClient: ObservableObject {
         loginTask?.cancel()
         loginTask = nil
         session = nil
+        hasEnteredApp = false
         storageFailure = nil
     }
 

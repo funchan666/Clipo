@@ -14,7 +14,12 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
     @Published var luckyReward: LuckyRewardNotice?
     @Published private(set) var startupFinished = false
     private var startupStarted = false
-    private var startupDeadline: Task<Void, Never>?
+    @Published private(set) var isPreparingAppOpen = false
+    private var appOpenTask: Task<Void, Never>?
+    private var appOpenDeadline: Task<Void, Never>?
+    private var appOpenAttempt: UUID?
+    private var appOpenHistoryKey: String?
+    private var returnedFromBackground = false
     private var appOpenAd: AppOpenAd?
     private var rewarded: RewardedAd?
     private var rewardGranted = false
@@ -25,7 +30,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
     private static let demoAppOpenUnitID = "ca-app-pub-3940256099942544/5575463023"
 
     func watch(commerce: CommerceStore, quota: QuotaStore) async {
-        guard !busy, !isPresenting else { return }
+        guard !busy, !isPresenting, !isPreparingAppOpen else { return }
         guard let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
             error = "Rewarded ads are not available right now. No views have been deducted."; return
         }
@@ -110,57 +115,123 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         }
     }
 
-    // One opportunity per cold launch, only while the original loading screen is visible.
-    func beginStartup(commerce: CommerceStore) {
+    // Cold start includes pre-login guest preparation. Foreground returns use the same gate.
+    func beginStartup(commerce: CommerceStore, accountAccess: AccountAccessFlow) {
         guard !startupStarted else { return }
         startupStarted = true
-        guard let owner = commerce.api.session?.userId.value else { finishStartup(); return }
-        startupDeadline = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(3)); self?.finishStartup() }
-            catch { }
+        requestAppOpen(commerce: commerce, accountAccess: accountAccess, coldStart: true)
+    }
+
+    func didEnterBackground() {
+        // An ad or SDK consent browser returning to the app must not recursively trigger an ad.
+        returnedFromBackground = !isPresenting && !isPreparingAppOpen
+        if isPreparingAppOpen { finishAppOpen() }
+    }
+
+    func didBecomeActive(commerce: CommerceStore, accountAccess: AccountAccessFlow) {
+        guard returnedFromBackground else { return }
+        returnedFromBackground = false
+        requestAppOpen(commerce: commerce, accountAccess: accountAccess, coldStart: false)
+    }
+
+    private func requestAppOpen(commerce: CommerceStore, accountAccess: AccountAccessFlow, coldStart: Bool) {
+        guard appOpenAttempt == nil, !busy, !isPresenting,
+              !commerce.busy, !commerce.preparingPurchase, !accountAccess.isBusy else {
+            if coldStart { startupFinished = true }
+            return
         }
-        Task { [weak self] in
+        let attempt = UUID()
+        appOpenAttempt = attempt
+        isPreparingAppOpen = true
+        // A slow/unavailable backend must not leave the splash or welcome button blocked.
+        appOpenDeadline = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(8)) } catch { return }
+            guard let self, self.appOpenAttempt == attempt, !self.isPresenting else { return }
+            self.finishAppOpen()
+        }
+        appOpenTask = Task { [weak self] in
             guard let self else { return }
-            let demoMode = (Bundle.main.object(forInfoDictionaryKey: "ClipoAdsTestMode") as? String) == "YES"
-            // Official demo ads do not depend on a registered backend package.
-            // Production ads must first obtain the real configuration and account rights.
-            if !demoMode { await commerce.refresh() }
-            guard !self.startupFinished else { return }
-            guard commerce.api.session?.userId.value == owner, !commerce.premium else { self.finishStartup(); return }
-            guard demoMode || commerce.rightsVerified else { self.finishStartup(); return }
-            let appID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
-            let unitID: String
-            if demoMode, appID == Self.demoAppID { unitID = Self.demoAppOpenUnitID }
-            else if !demoMode, let appID, appID != Self.demoAppID,
-                    let unit = commerce.release?.adList?.first(where: { $0.adType == 1 && $0.advertiser?.lowercased() == "google" }),
-                    unit.config.appId == appID, let configured = unit.config.adUnitId?.nilIfBlank {
-                unitID = configured
-            } else { self.finishStartup(); return }
             do {
-                try await self.prepareSDK(demoMode: demoMode, mayPresentConsent: false)
-                guard !self.startupFinished else { return }
+                try await commerce.api.prepareVisitor()
+                try Task.checkCancellation()
+                guard self.appOpenAttempt == attempt, let owner = commerce.api.session?.userId.value else {
+                    self.finishAppOpen(attempt: attempt); return
+                }
+                await commerce.refresh()
+                try Task.checkCancellation()
+                guard self.appOpenAttempt == attempt, commerce.api.session?.userId.value == owner,
+                      commerce.rightsVerified, !commerce.premium else {
+                    self.finishAppOpen(attempt: attempt); return
+                }
+                let demoMode = (Bundle.main.object(forInfoDictionaryKey: "ClipoAdsTestMode") as? String) == "YES"
+                let appID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
+                let unit = commerce.release?.adList?.first {
+                    $0.adType == 1 && $0.advertiser?.lowercased() == "google"
+                }
+                // Only official demo mode can run without package ad configuration.
+                let interval = unit?.displayInterval ?? (demoMode ? 0 : nil)
+                let unitID: String
+                if demoMode, appID == Self.demoAppID { unitID = Self.demoAppOpenUnitID }
+                else if !demoMode, let appID, appID != Self.demoAppID,
+                        let unit, unit.config.appId == appID,
+                        let configured = unit.config.adUnitId?.nilIfBlank,
+                        configured.hasPrefix("ca-app-pub-"), configured.contains("/") {
+                    unitID = configured
+                } else { self.finishAppOpen(attempt: attempt); return }
+                let key = "app-open.last-impression.\(commerce.api.configuration.bundleID).\(commerce.api.configuration.apiBaseURL?.host ?? "none").\(demoMode ? "demo" : "production")"
+                let lastShown = UserDefaults.standard.object(forKey: key) as? Date
+                guard AppOpenTiming.isDue(intervalMinutes: interval, lastShown: lastShown) else {
+                    self.finishAppOpen(attempt: attempt); return
+                }
+                // Consent is a genuine Google surface; don't time out underneath it.
+                self.appOpenDeadline?.cancel()
+                try await self.prepareSDK(demoMode: demoMode, mayPresentConsent: true)
+                try Task.checkCancellation()
+                guard self.appOpenAttempt == attempt else { return }
+                self.appOpenDeadline = Task { [weak self] in
+                    do { try await Task.sleep(for: .seconds(8)) } catch { return }
+                    guard let self, self.appOpenAttempt == attempt, !self.isPresenting else { return }
+                    self.finishAppOpen()
+                }
                 let ad = try await AppOpenAd.load(with: unitID, request: Request())
-                guard !self.startupFinished else { return }
-                guard commerce.api.session?.userId.value == owner, !commerce.premium,
-                      UIApplication.shared.applicationState == .active,
-                      !self.busy, !self.isPresenting else { self.finishStartup(); return }
+                try Task.checkCancellation()
+                guard self.appOpenAttempt == attempt, commerce.api.session?.userId.value == owner,
+                      !commerce.premium, UIApplication.shared.applicationState == .active,
+                      !self.busy, !self.isPresenting, !commerce.busy, !commerce.preparingPurchase,
+                      !accountAccess.isBusy,
+                      AppOpenTiming.isDue(intervalMinutes: interval,
+                        lastShown: UserDefaults.standard.object(forKey: key) as? Date) else {
+                    self.finishAppOpen(attempt: attempt); return
+                }
                 try ad.canPresent(from: nil)
                 self.appOpenAd = ad
+                self.appOpenHistoryKey = key
                 ad.fullScreenContentDelegate = self
-                self.startupDeadline?.cancel()
+                self.appOpenDeadline?.cancel()
+                self.isPreparingAppOpen = false
                 self.isPresenting = true
                 ad.present(from: nil)
-            } catch { self.finishStartup() }
+            } catch { self.finishAppOpen(attempt: attempt) }
         }
     }
 
-    private func finishStartup() {
-        guard !startupFinished else { return }
-        startupDeadline?.cancel()
-        startupDeadline = nil
+    private func finishAppOpen(attempt: UUID? = nil) {
+        if let attempt, attempt != appOpenAttempt { return }
+        appOpenAttempt = nil
+        appOpenDeadline?.cancel()
+        appOpenDeadline = nil
+        appOpenTask?.cancel()
+        appOpenTask = nil
         appOpenAd = nil
+        appOpenHistoryKey = nil
+        isPreparingAppOpen = false
         isPresenting = false
         startupFinished = true
+    }
+
+    func adDidRecordImpression(_ ad: FullScreenPresentingAd) {
+        guard let current = appOpenAd, ad === current, let key = appOpenHistoryKey else { return }
+        UserDefaults.standard.set(Date(), forKey: key)
     }
 
     func privacyOptions() async {
@@ -168,13 +239,13 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         catch { self.error = error.localizedDescription }
     }
     func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
-        if ad is AppOpenAd { finishStartup(); return }
+        if ad is AppOpenAd { finishAppOpen(); return }
         rewarded = nil
         isPresenting = false
         if !rewardGranted, error == nil { message = "No reward was received. Finish a rewarded ad to get more views." }
     }
     func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
-        if ad is AppOpenAd { finishStartup(); return }
+        if ad is AppOpenAd { finishAppOpen(); return }
         rewarded = nil
         isPresenting = false
         self.error = error.localizedDescription

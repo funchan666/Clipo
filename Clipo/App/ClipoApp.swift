@@ -28,10 +28,11 @@ struct ClipoApp: App {
 }
 
 // Keeps the original splash visible during the bounded cold-start ad opportunity.
-// No automatic sign-in is performed.
+// Guest authentication prepares configuration; entering the app remains a separate welcome action.
 struct ClipoStartupHost: View {
     @EnvironmentObject private var ads: RewardedAds
     @EnvironmentObject private var commerce: CommerceStore
+    @EnvironmentObject private var accountAccess: AccountAccessFlow
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var finished = false
@@ -50,11 +51,17 @@ struct ClipoStartupHost: View {
             do {
                 try await Task.sleep(for: .milliseconds(reduceMotion ? 150 : 750))
                 try Task.checkCancellation()
-                ads.beginStartup(commerce: commerce)
+                ads.beginStartup(commerce: commerce, accountAccess: accountAccess)
             } catch { /* Leaving the foreground cancels this transition. */ }
         }
         .onReceive(ads.$startupFinished) { complete in
             if complete { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { finished = true } }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { ads.didEnterBackground() }
+            if phase == .active, finished {
+                ads.didBecomeActive(commerce: commerce, accountAccess: accountAccess)
+            }
         }
     }
 }
@@ -134,7 +141,7 @@ struct ClipoRootView: View {
     var body: some View {
         ZStack {
             ClipoStyle.background.ignoresSafeArea()
-            if api.session != nil {
+            if api.hasEnteredApp, api.session != nil {
                 Group {
                     switch tab {
                     case .home: HomeView(openAccount: { tab = .me }, discover: { tab = .discover }, openTools: { tab = .tools })
@@ -156,7 +163,7 @@ struct ClipoRootView: View {
             .sheet(item: $editing) { EditorSheet(initialMovie: $0) }
             .task(id: api.session?.userId.value) { await commerce.refresh() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { quota.resetIfNeeded(); Task { await commerce.refresh() } }
+                if phase == .active { quota.resetIfNeeded() }
             }
             .overlay(alignment: .top) {
                 if let message = library.error {

@@ -22,13 +22,14 @@ final class QuotaStore: ObservableObject {
     private var timeZone = TimeZone.current
     var unlimited: Bool { (usage?.completedRewardIDs.count ?? 0) >= (policy?.unlimitedAfterCompletedAds ?? Int.max) }
     var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watched.count ?? 0)) }
-    var favoritesLeft: Int { max(0, (remote?.favoriteBaseLimit ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraFavorites ?? 0) - (usage?.favoritesUsed ?? 0)) }
+    var favoritesLeft: Int { max(0, (remote?.unlimitedAfterAdCount ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraFavorites ?? 0) - (usage?.favoritesUsed ?? 0)) }
+    private var favoriteReward: Int { max(0, remote?.favoriteBaseLimit ?? policy?.favoriteReward ?? 0) }
     var rewardSummary: String {
         guard let policy else { return "Rewards are unavailable." }
-        if unlimited { return "Viewing is already unlimited until 5 AM. Watch a full ad for \(policy.favoriteReward) more saves." }
+        if unlimited { return "Viewing is already unlimited until 5 AM. Watch a full ad for \(favoriteReward) more saves." }
         let count = usage?.completedRewardIDs.count ?? 0
-        if count + 1 >= policy.unlimitedAfterCompletedAds { return "Watch a full ad for unlimited viewing until 5 AM and \(policy.favoriteReward) more saves." }
-        return "Watch a full ad for \(nextWatchReward) more views and \(policy.favoriteReward) more saves."
+        if count + 1 >= policy.unlimitedAfterCompletedAds { return "Watch a full ad for unlimited viewing until 5 AM and \(favoriteReward) more saves." }
+        return "Watch a full ad for \(nextWatchReward) more views and \(favoriteReward) more saves."
     }
     private var nextWatchReward: Int {
         let index = min(usage?.completedRewardIDs.count ?? 0, 2)
@@ -88,10 +89,10 @@ final class QuotaStore: ObservableObject {
     func reward(_ id: UUID, owner: String) throws {
         guard owner == userID, storageOK else { throw ClipoError.storage }
         resetIfNeeded()
-        guard var next = usage, let policy else { throw ClipoError.configuration }
+        guard var next = usage, policy != nil else { throw ClipoError.configuration }
         guard !next.completedRewardIDs.contains(id) else { return }
         next.extraWatches += nextWatchReward
-        next.extraFavorites += max(0, policy.favoriteReward)
+        next.extraFavorites += favoriteReward
         next.completedRewardIDs.insert(id)
         try commit(next)
     }
@@ -100,14 +101,14 @@ final class QuotaStore: ObservableObject {
     func rewardNoFill(_ id: UUID, owner: String) throws -> String? {
         guard owner == userID, storageOK else { throw ClipoError.storage }
         resetIfNeeded()
-        guard var next = usage, let policy else { throw ClipoError.configuration }
+        guard var next = usage, policy != nil else { throw ClipoError.configuration }
         guard next.luckyRewardIDs?.contains(id) != true else { return nil }
         let now = Date()
         if let last = next.lastLuckyReward, now.timeIntervalSince(last) < 60 {
             throw ClipoError.service("Your last bonus was just added. Please wait a minute before trying again.")
         }
         let views = unlimited ? 0 : nextWatchReward
-        let saves = max(0, policy.favoriteReward)
+        let saves = favoriteReward
         next.extraWatches += views
         next.extraFavorites += saves
         next.luckyRewardIDs = (next.luckyRewardIDs ?? []).union([id])

@@ -56,6 +56,7 @@ struct AccountBusyModifier: ViewModifier {
 // One shared gate for the welcome screen and every signed-out content panel.
 struct LoginControls: View {
     @EnvironmentObject private var api: APIClient
+    @EnvironmentObject private var ads: RewardedAds
     @EnvironmentObject private var accountAccess: AccountAccessFlow
     @State private var agreed = false
     @State private var needsConsent = false
@@ -70,13 +71,14 @@ struct LoginControls: View {
                 Task {
                     do {
                         try await accountAccess.perform("Signing you in…") {
-                            _ = try await api.signIn()
+                            try await api.enterApp()
                         }
                     } catch is CancellationError {
                         // Another account operation owns the presentation.
                     } catch { self.error = error.localizedDescription }
                 }
-            }.accessibilityIdentifier("login.submit")
+            }.disabled(ads.isPreparingAppOpen || ads.isPresenting)
+                .accessibilityIdentifier("login.submit")
             HStack(alignment: .top, spacing: 6) {
                 Button { agreed.toggle() } label: {
                     ConsentCheckbox(selected: agreed).frame(width: 30, height: 30)
@@ -300,7 +302,7 @@ struct AccountSettingsSection: View {
     @State private var pendingAction: AccountExitAction?
     @State private var error: String?
     @State private var document: PolicyDocument?
-    private var unavailable: Bool { accountAccess.isBusy || commerce.busy || commerce.preparingPurchase || ads.busy || ads.isPresenting }
+    private var unavailable: Bool { accountAccess.isBusy || commerce.busy || commerce.preparingPurchase || ads.busy || ads.isPreparingAppOpen || ads.isPresenting }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
