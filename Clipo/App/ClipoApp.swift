@@ -157,7 +157,12 @@ struct ClipoRootView: View {
                     }
                 }
             } else {
-                ConnectionPanel().padding(24)
+                GeometryReader { geometry in
+                    ScrollView {
+                        ConnectionPanel().padding(24)
+                            .frame(minHeight: geometry.size.height)
+                    }
+                }
             }
         }.foregroundStyle(.white)
             .sheet(item: $editing) { EditorSheet(initialMovie: $0) }

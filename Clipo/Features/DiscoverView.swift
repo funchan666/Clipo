@@ -50,8 +50,8 @@ struct DiscoverView: View {
             if api.session == nil {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        ClipoIllustration(name: "ClipoArtDiscover", height: 208)
-                        Text("Sign in, find your next favorite, and keep swiping.")
+                        TennisArtwork(kind: .lesson, height: 208)
+                        Text("Connecting your lesson feed…")
                             .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         ConnectionPanel()
                     }.clipoPage()
@@ -61,9 +61,9 @@ struct DiscoverView: View {
                     feedHeader
                     ScrollView {
                         VStack(spacing: 24) {
-                            ClipoIllustration(name: "ClipoArtDiscover", height: 208)
-                            MessagePanel(title: feed.loading ? "Finding your next clip…" : "A fresh feed starts here.",
-                                         message: feed.error ?? (feed.loading ? "Loading videos from Clipo." : "No videos are available for this search."),
+                            TennisArtwork(kind: .lesson, height: 208)
+                            MessagePanel(title: feed.loading ? "Finding your next lesson…" : "Your next session starts here.",
+                                         message: feed.error ?? (feed.loading ? "Loading your lesson feed." : "No lessons are available here yet. Try another search or open a shared lesson link on Home."),
                                          actionTitle: feed.loading ? nil : "Try again") { Task { await feed.load(api: api, search: search) } }
                         }.clipoPage()
                     }

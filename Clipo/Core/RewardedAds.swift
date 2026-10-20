@@ -143,7 +143,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         let attempt = UUID()
         appOpenAttempt = attempt
         isPreparingAppOpen = true
-        // A slow/unavailable backend must not leave the splash or welcome button blocked.
+        // A slow/unavailable backend must not leave the startup screen blocked.
         appOpenDeadline = Task { [weak self] in
             do { try await Task.sleep(for: .seconds(8)) } catch { return }
             guard let self, self.appOpenAttempt == attempt, !self.isPresenting else { return }

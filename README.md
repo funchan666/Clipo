@@ -1,13 +1,13 @@
 # Clipo
 
-Native SwiftUI iPhone app, iOS 17+. Open `Clipo.xcodeproj` and select the `Clipo` scheme.
+Native SwiftUI iPhone app for shared tennis lessons and local practice-video review, iOS 17+. Open `Clipo.xcodeproj` and select the `Clipo` scheme.
 
 - [Quick app demonstration](Documentation/Demo/Clipo-quick-tour.mp4) — about 2 minutes, edited from a real simulator recording; no audio.
 - [API questions and decisions to confirm](Documentation/CONFIRMATIONS.md) — consolidated current handoff.
 - [Supplied API reference](Documentation/API-reference.md).
 - English policy drafts remain in `Documentation/Legal/`.
 
-Backend: `https://devapi.io-jp.com`. Provisional Bundle ID: `com.clipo.video`.
+Backend: `https://devapi.io-jp.com`. Target Bundle ID: `com.cliporows.toolskeep` (the target overrides the older xcconfig fallback).
 Configuration: `Config/Clipo.xcconfig` and `Clipo/Resources/Commerce.json`.
 
 Monthly product: `ypsmwxmscbzeixig`, USD reference price 9.99.
@@ -18,4 +18,10 @@ The latest short demonstration covers startup, authorized consent and login, sho
 
 Confirmed API mapping: `unlimitedAfterAdCount` is the daily base favorite allowance; `favoriteBaseLimit` is the per-ad favorite reward. Rewarded ad type is `5`. Backend `usdPrice` values `999` / `9999` are fixed USD plan values and are sent unchanged. These contract changes received static review only; the existing demo predates them.
 
-Startup now prepares a guest session for package/ad configuration while preserving the explicit welcome consent/entry step. App-open ads use server `displayInterval` in minutes on cold start and background return, with persisted impression timing. Official test IDs remain enabled. These changes received static inspection only; the demo predates them. See the handoff for other confirmed rules still awaiting implementation.
+Startup now authenticates a real guest automatically and opens the app without a welcome/login gate. Connection failures offer retry and policy links. Sign-out and simulated account deletion controls have been removed at the user’s request; genuine server deletion remains a release requirement to resolve. Existing purchase ownership and recovery records are preserved.
+
+The tennis redesign uses original `ClipoTennisCourt` and `ClipoTennisKit` raster assets, generated specifically for this project. Prompts are in `ProjectMaterials/UIAssets/Prompts/Tennis/`. The App Icon and launch mark are unchanged pending client artwork. Illustrations are decorative; lesson data still comes from the existing API, with no fabricated feed items. The client confirmed the currently empty recommendation feed is expected until videos are configured.
+
+App-open ads use server `displayInterval` in minutes on cold start and background return, with persisted impression timing; zero means no interval restriction. Official test IDs remain enabled. `adOrder`, `showIntervalRows`, and `maxHourlyImps` definitions remain pending.
+
+The theme and automatic-entry changes received static inspection only: no build, tests, simulator run, live login, ad, or purchase verification this turn. The linked demo predates these changes. See the handoff for confirmed business rules still awaiting implementation, including independent offline-cache quotas and UTC resets.

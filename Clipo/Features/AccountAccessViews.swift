@@ -228,7 +228,6 @@ struct AccountSettingsSection: View {
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var ads: RewardedAds
     @EnvironmentObject private var accountAccess: AccountAccessFlow
-    @State private var error: String?
     @State private var document: PolicyDocument?
     private var unavailable: Bool { accountAccess.isBusy || commerce.busy || commerce.preparingPurchase || ads.busy || ads.isPreparingAppOpen || ads.isPresenting }
 

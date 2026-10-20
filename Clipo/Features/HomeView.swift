@@ -25,7 +25,8 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HStack(spacing: 10) {
-                    ClipoIllustration(name: "ClipoArtLink", height: 64).frame(width: 96)
+                    Text("YOUR DAILY PRACTICE").font(.caption2.weight(.bold))
+                        .tracking(2).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
                     Button(commerce.premium ? "PLUS" : "Get Plus") { paywall = true }
                         .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
@@ -33,25 +34,26 @@ struct HomeView: View {
                         .background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
                     IconButton(symbol: .settings, label: "Open Me and account settings", action: openAccount)
                 }
+                TennisCourtBanner()
                 linkComposer
                 linkGuide
                 if let error { ErrorNote(message: error) }
                 if api.session == nil { ConnectionPanel() }
                 recentLinks
                 VStack(alignment: .leading, spacing: 16) {
-                    SectionLabel(title: "Watch or create")
+                    SectionLabel(title: "From watching to playing")
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
-                        quickAction(artwork: "ClipoArtDiscover", title: "Discover", detail: "Swipe into something new", action: discover)
-                        quickAction(artwork: "ClipoArtTools", title: "Tools", detail: "Audio, speed and framing", action: openTools)
+                        quickAction(artwork: .lesson, title: "Watch lessons", detail: "One idea for your next session", action: discover)
+                        quickAction(artwork: .racket, title: "Review practice", detail: "A closer look at your own game", action: openTools)
                     }
                 }
                 if !channels.isEmpty {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Channels to explore").font(.headline)
-                            Text("Find a new point of view.").font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            Text("Lesson collections").font(.headline)
+                            Text("Keep learning, one session at a time.").font(.caption).foregroundStyle(ClipoStyle.secondary)
                         }.frame(maxWidth: .infinity, alignment: .leading)
-                        ClipoIllustration(name: "ClipoArtChannels", height: 76).frame(width: 114)
+                        TennisArtwork(kind: .notebook, height: 76).frame(width: 114)
                     }
                     ForEach(Array(channels.enumerated()), id: \.offset) { _, item in
                         if let info = item.extraInfo, let title = info.channelName, let short = info.externalLinks {
@@ -91,15 +93,15 @@ struct HomeView: View {
                 Glyph(symbol: .link, size: 20)
                     .frame(width: 40, height: 40)
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
-                Text("Open a link").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+                Text("Open a lesson").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
             }
-            TextField("Paste your shared link or code", text: $link, axis: .vertical)
+            TextField("Lesson link or short code", text: $link, axis: .vertical)
                 .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .focused($focused).font(.body).foregroundStyle(ClipoStyle.ink)
                 .tint(ClipoStyle.ink).padding(16)
                 .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
                 .environment(\.colorScheme, .light)
-                .accessibilityLabel("Video or channel link")
+                .accessibilityLabel("Lesson or collection link")
             ViewThatFits(in: .horizontal) {
                 HStack {
                     pasteButton
@@ -141,30 +143,15 @@ struct HomeView: View {
         link = text
     }
     private var linkGuide: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 18) {
-                linkGuideCopy
-                ClipoIllustration(name: "ClipoArtWelcome", height: 102).frame(width: 100)
-            }
-            VStack(alignment: .leading, spacing: 12) {
-                ClipoIllustration(name: "ClipoArtWelcome", height: 88).frame(width: 88)
-                linkGuideCopy
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
-    }
-    private var linkGuideCopy: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("From link to play.")
-                .font(.headline).foregroundStyle(.white)
-            Text("Use a link or code shared for Clipo.")
-                .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Button("How it works") { showingLinkGuide = true }
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Have a lesson link?").font(.subheadline.weight(.semibold))
+                Text("Paste the link or code shared with you.")
+                    .font(.caption).foregroundStyle(ClipoStyle.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Button("How to") { showingLinkGuide = true }
                 .font(.subheadline.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
-                .frame(minHeight: 44).buttonStyle(PressStyle())
+                .frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle())
         }
     }
     @ViewBuilder private var recentLinks: some View {
@@ -197,10 +184,10 @@ struct HomeView: View {
             .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
             .frame(minHeight: 44).buttonStyle(PressStyle())
     }
-    private func quickAction(artwork: String, title: String, detail: String, action: @escaping () -> Void) -> some View {
+    private func quickAction(artwork: TennisArtwork.Kind, title: String, detail: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 18) {
-                ClipoIllustration(name: artwork, height: 100)
+                TennisArtwork(kind: artwork, height: 116)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title).font(.headline).foregroundStyle(.white)
                     Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
@@ -213,7 +200,7 @@ struct HomeView: View {
     private func resolve() {
         guard let text = link.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank, !loading else { return }
         focused = false
-        guard api.session != nil else { showLinkFailure("Sign in to open this link."); return }
+        guard api.session != nil else { showLinkFailure("Your connection is not ready yet. Please try again."); return }
         loading = true
         error = nil
         let accessPassword = usePassword ? password : ""
@@ -253,7 +240,7 @@ struct ChannelView: View {
             SheetHeading(title: route.title) { dismiss() }
             ScrollView {
                 LazyVStack(spacing: 18) {
-                    ClipoIllustration(name: "ClipoArtChannels", height: 140)
+                    TennisArtwork(kind: .notebook, height: 140)
                     if items.isEmpty, !loading, error == nil { MessagePanel(title: "Nothing here yet", message: "This channel has no available videos.") }
                     ForEach(items, id: \.stableID) { item in
                         Button { open(item) } label: {
@@ -304,13 +291,13 @@ struct LinkGuideSheet: View {
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeading(title: "From link to play") { dismiss() }
+            SheetHeading(title: "Open your next lesson") { dismiss() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
-                    ClipoIllustration(name: "ClipoArtWelcome", height: 150)
-                    FeatureRow(symbol: .link, title: "1. Copy your shared link", detail: "Use the link or short code shared with you for Clipo.")
+                    TennisArtwork(kind: .lesson, height: 150)
+                    FeatureRow(symbol: .link, title: "1. Copy your shared link", detail: "Use a tennis lesson link or short code shared with you.")
                     FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste link or enter the code exactly as received. Uppercase and lowercase letters matter.")
-                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to view the video or browse its channel. Add the access password if one was provided.")
+                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to watch the lesson or browse its collection. Add the access password if one was provided.")
                     Text("A link not opening? Check the code and password, or ask the sender for a new link.")
                         .font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Got it") { dismiss() }

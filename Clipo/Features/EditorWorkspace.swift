@@ -16,8 +16,8 @@ enum VideoTool: String, Identifiable, CaseIterable {
     var detail: String {
         switch self {
         case .audio: return "Keep the sound as an M4A file."
-        case .speed: return "Slow it down or pick up the pace."
-        case .frame: return "Portrait, square or landscape."
+        case .speed: return "Slow down your serve or review a rally."
+        case .frame: return "Bring your footwork or swing into focus."
         case .studio: return "Trim, rotate and combine your changes."
         }
     }
@@ -44,11 +44,14 @@ struct ToolsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                ClipoIllustration(name: "ClipoArtTools", height: 176)
-                Text("Quick tools for videos on your device. Your original stays untouched.")
+                TennisArtwork(kind: .lesson, height: 200)
+                Text("See your game\nfrom a new angle.")
+                    .font(.system(.largeTitle, design: .serif, weight: .medium))
+                    .foregroundStyle(ClipoStyle.paper)
+                Text("Bring in your practice footage. Slow down a serve, focus on your footwork, or keep your best rally.")
                     .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 VStack(spacing: 0) {
-                    ForEach([VideoTool.audio, .speed, .frame]) { tool in
+                    ForEach([VideoTool.speed, .frame, .audio]) { tool in
                         Button { selectedTool = tool } label: {
                             HStack(spacing: 16) {
                                 Glyph(symbol: tool.glyph, size: 26).allowsHitTesting(false)
@@ -61,10 +64,10 @@ struct ToolsView: View {
                                 .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
                                 .contentShape(.interaction, Rectangle())
                         }.buttonStyle(PressStyle()).accessibilityIdentifier("tools.\(tool.rawValue)")
-                        if tool != .frame { Divider().overlay(ClipoStyle.line).padding(.horizontal, 20) }
+                        if tool != .audio { Divider().overlay(ClipoStyle.line).padding(.horizontal, 20) }
                     }
                 }.background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
-                ActionButton(title: "Open full editor", primary: false) { selectedTool = .studio }
+                ActionButton(title: "Review a practice video") { selectedTool = .studio }
                 Text("Processed on your device. Finished files appear in Library under Exports.")
                     .font(.footnote).foregroundStyle(ClipoStyle.secondary)
             }.clipoPage()
@@ -159,7 +162,7 @@ struct EditorWorkspace: View {
                     Text("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 } else {
                     VStack(alignment: .leading, spacing: 24) {
-                        ClipoIllustration(name: initialTool == .studio ? "ClipoArtStudio" : "ClipoArtTools", height: 176)
+                        TennisArtwork(kind: .lesson, height: 176)
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Start with a video.").font(.title2.weight(.bold)).tracking(-0.5)
                             Text("Choose a clip from your device. We’ll keep your original untouched.")
@@ -180,7 +183,7 @@ struct EditorWorkspace: View {
                             SectionLabel(title: "From raw to ready")
                             FeatureRow(symbol: .edit, title: "Keep the best part", detail: "Trim the timing, crop the frame, change the pace.")
                             HStack(spacing: 16) {
-                                ClipoIllustration(name: "ClipoArtExport", height: 72).frame(width: 108)
+                                TennisArtwork(kind: .bag, height: 72).frame(width: 108)
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Export your way").font(.subheadline.weight(.semibold))
                                     Text("Save a video or extract an audio track.").font(.caption)

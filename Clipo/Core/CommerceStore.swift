@@ -86,7 +86,7 @@ final class CommerceStore: NSObject, ObservableObject {
         guard !busy, !preparingPurchase else { return }
         error = nil
         message = nil
-        guard let owner = api.session else { error = "Sign in before subscribing."; return }
+        guard let owner = api.session else { error = "Your connection is not ready. Please try again shortly."; return }
         guard ledgerAvailable, let entry = policy?.products.first(where: { $0.id == planID }) else {
             error = "Purchases are temporarily unavailable. Please try again later."; return
         }
@@ -197,7 +197,7 @@ final class CommerceStore: NSObject, ObservableObject {
     }
     func restore() {
         guard !busy, !preparingPurchase else { return }
-        guard api.session != nil, ledgerAvailable else { error = "Sign in before restoring purchases."; return }
+        guard api.session != nil, ledgerAvailable else { error = "Your connection or purchase records are not ready. Please try again shortly."; return }
         busy = true
         error = nil
         message = "Checking your Apple purchases…"

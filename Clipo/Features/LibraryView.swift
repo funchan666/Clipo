@@ -14,12 +14,12 @@ struct LibraryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 if itemCount > 0 {
-                    ClipoIllustration(name: "ClipoArtLibrary", height: 128)
+                    TennisArtwork(kind: .notebook, height: 128)
                 }
                 FlowChoices(values: ["Saved", "Imports", "Exports"], selected: filter) { filter = $0 }
                 SectionLabel(title: filter, detail: "\(itemCount) \(itemCount == 1 ? "item" : "items") · On this device")
                 if filter == "Saved" {
-                    if library.favorites.isEmpty { LibraryEmptyState(artwork: "ClipoArtLibrary", title: "Worth keeping.", message: "Save a video while watching and find it here whenever you want to come back.") }
+                    if library.favorites.isEmpty { LibraryEmptyState(artwork: .notebook, title: "Build your lesson collection.", message: "Save lessons as you watch. Come back to the ideas you want to try on court.") }
                     ForEach(library.favorites) { clip in
                         HStack(spacing: 14) {
                             Button { player = PlayerRoute(clips: library.favorites, startID: clip.id) } label: {
@@ -37,9 +37,9 @@ struct LibraryView: View {
                 } else {
                     let movies = library.movies.filter { $0.isExport == (filter == "Exports") }
                     if movies.isEmpty {
-                        LibraryEmptyState(artwork: filter == "Exports" ? "ClipoArtExport" : "ClipoArtStudio",
-                                          title: filter == "Exports" ? "Ready when you are." : "Your next edit starts here.",
-                                          message: filter == "Exports" ? "Finish a video or extract its audio in Tools. Your exports will be collected here." : "Choose a video in Tools to keep a local working copy.")
+                        LibraryEmptyState(artwork: filter == "Exports" ? .bag : .racket,
+                                          title: filter == "Exports" ? "Ready for your next session." : "Your practice, in focus.",
+                                          message: filter == "Exports" ? "Finish a video or extract its audio in Tools. Your exports will be collected here." : "Choose your practice footage in Tools to keep a local working copy.")
                     }
                     ForEach(movies) { movie in
                         HStack(spacing: 12) {
@@ -78,12 +78,12 @@ struct LibraryView: View {
 }
 
 private struct LibraryEmptyState: View {
-    let artwork: String
+    let artwork: TennisArtwork.Kind
     let title: String
     let message: String
     var body: some View {
         VStack(spacing: 18) {
-            ClipoIllustration(name: artwork, height: 184)
+            TennisArtwork(kind: artwork, height: 184)
             VStack(spacing: 10) {
                 Text(title).font(.title3.weight(.semibold))
                 Text(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)

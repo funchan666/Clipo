@@ -25,10 +25,10 @@ struct MembershipView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(spacing: 12) {
-                    ClipoIllustration(name: "ClipoArtPlus", height: 136)
+                    TennisArtwork(kind: .bag, height: 164)
                         .accessibilityHidden(true)
-                    Text(commerce.premium ? "More is yours." : "More to love.")
-                        .font(.largeTitle.weight(.bold)).tracking(-1)
+                    Text(commerce.premium ? "More court time." : "Keep your game growing.")
+                        .font(.system(.largeTitle, design: .serif, weight: .medium))
                         .foregroundStyle(ClipoStyle.paper)
                     Text("Unlimited views. Unlimited saves.")
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
@@ -250,7 +250,7 @@ struct AccountView: View {
 
     private func accountIdentity(_ id: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("Guest account").font(.headline).foregroundStyle(ClipoStyle.paper)
+            Text("Your practice space").font(.headline).foregroundStyle(ClipoStyle.paper)
             Text("ID · \(id)").font(.caption.monospaced()).foregroundStyle(ClipoStyle.secondary)
                 .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
         }
@@ -267,12 +267,10 @@ struct AccountView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     membershipCopy
-                    Image("ClipoArtPlus").resizable().scaledToFit()
-                        .frame(width: 132, height: 126).accessibilityHidden(true)
+                    TennisArtwork(kind: .bag, height: 126).frame(width: 132)
                 }
                 VStack(alignment: .leading, spacing: 12) {
-                    Image("ClipoArtPlus").resizable().scaledToFit()
-                        .frame(height: 100).accessibilityHidden(true)
+                    TennisArtwork(kind: .bag, height: 100)
                     membershipCopy
                 }
             }
@@ -285,7 +283,7 @@ struct AccountView: View {
 
     private var membershipCopy: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(commerce.premium ? "Your Plus." : "Make it Plus.")
+            Text(commerce.premium ? "Your court pass." : "Go further with Plus.")
                 .font(.title2.weight(.bold)).tracking(-0.5).foregroundStyle(ClipoStyle.ink)
             Text("Unlimited views & saves.")
                 .font(.footnote).foregroundStyle(ClipoStyle.paperSecondary)
@@ -336,7 +334,7 @@ struct LuckyRewardView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 20) {
-                    ClipoIllustration(name: "ClipoArtPlus", height: 140)
+                    TennisArtwork(kind: .bag, height: 140)
                         .scaleEffect(appeared || reduceMotion ? 1 : 0.88)
                         .accessibilityHidden(true)
                     Text("A little luck, on us").font(.title2.bold()).foregroundStyle(.white)
