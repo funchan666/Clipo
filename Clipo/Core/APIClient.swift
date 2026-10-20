@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import Security
 import UIKit
+import OSLog
 
 struct ClipoConfiguration {
     let apiBaseURL: URL?
@@ -23,19 +24,6 @@ struct ClipoConfiguration {
     }
 }
 
-enum ClipoError: LocalizedError {
-    case configuration, invalidResponse, unauthorized, service(String), storage, unsupportedMedia
-    var errorDescription: String? {
-        switch self {
-        case .configuration: return "Clipo’s online service is not configured yet. Local editing is available."
-        case .invalidResponse: return "The service returned an unreadable response. Please try again."
-        case .unauthorized: return "Your session has expired. Please sign in again."
-        case .service(let message): return message
-        case .storage: return "Your changes could not be saved on this device. Please try again."
-        case .unsupportedMedia: return "This video cannot be edited. Import a local video file to continue."
-        }
-    }
-}
 
 enum SecureStorage {
     private static let service = "Clipo.Session"
@@ -70,6 +58,7 @@ enum SecureStorage {
 
 @MainActor
 final class APIClient: ObservableObject {
+    private let diagnostics = Logger(subsystem: "com.clipo.video", category: "API")
     @Published private(set) var session: VisitorSession?
     let configuration: ClipoConfiguration
     private let transport: URLSession
@@ -128,11 +117,24 @@ final class APIClient: ObservableObject {
         storageFailure = nil
     }
 
+    // Explicitly local simulation until a server deletion contract is supplied.
+    // Keep local media and immutable purchase recovery records intact.
+    func resetLocalAccount() throws {
+        let installation = try SecureStorage.read("installation")
+        try SecureStorage.remove("installation")
+        do {
+            try signOut()
+        } catch {
+            if let installation { try SecureStorage.write(installation, key: "installation") }
+            throw error
+        }
+    }
+
     func releaseConfiguration() async throws -> ReleaseConfiguration {
         guard let session else { throw ClipoError.unauthorized }
         return try await perform("/app-api/flow/release-package/getV2", query: [
             "platform": "IOS", "name": configuration.bundleID, "version": configuration.version,
-            "lang": Locale.preferredLanguages.first ?? "en", "userId": session.userId.value,
+            "lang": Bundle.main.preferredLocalizations.first ?? "en", "userId": session.userId.value,
             "time": TimeZone.current.identifier, "input": UITextInputMode.activeInputModes.compactMap(\.primaryLanguage).joined(separator: ",")
         ], authenticated: false)
     }
@@ -144,7 +146,8 @@ final class APIClient: ObservableObject {
     }
     func resolve(_ link: String, password: String) async throws -> LandingInfo {
         try await perform("/app-api/flow/land-page/info_by_links", query: [
-            "externalLinks": link, "password": password, "packageName": configuration.bundleID])
+            "externalLinks": link, "password": password, "packageName": configuration.bundleID],
+            missingDataMessage: "No content was returned for this link. Check the code, including uppercase and lowercase letters, or try again later.")
     }
     func channelPage(link: String, page: Int) async throws -> ChannelPage {
         try await perform("/app-api/flow/land-page/list_by_links_page", query: [
@@ -171,7 +174,7 @@ final class APIClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(owner.accessToken)", forHTTPHeaderField: "Authorization")
-        let (data, response) = try await transport.data(for: request)
+        let (data, response) = try await send(request)
         guard let http = response as? HTTPURLResponse else { throw ClipoError.invalidResponse }
         if http.statusCode == 401 { throw ClipoError.unauthorized }
         guard (200..<300).contains(http.statusCode) else { throw ClipoError.service("Purchase service is unavailable (\(http.statusCode)).") }
@@ -182,7 +185,8 @@ final class APIClient: ObservableObject {
     }
 
     private func perform<Value: Decodable>(_ path: String, method: String = "GET", query: [String: String] = [:],
-                                           body: Data? = nil, authenticated: Bool = true, retry: Bool = true) async throws -> Value {
+                                           body: Data? = nil, authenticated: Bool = true, retry: Bool = true,
+                                           missingDataMessage: String? = nil) async throws -> Value {
         guard configuration.isReady, let base = configuration.apiBaseURL,
               var components = URLComponents(url: base.appendingPathComponent(path), resolvingAgainstBaseURL: false) else { throw ClipoError.configuration }
         var effectiveQuery = query
@@ -201,23 +205,50 @@ final class APIClient: ObservableObject {
             request.setValue("Bearer \(usedToken)", forHTTPHeaderField: "Authorization")
         }
         let generation = sessionGeneration
-        let (data, response) = try await transport.data(for: request)
+        let (data, response) = try await send(request)
         try Task.checkCancellation()
         if authenticated, generation != sessionGeneration { throw CancellationError() }
         guard let response = response as? HTTPURLResponse else { throw ClipoError.invalidResponse }
+        #if DEBUG
+        // Never log tokens, passwords, query values, user IDs or response bodies.
+        diagnostics.debug("\(method, privacy: .public) \(path, privacy: .public) HTTP \(response.statusCode)")
+        #endif
         if response.statusCode == 401, authenticated {
             guard retry else { throw ClipoError.unauthorized }
             if session?.accessToken == usedToken { try await signIn() }
-            return try await perform(path, method: method, query: query, body: body, authenticated: true, retry: false)
+            return try await perform(path, method: method, query: query, body: body, authenticated: true, retry: false,
+                                     missingDataMessage: missingDataMessage)
         }
         guard (200..<300).contains(response.statusCode) else {
             throw ClipoError.service("The service is unavailable (\(response.statusCode)). Please try again.")
         }
         let result: APIEnvelope<Value>
         do { result = try JSONDecoder().decode(APIEnvelope<Value>.self, from: data) }
-        catch { throw ClipoError.invalidResponse }
+        catch {
+            #if DEBUG
+            diagnostics.error("\(path, privacy: .public): response decoding failed")
+            #endif
+            throw ClipoError.invalidResponse
+        }
+        #if DEBUG
+        diagnostics.debug("\(path, privacy: .public): business code \(result.code), data present \(result.data != nil)")
+        #endif
         guard result.code == 0 else { throw ClipoError.service(result.msg?.nilIfBlank ?? "The request could not be completed.") }
-        guard let value = result.data else { throw ClipoError.invalidResponse }
+        guard let value = result.data else {
+            if let missingDataMessage { throw ClipoError.service(missingDataMessage) }
+            throw ClipoError.invalidResponse
+        }
         return value
+    }
+
+    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do { return try await transport.data(for: request) }
+        catch {
+            #if DEBUG
+            let code = (error as NSError).code
+            diagnostics.error("\(request.url?.path ?? "", privacy: .public): transport failed (\(code))")
+            #endif
+            throw ClipoError.connectionFailure(error)
+        }
     }
 }

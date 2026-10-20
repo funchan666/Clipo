@@ -19,8 +19,11 @@ private struct PurchaseRecord: Codable {
 final class CommerceStore: NSObject, ObservableObject {
     @Published private(set) var products: [SKProduct] = []
     @Published private(set) var release: ReleaseConfiguration?
+    @Published private(set) var rightsVerified = false
     @Published private(set) var expiration: Date?
     @Published private(set) var busy = false
+    @Published private(set) var loadingProducts = false
+    @Published private(set) var preparingPurchase = false
     @Published var message: String?
     @Published var error: String?
     private(set) var policy: CommerceConfiguration?
@@ -29,6 +32,9 @@ final class CommerceStore: NSObject, ObservableObject {
     private var records: [PurchaseRecord] = []
     private var ledgerAvailable = true
     private var productsRequest: SKProductsRequest?
+    private var productContinuation: CheckedContinuation<SKProduct, Error>?
+    private var productTimeout: Task<Void, Never>?
+    private var requestedProductID: String?
     private var receiptRequest: SKReceiptRefreshRequest?
     private var receiptContinuation: CheckedContinuation<Void, Error>?
     private var processing: Set<String> = []
@@ -53,28 +59,95 @@ final class CommerceStore: NSObject, ObservableObject {
     func refresh() async {
         let id = UUID()
         refreshID = id
+        rightsVerified = false
         let userID = api.session?.userId.value
         if ownerID != userID { expiration = nil; release = nil; ownerID = userID }
         quota.configure(userID: userID, policy: policy, remote: release?.quotaConfig)
         guard userID != nil else { return }
+        error = nil
         do {
             let configuration = try await api.releaseConfiguration()
             guard refreshID == id, api.session?.userId.value == userID else { return }
             release = configuration
             quota.configure(userID: userID, policy: policy, remote: configuration.quotaConfig)
+        } catch { if refreshID == id { self.error = error.localizedDescription } }
+        guard refreshID == id, api.session?.userId.value == userID else { return }
+        // Account rights remain independently refreshable if package configuration fails.
+        do {
             let rights = try await api.rights()
             guard refreshID == id, api.session?.userId.value == userID else { return }
             expiration = rights.expiration
-        } catch { if refreshID == id { self.error = error.localizedDescription } }
+            rightsVerified = true
+        } catch { if refreshID == id, self.error == nil { self.error = error.localizedDescription } }
         retryPending()
     }
-    func loadProducts() {
-        guard productsRequest == nil, let policy else { return }
+    // Called only by an explicit purchase action, never when the paywall appears.
+    func purchase(planID: String) async {
+        guard !busy, !preparingPurchase else { return }
         error = nil
-        let request = SKProductsRequest(productIdentifiers: Set(policy.products.map(\.id)))
-        productsRequest = request
-        request.delegate = self
-        request.start()
+        message = nil
+        guard let owner = api.session else { error = "Sign in before subscribing."; return }
+        guard ledgerAvailable, let entry = policy?.products.first(where: { $0.id == planID }) else {
+            error = "Purchases are temporarily unavailable. Please try again later."; return
+        }
+        guard SKPaymentQueue.canMakePayments() else { error = "Purchases are not allowed on this device."; return }
+        preparingPurchase = true
+        defer { preparingPurchase = false }
+        do {
+            let product = try await requestProduct(planID)
+            try Task.checkCancellation()
+            guard api.session?.userId.value == owner.userId.value else { throw ClipoError.unauthorized }
+            guard let period = product.subscriptionPeriod, period.numberOfUnits == 1,
+                  (entry.period == .month && period.unit == .month) || (entry.period == .year && period.unit == .year) else {
+                throw ClipoError.service("Apple returned a different subscription period. Please try again later.")
+            }
+            products.removeAll { $0.productIdentifier == product.productIdentifier }
+            products.append(product)
+            await refresh()
+            try Task.checkCancellation()
+            guard api.session?.userId.value == owner.userId.value else { throw ClipoError.unauthorized }
+            guard !premium else { message = "Your membership is already active."; return }
+            await buy(product)
+        } catch is CancellationError {
+            // No order or payment is created when preparation is cancelled.
+        } catch { self.error = error.localizedDescription }
+    }
+    private func requestProduct(_ id: String) async throws -> SKProduct {
+        guard productsRequest == nil else { throw ClipoError.service("An Apple request is already in progress.") }
+        let request = SKProductsRequest(productIdentifiers: [id])
+        return try await withTaskCancellationHandler(operation: {
+            try Task.checkCancellation()
+            return try await withCheckedThrowingContinuation { continuation in
+                productsRequest = request
+                requestedProductID = id
+                productContinuation = continuation
+                loadingProducts = true
+                request.delegate = self
+                request.start()
+                productTimeout = Task { @MainActor [weak self, weak request] in
+                    do { try await Task.sleep(for: .seconds(20)) } catch { return }
+                    guard let request else { return }
+                    self?.finishProductRequest(request, result: .failure(ClipoError.service("Apple is taking too long to respond. Please try again.")))
+                }
+            }
+        }, onCancel: {
+            Task { @MainActor [weak self] in
+                self?.finishProductRequest(request, result: .failure(CancellationError()))
+            }
+        })
+    }
+    private func finishProductRequest(_ request: SKRequest, result: Result<SKProduct, Error>) {
+        guard request === productsRequest else { return }
+        productTimeout?.cancel()
+        productTimeout = nil
+        request.delegate = nil
+        request.cancel()
+        productsRequest = nil
+        requestedProductID = nil
+        loadingProducts = false
+        let continuation = productContinuation
+        productContinuation = nil
+        continuation?.resume(with: result)
     }
     func price(_ product: SKProduct) -> String {
         let formatter = NumberFormatter()
@@ -88,7 +161,7 @@ final class CommerceStore: NSObject, ObservableObject {
         switch period.unit { case .day: unit = "day"; case .week: unit = "week"; case .month: unit = "month"; case .year: unit = "year"; @unknown default: unit = "period" }
         return period.numberOfUnits == 1 ? "per \(unit)" : "every \(period.numberOfUnits) \(unit)s"
     }
-    func buy(_ product: SKProduct) async {
+    private func buy(_ product: SKProduct) async {
         guard !busy else { return }
         guard purchasesAllowed, let owner = api.session, let billing = release?.ios,
               let entry = policy?.products.first(where: { $0.id == product.productIdentifier }) else {
@@ -123,7 +196,8 @@ final class CommerceStore: NSObject, ObservableObject {
         } catch { self.error = error.localizedDescription; busy = false }
     }
     func restore() {
-        guard !busy, api.session != nil, ledgerAvailable else { error = "Sign in before restoring purchases."; return }
+        guard !busy, !preparingPurchase else { return }
+        guard api.session != nil, ledgerAvailable else { error = "Sign in before restoring purchases."; return }
         busy = true
         error = nil
         message = "Checking your Apple purchases…"
@@ -201,9 +275,12 @@ final class CommerceStore: NSObject, ObservableObject {
 extension CommerceStore: SKProductsRequestDelegate, SKRequestDelegate, SKPaymentTransactionObserver {
     nonisolated func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
         Task { @MainActor in
-            products = response.products.filter { $0.subscriptionPeriod != nil }.sorted { $0.price.compare($1.price) == .orderedAscending }
-            productsRequest = nil
-            if products.isEmpty { error = "No subscription plans are available from the App Store yet." }
+            guard request === productsRequest else { return }
+            guard let product = response.products.first(where: { $0.productIdentifier == requestedProductID }), product.subscriptionPeriod != nil else {
+                finishProductRequest(request, result: .failure(ClipoError.service("This plan isn’t available from Apple yet. Please try again later.")))
+                return
+            }
+            finishProductRequest(request, result: .success(product))
         }
     }
     nonisolated func request(_ request: SKRequest, didFailWithError error: Error) {
@@ -212,7 +289,9 @@ extension CommerceStore: SKProductsRequestDelegate, SKRequestDelegate, SKPayment
                 receiptRequest = nil
                 receiptContinuation?.resume(throwing: error)
                 receiptContinuation = nil
-            } else { productsRequest = nil; self.error = error.localizedDescription }
+            } else if request === productsRequest {
+                finishProductRequest(request, result: .failure(error))
+            }
         }
     }
     nonisolated func requestDidFinish(_ request: SKRequest) {

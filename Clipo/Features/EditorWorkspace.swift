@@ -68,7 +68,7 @@ struct ToolsView: View {
                 Text("Processed on your device. Finished files appear in Library under Exports.")
                     .font(.footnote).foregroundStyle(ClipoStyle.secondary)
             }.clipoPage()
-        }.background(ClipoStyle.background)
+        }.clipoScreenBackground()
             .sheet(item: $selectedTool) { EditorSheet(initialTool: $0) }
     }
 }
@@ -81,7 +81,7 @@ struct EditorSheet: View {
         VStack(spacing: 0) {
             SheetHeading(title: initialTool.title) { dismiss() }
             EditorWorkspace(initialMovie: initialMovie, initialTool: initialTool)
-        }.background(ClipoStyle.background).foregroundStyle(.white)
+        }.clipoScreenBackground().foregroundStyle(.white)
     }
 }
 struct EditorWorkspace: View {
@@ -115,7 +115,7 @@ struct EditorWorkspace: View {
                     HStack {
                         Text(selected.title).font(.subheadline).lineLimit(1)
                         Spacer()
-                        if !editor.isExporting {
+                        if !editor.isExporting, !editor.isPreparingPreview {
                             Button("Change") { self.selected = nil; editor.close() }.foregroundStyle(ClipoStyle.accent)
                         }
                     }
@@ -123,6 +123,7 @@ struct EditorWorkspace: View {
                         .aspectRatio(4.0 / 3.0, contentMode: .fit).background(.black).clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay(alignment: .bottomTrailing) { PreviewButton(playback: editor.preview).padding(8) }
                     if editor.isLoading { Text("Preparing your video…").foregroundStyle(ClipoStyle.secondary) }
+                    if editor.isPreparingPreview { AccountLoadingIndicator(title: "Preparing preview…").frame(maxWidth: .infinity) }
                     if initialTool == .studio {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
@@ -135,7 +136,7 @@ struct EditorWorkspace: View {
                             }
                         }
                     }
-                    controls.disabled(editor.isExporting || editor.isLoading)
+                    controls.disabled(editor.isExporting || editor.isLoading || editor.isPreparingPreview)
                     if let error = editor.error { ErrorNote(message: error) }
                     if let error { ErrorNote(message: error) }
                     if editor.isExporting {
@@ -151,9 +152,9 @@ struct EditorWorkspace: View {
                         ActionButton(title: initialTool == .audio ? "Export audio as M4A" : "Export video") {
                             export(audio: initialTool == .audio, title: selected.title)
                         }
-                            .disabled(editor.isLoading || editor.duration <= 0)
+                            .disabled(editor.isLoading || editor.isPreparingPreview || editor.duration <= 0)
                         ActionButton(title: "Preview changes", primary: false) { Task { await editor.applyPreview() } }
-                            .disabled(editor.isLoading || editor.duration <= 0)
+                            .disabled(editor.isLoading || editor.isPreparingPreview || editor.duration <= 0)
                     }
                     Text("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 } else {
@@ -208,7 +209,10 @@ struct EditorWorkspace: View {
                     }
                 }
             }.clipoPage()
-        }.background(ClipoStyle.background)
+        }.clipoScreenBackground()
+            .onReceive(editor.preview.$error) { message in
+                if let message { editor.error = "Preview could not play. \(message)" }
+            }
             .fileImporter(isPresented: $filePicker, allowedContentTypes: [.movie], allowsMultipleSelection: false) { result in
                 do { if let url = try result.get().first { importURL(url) } }
                 catch { self.error = error.localizedDescription }

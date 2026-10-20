@@ -4,7 +4,7 @@
 
 ## 已确认范围
 
-- 应用名称 Clipo，临时 Bundle ID `com.clipo.video`，API `https://devapi.io-d.cc`。
+- 应用名称 Clipo，临时 Bundle ID `com.clipo.video`，API `https://devapi.io-jp.com`。
 - Figma 是功能参考而非逐像素复制。已通过用户 Chrome 观察首页、视频工具箱、频道/文件夹、播放与额度弹层；参考总览保存在 `ProjectMaterials/DesignReferences/figma-overview.png`。
 - 首页输入外部链接/短码，支持访问密码、最近打开记录、推荐频道和来源入口。
 - 推荐/搜索 Feed，原生纵向分页，当前页播放、离页释放、后台暂停、循环、静音、倍速、进度、保存与分享。
@@ -38,7 +38,7 @@
 
 商品 ID 按用户要求使用 16 位纯小写字母；App Store Connect 登记时必须逐字一致。StoreKit 查询和创建订单的 rightsName 共用 Commerce.json 中的 ID，既有交易账本保留原商品 ID，不改写历史订单。
 
-商品类型：自动续期订阅，建议同一订阅组。以上是待在 App Store Connect 创建的配置建议；页面只展示 StoreKit 返回的实际本地化价格，没有硬编码成交价或虚构优惠。
+商品类型：自动续期订阅，建议同一订阅组。2026-10-20 按用户要求，页面先显示 Monthly USD 9.99 / Yearly USD 99.99 参考价格，选择套餐后点击 Continue 才查询 Apple 商品；返回后使用实际本地化价格。参考金额独立保存在 displayPriceUSD，不改变后端 usdPrice，也不用于创建虚假交易或权益。详见 MEMBERSHIP-REFRESH.md。
 
 用户授权先拟定的广告策略：adType=2；每日5次观看，前三次完整广告各加3次，第4次广告后当日无限观看；每日基础收藏5次，每个完整广告加5次。每天本机时区凌晨5点重置。后端明确的 dailyWatchLimit / favoriteBaseLimit / 三阶段奖励字段可覆盖基础值；文档内冲突的 unlimitedAfterAdCount 不擅自套用，阈值在 Commerce.json 管理。
 

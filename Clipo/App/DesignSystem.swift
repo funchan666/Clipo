@@ -21,13 +21,22 @@ struct Glyph: View {
     let symbol: ClipoGlyph
     var size: CGFloat = 25
     var tint: Color = .white
+    private var cellOrigin: CGPoint {
+        if symbol == .link {
+            // In the 1254px atlas, the link's visible bounds are (82, 400)–(288, 601).
+            // Center that artwork in its viewport instead of assuming an even grid.
+            let cellSide: CGFloat = 313.5
+            return CGPoint(x: 185 / cellSide - 0.5, y: 500.5 / cellSide - 0.5)
+        }
+        return CGPoint(x: CGFloat(symbol.rawValue % 4), y: CGFloat(symbol.rawValue / 4))
+    }
     var body: some View {
         // Cell extraction is display-only: the source artwork is never redrawn in code.
         GeometryReader { geometry in
             Image("ClipoGlyphAtlas").resizable().interpolation(.high).colorMultiply(tint)
                 .frame(width: geometry.size.width * 4, height: geometry.size.height * 4)
-                .offset(x: -CGFloat(symbol.rawValue % 4) * geometry.size.width,
-                        y: -CGFloat(symbol.rawValue / 4) * geometry.size.height)
+                .offset(x: -cellOrigin.x * geometry.size.width,
+                        y: -cellOrigin.y * geometry.size.height)
                 // The enlarged atlas is artwork, never an independent touch target.
                 .allowsHitTesting(false)
         }
@@ -102,6 +111,11 @@ struct FieldStyle: ViewModifier {
 }
 extension View {
     func clipoField() -> some View { modifier(FieldStyle()) }
+    // Extend visual surfaces to every container edge, while preserving keyboard avoidance
+    // and the foreground's safe area for interactive controls.
+    func clipoScreenBackground(_ color: Color = ClipoStyle.background) -> some View {
+        background { color.ignoresSafeArea(.container, edges: .all) }
+    }
     // A readable column follows the available container without resetting page state.
     func clipoPage() -> some View {
         padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 28)
@@ -112,15 +126,19 @@ struct MediaCover: View {
     let url: URL?
     var folder = false
     var body: some View {
-        ZStack {
-            ClipoStyle.raised
-            if folder { Glyph(symbol: .folder, size: 30) }
-            else if let url {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image { image.resizable().scaledToFill() }
-                    else { Glyph(symbol: .feed, size: 30) }
-                }
-            } else { Glyph(symbol: .feed, size: 30) }
+        ClipoStyle.raised.overlay {
+            GeometryReader { geometry in
+                Group {
+                    if folder { Glyph(symbol: .folder, size: 30) }
+                    else if let url {
+                        AsyncImage(url: url) { phase in
+                            if let image = phase.image { image.resizable().scaledToFill() }
+                            else { Glyph(symbol: .feed, size: 30) }
+                        }
+                    } else { Glyph(symbol: .feed, size: 30) }
+                }.frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+            }
         }.clipped()
     }
 }

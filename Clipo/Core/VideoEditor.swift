@@ -30,6 +30,7 @@ final class VideoEditor: ObservableObject {
     @Published private(set) var thumbnails: [UIImage] = []
     @Published private(set) var isLoading = false
     @Published private(set) var isExporting = false
+    @Published private(set) var isPreparingPreview = false
     @Published private(set) var progress: Float = 0
     @Published var error: String?
     @Published var exportedURL: URL?
@@ -38,8 +39,12 @@ final class VideoEditor: ObservableObject {
     private var exporter: AVAssetExportSession?
     private var revision = UUID()
     private var cancelRequested = false
+    private var previewExporter: AVAssetExportSession?
+    private var previewURL: URL?
+    private var previewRevision = UUID()
 
     func open(_ url: URL) async {
+        clearRenderedPreview()
         let requestID = UUID()
         revision = requestID
         sourceURL = url
@@ -81,23 +86,60 @@ final class VideoEditor: ObservableObject {
     }
 
     func applyPreview() async {
-        guard let sourceURL, !isExporting else { return }
+        guard let sourceURL, !isExporting, !isPreparingPreview else { return }
         let requestedRecipe = recipe
         let requestID = revision
+        let previewID = UUID()
+        previewRevision = previewID
+        isPreparingPreview = true
+        error = nil
+        preview.pause()
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("Clipo-preview-\(previewID).mp4")
+        var retained = false
+        defer {
+            if !retained { try? FileManager.default.removeItem(at: output) }
+            if previewRevision == previewID { isPreparingPreview = false; previewExporter = nil }
+        }
         do {
-            let (composition, video) = try await compose(url: sourceURL, recipe: requestedRecipe)
-            guard requestID == revision, recipe == requestedRecipe else { return }
-            preview.pause()
-            let item = AVPlayerItem(asset: composition)
-            item.videoComposition = video
+            // Materialize a bounded-resolution preview. Some simulator runtimes cannot
+            // play AVVideoComposition directly even when the same composition exports.
+            var previewRecipe = requestedRecipe
+            previewRecipe.quality = .compact
+            let (composition, video) = try await compose(url: sourceURL, recipe: previewRecipe)
+            guard requestID == revision, previewRevision == previewID, recipe == requestedRecipe else { return }
+            guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
+                throw ClipoError.unsupportedMedia
+            }
+            previewExporter = session
+            session.videoComposition = video
+            session.outputURL = output
+            session.outputFileType = .mp4
+            await withTaskCancellationHandler {
+                await withCheckedContinuation { continuation in
+                    session.exportAsynchronously { continuation.resume() }
+                }
+            } onCancel: { session.cancelExport() }
+            try Task.checkCancellation()
+            guard requestID == revision, previewRevision == previewID, recipe == requestedRecipe else { return }
+            guard session.status == .completed else {
+                throw session.error ?? ClipoError.service("Preview could not be prepared. Please try again.")
+            }
+            let previousURL = previewURL
             preview.setMuted(false)
             preview.setSpeed(1)
-            preview.load(item, autoplay: true)
-        } catch { self.error = error.localizedDescription }
+            preview.load(output, autoplay: true)
+            previewURL = output
+            retained = true
+            if let previousURL { try? FileManager.default.removeItem(at: previousURL) }
+        } catch {
+            if requestID == revision, previewRevision == previewID, !(error is CancellationError) {
+                self.error = error.localizedDescription
+            }
+        }
     }
 
     func export(audioOnly: Bool = false) async -> URL? {
-        guard let sourceURL, !isExporting else { return nil }
+        guard let sourceURL, !isExporting, !isPreparingPreview else { return nil }
         isExporting = true
         cancelRequested = false
         progress = 0
@@ -148,7 +190,17 @@ final class VideoEditor: ObservableObject {
         }
     }
     func cancelExport() { cancelRequested = true; exporter?.cancelExport() }
-    func close() { revision = UUID(); preview.release(); cancelExport() }
+    func close() { revision = UUID(); clearRenderedPreview(); preview.release(); cancelExport() }
+
+    private func clearRenderedPreview() {
+        previewRevision = UUID()
+        previewExporter?.cancelExport()
+        previewExporter = nil
+        isPreparingPreview = false
+        preview.release()
+        if let previewURL { try? FileManager.default.removeItem(at: previewURL) }
+        previewURL = nil
+    }
 
     private func compose(url: URL, recipe: EditRecipe) async throws -> (AVMutableComposition, AVMutableVideoComposition) {
         let source = AVURLAsset(url: url)

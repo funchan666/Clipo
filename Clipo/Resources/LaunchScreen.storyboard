@@ -16,14 +16,14 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="ClipoLaunchMark" translatesAutoresizingMaskIntoConstraints="NO" id="launch-mark">
-                                <rect key="frame" x="142.5" y="384.5" width="108" height="108"/>
+                                <rect key="frame" x="142.5" y="372" width="108" height="108"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="108" id="mark-width"/>
                                     <constraint firstAttribute="height" constant="108" id="mark-height"/>
                                 </constraints>
                             </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" image="ClipoLoadingMark" translatesAutoresizingMaskIntoConstraints="NO" id="launch-loading">
-                                <rect key="frame" x="176.5" y="519.5" width="40" height="5"/>
+                                <rect key="frame" x="176.5" y="507" width="40" height="5"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="40" id="loading-width"/>
                                     <constraint firstAttribute="height" constant="5" id="loading-height"/>
@@ -33,8 +33,8 @@
                         <viewLayoutGuide key="safeArea" id="launch-safe-area"/>
                         <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
-                            <constraint firstItem="launch-mark" firstAttribute="centerX" secondItem="launch-safe-area" secondAttribute="centerX" id="mark-center-x"/>
-                            <constraint firstItem="launch-mark" firstAttribute="centerY" secondItem="launch-safe-area" secondAttribute="centerY" id="mark-center-y"/>
+                            <constraint firstItem="launch-mark" firstAttribute="centerX" secondItem="launch-view" secondAttribute="centerX" id="mark-center-x"/>
+                            <constraint firstItem="launch-mark" firstAttribute="centerY" secondItem="launch-view" secondAttribute="centerY" id="mark-center-y"/>
                             <constraint firstItem="launch-loading" firstAttribute="centerX" secondItem="launch-mark" secondAttribute="centerX" id="loading-center-x"/>
                             <constraint firstItem="launch-loading" firstAttribute="top" secondItem="launch-mark" secondAttribute="bottom" constant="27" id="loading-top"/>
                         </constraints>

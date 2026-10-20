@@ -2,7 +2,11 @@
 
 Native SwiftUI iPhone app for opening video links, browsing a vertical video feed and editing local videos. iOS 17+.
 
-Open `Clipo.xcodeproj` and select the shared `Clipo` scheme. Backend: `https://devapi.io-d.cc`. Provisional Bundle ID: `com.clipo.video`.
+## Latest verification — 2026-10-20
+
+The API host is now `https://devapi.io-jp.com`. The supplied code `2DhdI8` resolves in the running app; its second video and a nested-folder video play. Video preview, official app-open ads, rewarded ads, genuine no-fill bonuses, sign-out and one-tap sign-in were exercised. After authorized consent and sign-in, the view balance persisted and `2DhdI8` resolved again. A cover-sizing defect was fixed and rechecked. The backend still reports that package `com.clipo.video` does not exist, one media resource is unavailable, and Apple products are not registered. See [the latest runtime audit](Documentation/RUNTIME-AUDIT-2026-10-20.md) for exact coverage and pending checks. Earlier notes below describe prior revisions.
+
+Open `Clipo.xcodeproj` and select the shared `Clipo` scheme. Backend: `https://devapi.io-jp.com`. Provisional Bundle ID: `com.clipo.video`.
 
 Configuration lives in `Config/Clipo.xcconfig` and `Clipo/Resources/Commerce.json`. Set your signing team, registered product configuration, AdMob App ID and public policy URLs before release. Google Mobile Ads and UMP are declared as official Swift packages; dependencies are resolved in the checked-in workspace lockfile.
 

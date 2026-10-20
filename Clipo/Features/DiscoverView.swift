@@ -62,32 +62,36 @@ struct DiscoverView: View {
                     }
                 }
             } else {
-                GeometryReader { geometry in
-                    ScrollView(.vertical) {
-                        LazyVStack(spacing: 0) {
-                            ForEach(feed.clips) { clip in
-                                ClipPage(clip: clip, active: activeID == clip.id && !searchOpen)
-                                    .frame(width: geometry.size.width, height: geometry.size.height).id(clip.id)
+                GeometryReader { container in
+                    GeometryReader { geometry in
+                        ScrollView(.vertical) {
+                            LazyVStack(spacing: 0) {
+                                ForEach(feed.clips) { clip in
+                                    ClipPage(clip: clip, active: activeID == clip.id && !searchOpen,
+                                             controlInsets: container.safeAreaInsets)
+                                        .frame(width: geometry.size.width, height: geometry.size.height).id(clip.id)
+                                }
+                                if feed.error != nil || feed.hasMore {
+                                    VStack(spacing: 16) {
+                                        Text(feed.error ?? "Finding more clips…").foregroundStyle(ClipoStyle.secondary)
+                                        ActionButton(title: "Load more", primary: false, busy: feed.loading) { Task { await feed.load(api: api) } }
+                                    }.padding(28).padding(container.safeAreaInsets)
+                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                }
+                            }.scrollTargetLayout()
+                        }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID).scrollIndicators(.hidden)
+                            .onChange(of: activeID) { _, id in
+                                if let index = feed.clips.firstIndex(where: { $0.id == id }), index >= feed.clips.count - 3 {
+                                    Task { await feed.load(api: api) }
+                                }
                             }
-                            if feed.error != nil || feed.hasMore {
-                                VStack(spacing: 16) {
-                                    Text(feed.error ?? "Finding more clips…").foregroundStyle(ClipoStyle.secondary)
-                                    ActionButton(title: "Load more", primary: false, busy: feed.loading) { Task { await feed.load(api: api) } }
-                                }.padding(28).frame(width: geometry.size.width, height: geometry.size.height)
-                            }
-                        }.scrollTargetLayout()
-                    }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID).scrollIndicators(.hidden)
-                        .onChange(of: activeID) { _, id in
-                            if let index = feed.clips.firstIndex(where: { $0.id == id }), index >= feed.clips.count - 3 {
-                                Task { await feed.load(api: api) }
-                            }
-                        }
+                    }.ignoresSafeArea(.container, edges: .all)
                 }
             }
             if api.session != nil, !feed.clips.isEmpty {
                 feedHeader
             }
-        }.background(Color.black)
+        }.clipoScreenBackground(.black)
             .task(id: api.session?.userId.value) {
                 guard api.session != nil else { return }
                 await feed.load(api: api, search: search)
@@ -98,8 +102,8 @@ struct DiscoverView: View {
     private var feedHeader: some View {
         VStack(spacing: 10) {
             HStack {
-                Spacer()
                 IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
+                Spacer()
             }
             if searchOpen {
                 HStack {
@@ -108,7 +112,8 @@ struct DiscoverView: View {
                     Button("Go") { runSearch() }.frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle()).foregroundStyle(ClipoStyle.accent)
                 }
             }
-        }.padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 10).background(Color.black.opacity(0.55))
+        }.padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 10)
+            .background(searchOpen ? Color.black.opacity(0.75) : Color.clear)
     }
     private func runSearch() {
         searchOpen = false
@@ -122,18 +127,21 @@ struct PlayerScreen: View {
     let route: PlayerRoute
     @State private var activeID: String?
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 0) {
-                    ForEach(route.clips) { clip in
-                        ClipPage(clip: clip, active: activeID == clip.id)
-                            .frame(width: geometry.size.width, height: geometry.size.height).id(clip.id)
-                    }
-                }.scrollTargetLayout()
-            }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID).scrollIndicators(.hidden)
-        }.background(.black).overlay(alignment: .topLeading) {
+        GeometryReader { container in
+            GeometryReader { geometry in
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(route.clips) { clip in
+                            ClipPage(clip: clip, active: activeID == clip.id,
+                                     controlInsets: container.safeAreaInsets)
+                                .frame(width: geometry.size.width, height: geometry.size.height).id(clip.id)
+                        }
+                    }.scrollTargetLayout()
+                }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID).scrollIndicators(.hidden)
+            }.ignoresSafeArea(.container, edges: .all)
+        }.clipoScreenBackground(.black).overlay(alignment: .topLeading) {
             IconButton(symbol: .back, label: "Back") { dismiss() }
-                .background(.black.opacity(0.5), in: Circle()).padding(16)
+                .shadow(color: .black.opacity(0.6), radius: 3, y: 1).padding(12)
         }.onAppear { activeID = route.startID }.preferredColorScheme(.dark)
     }
 }
@@ -146,6 +154,8 @@ struct ClipPage: View {
     @Environment(\.scenePhase) private var phase
     let clip: Clip
     let active: Bool
+    // Read from the enclosing safe container; video fills the expanded viewport.
+    var controlInsets = EdgeInsets()
     @StateObject private var playback = PlaybackController()
     @State private var loaded = false
     @State private var gate = false
@@ -154,16 +164,23 @@ struct ClipPage: View {
     @State private var share = false
     @State private var recorded = false
     @State private var allowed = false
+    @State private var scrubbing = false
+    @State private var scrubPosition: Double = 0
+    @State private var resumeAfterScrub = false
     var body: some View {
         ZStack {
             Color.black
-            if loaded { VideoSurface(player: playback.player).clipped() }
+            if loaded { VideoSurface(player: playback.player).clipped().allowsHitTesting(false) }
             if playback.isLoading || !loaded {
                 MediaCover(url: clip.coverURL).opacity(0.45)
             }
             Color.clear.contentShape(Rectangle()).onTapGesture {
                 if allowed { playback.toggle() } else { gate = true }
             }
+            // Original raster scrim: a soft fade, never a hard panel across the video.
+            Color.clear.overlay {
+                Image("ClipoPlayerScrim").resizable().scaledToFill()
+            }.clipped().allowsHitTesting(false).accessibilityHidden(true)
             if let error = playback.error {
                 MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
             } else if !allowed, active {
@@ -171,37 +188,11 @@ struct ClipPage: View {
                     Text("Keep watching").font(.title.bold())
                     ActionButton(title: "Get more views") { gate = true }
                 }.padding(32).background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
-            } else if !playback.isPlaying, !playback.isLoading {
+            } else if !playback.isPlaying, !playback.isLoading, !scrubbing {
                 IconButton(symbol: .play, label: "Play video") { playback.play() }
                     .background(Color.black.opacity(0.4), in: Circle())
             }
-            VStack {
-                Spacer()
-                HStack(alignment: .bottom, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(clip.channel.uppercased()).font(.system(.caption, design: .monospaced).weight(.bold)).foregroundStyle(ClipoStyle.accent)
-                        Text(clip.title).font(.title2.weight(.bold)).lineLimit(3)
-                        Text("Swipe up for the next clip").font(.caption).foregroundStyle(.white.opacity(0.75))
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                    VStack(spacing: 14) {
-                        VStack(spacing: 0) {
-                            IconButton(symbol: .bookmark, label: library.isSaved(clip) ? "Remove saved video" : "Save video", selected: library.isSaved(clip)) { save() }
-                            Text(library.isSaved(clip) ? "Saved" : "Save").font(.caption2)
-                        }
-                        IconButton(symbol: playback.muted ? .mute : .sound, label: playback.muted ? "Unmute" : "Mute") { playback.setMuted(!playback.muted) }
-                        IconButton(symbol: .settings, label: "Playback options") { playback.pause(); options = true }
-                        IconButton(symbol: .link, label: "Share video link") { playback.pause(); share = true }
-                    }
-                }
-                HStack {
-                    Text(durationLabel(playback.elapsed)).font(.caption.monospacedDigit())
-                    ClipoScrubber(value: Binding(get: { playback.elapsed }, set: { playback.seek($0) }), range: 0...max(1, playback.duration), label: "Playback position")
-                    Text(durationLabel(playback.duration)).font(.caption.monospacedDigit())
-                }.padding(.top, 18)
-            }.padding(22).background(alignment: .bottom) {
-                VStack { Spacer(); Color.black.opacity(0.68).frame(height: 220) }
-                    .allowsHitTesting(false)
-            }
+            playerControls
             if active, playback.isLoading { Text("Loading…").font(.caption).padding(12).background(.black.opacity(0.6), in: Capsule()) }
         }.foregroundStyle(.white).clipped()
             .onAppear { if active { activate() } }
@@ -230,10 +221,76 @@ struct ClipPage: View {
                     ActionButton(title: "Edit a local video", primary: false) { options = false; editor = true }
                     Text("Online streams stay online. Import a video you own to make an edit.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
-                }.padding(22).background(ClipoStyle.background).presentationDetents([.medium, .large])
+                }.padding(22).clipoScreenBackground().presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $editor) { EditorSheet() }
             .sheet(isPresented: $share) { ShareSheet(items: [WebAddress.media(clip.shortLink) ?? clip.playbackURL]) }
+    }
+    private var playerControls: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                IconButton(symbol: playback.muted ? .mute : .sound,
+                           label: playback.muted ? "Unmute" : "Mute") {
+                    playback.setMuted(!playback.muted)
+                }.shadow(color: .black.opacity(0.6), radius: 3, y: 1)
+            }.padding(.top, 12)
+            Spacer(minLength: 16)
+            HStack(alignment: .bottom, spacing: 16) {
+                VStack(alignment: .leading, spacing: 7) {
+                    if !clip.channel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(clip.channel).font(.subheadline.weight(.bold)).lineLimit(2)
+                    }
+                    Text(clip.title).font(.subheadline).lineLimit(2)
+                        .accessibilityLabel(clip.title)
+                }
+                .shadow(color: .black.opacity(0.7), radius: 3, y: 1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 8)
+                VStack(spacing: 16) {
+                    PlayerRailButton(artwork: library.isSaved(clip) ? .saved : .save,
+                                     title: library.isSaved(clip) ? "Saved" : "Save",
+                                     accessibilityTitle: library.isSaved(clip) ? "Remove saved video" : "Save video",
+                                     selected: library.isSaved(clip), action: save)
+                    PlayerRailButton(artwork: .share, title: "Share", accessibilityTitle: "Share video link") {
+                        playback.pause(); share = true
+                    }
+                    PlayerRailButton(artwork: .more, title: "More", accessibilityTitle: "Playback options") {
+                        playback.pause(); options = true
+                    }
+                }.padding(.bottom, 8)
+            }.padding(.leading, 4)
+            ClipoScrubber(value: Binding(
+                get: { scrubbing ? scrubPosition : playback.elapsed },
+                set: { scrubPosition = $0; playback.seek($0) }
+            ), range: 0...max(1, playback.duration), label: "Playback position",
+                         tint: .white, trackHeight: scrubbing ? 5 : 2,
+                         onEditingChanged: { editing in
+                if editing {
+                    scrubPosition = playback.elapsed
+                    resumeAfterScrub = playback.isPlaying
+                    scrubbing = true
+                    playback.pause()
+                } else {
+                    scrubbing = false
+                    if resumeAfterScrub && active && allowed && phase == .active && !ads.isPresenting {
+                        playback.play()
+                    }
+                    resumeAfterScrub = false
+                }
+            })
+            .disabled(!allowed || playback.duration <= 0 || playback.error != nil)
+            .overlay(alignment: .top) {
+                if scrubbing {
+                    Text("\(durationLabel(scrubPosition)) / \(durationLabel(playback.duration))")
+                        .font(.caption.monospacedDigit()).offset(y: -8)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 2)
+        .padding(controlInsets)
     }
     private func activate(reload: Bool = false) {
         guard active, phase == .active else { return }
@@ -254,6 +311,11 @@ struct ClipoScrubber: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     let label: String
+    var tint: Color = ClipoStyle.accent
+    var trackHeight: CGFloat = 4
+    var onEditingChanged: (Bool) -> Void = { _ in }
+    @GestureState private var dragging = false
+    @State private var editing = false
     private var fraction: CGFloat {
         let span = range.upperBound - range.lowerBound
         guard value.isFinite, range.lowerBound.isFinite, span.isFinite, span > 0 else { return 0 }
@@ -262,15 +324,64 @@ struct ClipoScrubber: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.22)).frame(height: 4)
-                Capsule().fill(ClipoStyle.accent).frame(width: geometry.size.width * fraction, height: 4)
+                Capsule().fill(Color.white.opacity(0.3)).frame(height: trackHeight)
+                Capsule().fill(tint).frame(width: geometry.size.width * fraction, height: trackHeight)
             }.frame(height: 44).contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 0).onChanged { gesture in
+                .gesture(DragGesture(minimumDistance: 0).updating($dragging) { _, state, _ in state = true }.onChanged { gesture in
+                    if !editing { editing = true; onEditingChanged(true) }
                     value = range.lowerBound + min(1, max(0, gesture.location.x / max(1, geometry.size.width))) * (range.upperBound - range.lowerBound)
-                })
+                }.onEnded { _ in finishEditing() })
         }.frame(height: 44).accessibilityElement().accessibilityLabel(label)
+            .onChange(of: dragging) { _, dragging in if !dragging { finishEditing() } }
             .accessibilityValue(durationLabel(value)).accessibilityAdjustableAction { direction in
                 value = min(range.upperBound, max(range.lowerBound, value + (direction == .increment ? 1 : -1)))
             }
+    }
+    private func finishEditing() {
+        guard editing else { return }
+        editing = false
+        onEditingChanged(false)
+    }
+}
+
+private enum PlayerArtwork {
+    case save, saved, share, more
+    // Optical crop regions measured from the generated 1254px atlas.
+    var region: CGRect {
+        switch self {
+        case .save: CGRect(x: 162.5, y: 179, width: 368, height: 368)
+        case .saved: CGRect(x: 725.5, y: 177, width: 368, height: 368)
+        case .share: CGRect(x: 145, y: 688, width: 400, height: 400)
+        case .more: CGRect(x: 717.5, y: 698.5, width: 400, height: 400)
+        }
+    }
+}
+
+private struct PlayerRailButton: View {
+    let artwork: PlayerArtwork
+    let title: String
+    let accessibilityTitle: String
+    var selected = false
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                GeometryReader { geometry in
+                    let rect = artwork.region
+                    Image("ClipoPlayerActions").resizable().interpolation(.high)
+                        .colorMultiply(selected ? ClipoStyle.accent : .white)
+                        .frame(width: 1254 * geometry.size.width / rect.width,
+                               height: 1254 * geometry.size.height / rect.height)
+                        .offset(x: -rect.minX * geometry.size.width / rect.width,
+                                y: -rect.minY * geometry.size.height / rect.height)
+                }.frame(width: 36, height: 36).clipped().blendMode(.screen)
+                    .allowsHitTesting(false)
+                Text(title).font(.caption2.weight(.medium)).foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
+            }.frame(minWidth: 48, minHeight: 54)
+                .contentShape(.interaction, Rectangle())
+        }.buttonStyle(PressStyle())
+            .accessibilityLabel(accessibilityTitle)
+            .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

@@ -1,9 +1,10 @@
 // Replace these two values with the registered backend and Apple identifiers.
 // The bundle ID is provisional, as requested.
 PRODUCT_BUNDLE_IDENTIFIER = com.clipo.video
-CLIPO_API_HOST = devapi.io-d.cc
-CLIPO_PRIVACY_URL =
-CLIPO_TERMS_URL =
+CLIPO_API_HOST = devapi.io-jp.com
+// Empty expansion preserves // in xcconfig URL values.
+CLIPO_PRIVACY_URL = https:/$()/sites.google.com/view/clipo-privacypolicy/fendii
+CLIPO_TERMS_URL = https:/$()/sites.google.com/view/clipo-terms-of-service/fendii
 IPHONEOS_DEPLOYMENT_TARGET = 17.0
 SWIFT_VERSION = 5.0
 TARGETED_DEVICE_FAMILY = 1

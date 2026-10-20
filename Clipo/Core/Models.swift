@@ -64,6 +64,27 @@ struct DiskItem: Decodable, Identifiable {
     let fileSize: Double?
     let isFolder: Bool?
     let childrenFileNum: Int?
+    private enum CodingKeys: String, CodingKey {
+        case id, landingPage, name, coverImage, m3u8Url, fileUrl, originUrl
+        case length, fileSize, isFolder, childrenFileNum, extraInfo
+    }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(ServiceID.self, forKey: .id)
+        landingPage = try values.decodeIfPresent(String.self, forKey: .landingPage)
+        name = try values.decodeIfPresent(String.self, forKey: .name)
+        coverImage = try values.decodeIfPresent(String.self, forKey: .coverImage)
+        m3u8Url = try values.decodeIfPresent(String.self, forKey: .m3u8Url)
+        fileUrl = try values.decodeIfPresent(String.self, forKey: .fileUrl)
+        originUrl = try values.decodeIfPresent(String.self, forKey: .originUrl)
+        length = try values.decodeMediaNumber(forKey: .length)
+        fileSize = try values.decodeMediaNumber(forKey: .fileSize)
+        isFolder = try values.decodeIfPresent(Bool.self, forKey: .isFolder)
+        // The contract allows folder counts at either level. Prefer the direct value.
+        struct ExtraInfo: Decodable { let childrenFileNum: Int? }
+        childrenFileNum = try values.decodeIfPresent(Int.self, forKey: .childrenFileNum)
+            ?? values.decodeIfPresent(ExtraInfo.self, forKey: .extraInfo)?.childrenFileNum
+    }
     var stableID: String { id?.value ?? landingPage ?? m3u8Url ?? fileUrl ?? name ?? "" }
     func clip(channel: String) -> Clip? {
         guard isFolder != true, let name, !name.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -71,6 +92,19 @@ struct DiskItem: Decodable, Identifiable {
         return Clip(id: stableID.isEmpty ? source.absoluteString : stableID, title: name,
                     playbackURL: source, coverURL: WebAddress.media(coverImage),
                     shortLink: landingPage, channel: channel, duration: length)
+    }
+}
+private extension KeyedDecodingContainer {
+    // The live media API uses both JSON numbers and numeric strings (e.g. length: "50").
+    func decodeMediaNumber(forKey key: Key) throws -> Double? {
+        guard contains(key) else { return nil }
+        if try decodeNil(forKey: key) { return nil }
+        if let value = try? decode(Double.self, forKey: key), value.isFinite { return value }
+        let text = try decode(String.self, forKey: key).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let value = Double(text), value.isFinite else {
+            throw DecodingError.dataCorruptedError(forKey: key, in: self, debugDescription: "Expected a finite media number.")
+        }
+        return value
     }
 }
 struct ChannelPage: Decodable { let list: [DiskItem]; let total: Int }
@@ -173,7 +207,15 @@ struct UserRights: Decodable {
     }
 }
 struct CommerceConfiguration: Decodable {
-    struct Product: Decodable { let id: String; let usdPrice: String; let label: String }
+    struct Product: Decodable, Identifiable {
+        enum BillingPeriod: String, Decodable { case month, year }
+        let id: String
+        let usdPrice: String
+        let label: String
+        // Reference display values are separate from the backend's usdPrice contract.
+        let displayPriceUSD: String
+        let period: BillingPeriod
+    }
     let products: [Product]
     let rewardedAdType: Int
     let unlimitedAfterCompletedAds: Int
@@ -184,5 +226,32 @@ struct CommerceConfiguration: Decodable {
     static func load() throws -> Self {
         guard let url = Bundle.main.url(forResource: "Commerce", withExtension: "json") else { throw ClipoError.configuration }
         return try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
+    }
+}
+
+enum ClipoError: LocalizedError {
+    case configuration, invalidResponse, unauthorized, service(String), storage, unsupportedMedia
+    var errorDescription: String? {
+        switch self {
+        case .configuration: return "Clipo’s online service is not configured yet. Local editing is available."
+        case .invalidResponse: return "The service returned an unreadable response. Please try again."
+        case .unauthorized: return "Your session has expired. Please sign in again."
+        case .service(let message): return message
+        case .storage: return "Your changes could not be saved on this device. Please try again."
+        case .unsupportedMedia: return "This video cannot be edited. Import a local video file to continue."
+        }
+    }
+    static func connectionFailure(_ error: Error) -> Error {
+        guard let error = error as? URLError else { return error }
+        switch error.code {
+        case .secureConnectionFailed, .serverCertificateHasBadDate, .serverCertificateUntrusted,
+             .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid:
+            return ClipoError.service("A secure connection to Clipo could not be established. Check your network or VPN, then try again. If it continues, the service may be temporarily unavailable.")
+        case .notConnectedToInternet, .networkConnectionLost:
+            return ClipoError.service("Your internet connection was interrupted. Reconnect and try again.")
+        case .timedOut:
+            return ClipoError.service("The service took too long to respond. Please try again.")
+        default: return error
+        }
     }
 }

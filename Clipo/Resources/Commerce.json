@@ -1,7 +1,7 @@
 {
   "products": [
-    {"id": "ypsmwxmscbzeixig", "usdPrice": "999", "label": "Monthly"},
-    {"id": "xfpkaphmqxhtgzvx", "usdPrice": "9999", "label": "Yearly"}
+    {"id": "ypsmwxmscbzeixig", "usdPrice": "999", "label": "Monthly", "displayPriceUSD": "9.99", "period": "month"},
+    {"id": "xfpkaphmqxhtgzvx", "usdPrice": "9999", "label": "Yearly", "displayPriceUSD": "99.99", "period": "year"}
   ],
   "rewardedAdType": 2,
   "unlimitedAfterCompletedAds": 4,

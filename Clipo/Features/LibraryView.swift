@@ -61,7 +61,7 @@ struct LibraryView: View {
                     }
                 }
             }.clipoPage()
-        }.sheet(item: $sharing) { ShareSheet(items: [$0.url]) }
+        }.clipoScreenBackground().sheet(item: $sharing) { ShareSheet(items: [$0.url]) }
             .fullScreenCover(item: $player) { PlayerScreen(route: $0) }
             .sheet(item: $removing) { movie in
                 ScrollView {
@@ -72,7 +72,7 @@ struct LibraryView: View {
                         ActionButton(title: "Delete local copy") { library.delete(movie); removing = nil }
                         ActionButton(title: "Keep it", primary: false) { removing = nil }
                     }.padding(24)
-                }.background(ClipoStyle.background).presentationDetents([.medium, .large])
+                }.clipoScreenBackground().presentationDetents([.medium, .large])
             }
     }
 }

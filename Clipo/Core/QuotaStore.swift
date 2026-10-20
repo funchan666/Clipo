@@ -8,6 +8,8 @@ struct DailyUsage: Codable {
     var completedRewardIDs: Set<UUID> = []
     var extraWatches = 0
     var extraFavorites = 0
+    var luckyRewardIDs: Set<UUID>?
+    var lastLuckyReward: Date?
 }
 @MainActor
 final class QuotaStore: ObservableObject {
@@ -23,6 +25,7 @@ final class QuotaStore: ObservableObject {
     var favoritesLeft: Int { max(0, (remote?.favoriteBaseLimit ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraFavorites ?? 0) - (usage?.favoritesUsed ?? 0)) }
     var rewardSummary: String {
         guard let policy else { return "Rewards are unavailable." }
+        if unlimited { return "Viewing is already unlimited until 5 AM. Watch a full ad for \(policy.favoriteReward) more saves." }
         let count = usage?.completedRewardIDs.count ?? 0
         if count + 1 >= policy.unlimitedAfterCompletedAds { return "Watch a full ad for unlimited viewing until 5 AM and \(policy.favoriteReward) more saves." }
         return "Watch a full ad for \(nextWatchReward) more views and \(policy.favoriteReward) more saves."
@@ -91,6 +94,27 @@ final class QuotaStore: ObservableObject {
         next.extraFavorites += max(0, policy.favoriteReward)
         next.completedRewardIDs.insert(id)
         try commit(next)
+    }
+    // A no-fill gift never advances the completed-ad phase or unlocks unlimited viewing.
+    // Optional fields keep existing daily ledgers readable.
+    func rewardNoFill(_ id: UUID, owner: String) throws -> String? {
+        guard owner == userID, storageOK else { throw ClipoError.storage }
+        resetIfNeeded()
+        guard var next = usage, let policy else { throw ClipoError.configuration }
+        guard next.luckyRewardIDs?.contains(id) != true else { return nil }
+        let now = Date()
+        if let last = next.lastLuckyReward, now.timeIntervalSince(last) < 60 {
+            throw ClipoError.service("Your last bonus was just added. Please wait a minute before trying again.")
+        }
+        let views = unlimited ? 0 : nextWatchReward
+        let saves = max(0, policy.favoriteReward)
+        next.extraWatches += views
+        next.extraFavorites += saves
+        next.luckyRewardIDs = (next.luckyRewardIDs ?? []).union([id])
+        next.lastLuckyReward = now
+        try commit(next)
+        return views > 0 ? "\(views) more views and \(saves) more saves have been added. Your ad progress stays the same."
+            : "\(saves) more saves have been added. Your unlimited viewing stays active."
     }
     private var key: String { "quota.\(userID ?? "none")" }
     private func boundary() -> Date {

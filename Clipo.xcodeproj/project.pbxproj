@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ACCE55100000000000000001 /* AccountAccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCE55100000000000000002 /* AccountAccessViews.swift */; };
 		A09B10000000000000000001 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A09B10000000000000000002 /* LaunchScreen.storyboard */; };
 		0A80A0B8549C3D5AB3BBC1FC /* Clipo/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47A27C0CD55779B5085CB27B /* Clipo/Resources/Assets.xcassets */; };
 		16EB816FD26D57C86FA63242 /* Clipo/Resources/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B01A9BEACE5275588553E5AD /* Clipo/Resources/PrivacyInfo.xcprivacy */; };
@@ -31,6 +32,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		ACCE55100000000000000002 /* AccountAccessViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/AccountAccessViews.swift; sourceTree = SOURCE_ROOT; };
 		A09B10000000000000000002 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Clipo/Resources/LaunchScreen.storyboard; sourceTree = SOURCE_ROOT; };
 		17682BB59D393EEB797E5420 /* Clipo/Features/EditorWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/EditorWorkspace.swift; sourceTree = SOURCE_ROOT; };
 		1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LibraryStore.swift; sourceTree = SOURCE_ROOT; };
@@ -94,6 +96,7 @@
 				198C628051C30B581DC8DE92 /* Clipo/Features/HomeView.swift */,
 				7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */,
 				EC62DF084BD6179B0CD0BFAA /* Clipo/Features/MembershipView.swift */,
+				ACCE55100000000000000002 /* AccountAccessViews.swift */,
 				47A27C0CD55779B5085CB27B /* Clipo/Resources/Assets.xcassets */,
 				1E86FD4AD3FF9F970DB0B719 /* Clipo/Resources/Commerce.json */,
 				B01A9BEACE5275588553E5AD /* Clipo/Resources/PrivacyInfo.xcprivacy */,
@@ -198,6 +201,7 @@
 				8C78E63A9D2775413DFCA438 /* Clipo/Features/HomeView.swift in Sources */,
 				FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */,
 				8CBAB9F374786F17F0527D7A /* Clipo/Features/MembershipView.swift in Sources */,
+				ACCE55100000000000000001 /* AccountAccessViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
