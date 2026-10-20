@@ -51,7 +51,7 @@ struct DiscoverView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         TennisArtwork(kind: .lesson, height: 208)
-                        Text("Connecting your lesson feed…")
+                        LocalizedText("Connecting your lesson feed…")
                             .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         ConnectionPanel()
                     }.clipoPage()
@@ -86,7 +86,7 @@ struct DiscoverView: View {
                                 }
                                 if feed.error != nil || feed.hasMore {
                                     VStack(spacing: 16) {
-                                        Text(feed.error ?? "Finding more clips…").foregroundStyle(ClipoStyle.secondary)
+                                        LocalizedText(feed.error ?? "Finding more clips…").foregroundStyle(ClipoStyle.secondary)
                                         ActionButton(title: "Load more", primary: false, busy: feed.loading) { Task { await feed.load(api: api) } }
                                     }.padding(28).padding(container.safeAreaInsets)
                                         .frame(width: geometry.size.width, height: geometry.size.height)
@@ -125,7 +125,7 @@ struct DiscoverView: View {
             HStack {
                 IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
                 Spacer()
-                Button(feed.loading ? "Loading…" : "Refresh") { Task { await refreshFeed() } }
+                Button(LocalizedStringKey(feed.loading ? "Loading…" : "Refresh")) { Task { await refreshFeed() } }
                     .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
                     .padding(.horizontal, 12).frame(minHeight: 44)
                     .background(Color.black.opacity(0.4), in: Capsule())
@@ -245,7 +245,7 @@ struct ClipPage: View {
                 MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
             } else if !allowed, active {
                 VStack(spacing: 16) {
-                    Text("Keep watching").font(.title.bold())
+                    LocalizedText("Keep watching").font(.title.bold())
                     ActionButton(title: "Get more views") { gate = true }
                 }.padding(32).background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
             } else if active, allowed, !playback.isPlaying, !playback.isLoading, !scrubbing {
@@ -253,7 +253,7 @@ struct ClipPage: View {
                     .background(Color.black.opacity(0.4), in: Circle())
             }
             playerControls
-            if active, playback.isLoading { Text("Loading…").font(.caption).padding(12).background(.black.opacity(0.6), in: Capsule()) }
+            if active, playback.isLoading { LocalizedText("Loading…").font(.caption).padding(12).background(.black.opacity(0.6), in: Capsule()) }
         }.foregroundStyle(.white).clipped()
             .onAppear { visible = true; if active { activate() } }
             .onChange(of: active) { _, active in
@@ -278,16 +278,16 @@ struct ClipPage: View {
             .sheet(isPresented: $options) {
                 VStack(alignment: .leading, spacing: 24) {
                     SheetHeading(title: "Playback") { options = false }
-                    Text("Speed").font(.title3.bold())
+                    LocalizedText("Speed").font(.title3.bold())
                     HStack {
                         ForEach([Float(0.5), 1, 1.5, 2], id: \.self) { speed in
                             Button("\(speed, specifier: "%g")×") { playback.setSpeed(speed) }
                                 .padding(14).background(playback.speed == speed ? ClipoStyle.raised : ClipoStyle.surface, in: Capsule())
                         }
                     }.buttonStyle(PressStyle())
-                    Text("Supported streams adjust quality to your connection.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText("Supported streams adjust quality to your connection.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Edit a local video", primary: false) { options = false; editor = true }
-                    Text("Online streams stay online. Import a video you own to make an edit.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText("Online streams stay online. Import a video you own to make an edit.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
                 }.padding(22).clipoScreenBackground().presentationDetents([.medium, .large])
             }
@@ -307,9 +307,9 @@ struct ClipPage: View {
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(alignment: .leading, spacing: 7) {
                     if !clip.channel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(clip.channel).font(.subheadline.weight(.bold)).lineLimit(2)
+                        Text(verbatim: clip.channel).font(.subheadline.weight(.bold)).lineLimit(2)
                     }
-                    Text(clip.title).font(.subheadline).lineLimit(2)
+                    Text(verbatim: clip.title).font(.subheadline).lineLimit(2)
                         .accessibilityLabel(clip.title)
                 }
                 .shadow(color: .black.opacity(0.7), radius: 3, y: 1)
@@ -355,7 +355,7 @@ struct ClipPage: View {
             .disabled(!allowed || playback.duration <= 0 || playback.error != nil)
             .overlay(alignment: .top) {
                 if scrubbing {
-                    Text("\(durationLabel(scrubPosition)) / \(durationLabel(playback.duration))")
+                    LocalizedText("\(durationLabel(scrubPosition)) / \(durationLabel(playback.duration))")
                         .font(.caption.monospacedDigit()).offset(y: -8)
                         .allowsHitTesting(false)
                 }
@@ -415,7 +415,7 @@ struct ClipoScrubber: View {
                     if !editing { editing = true; onEditingChanged(true) }
                     value = range.lowerBound + min(1, max(0, gesture.location.x / max(1, geometry.size.width))) * (range.upperBound - range.lowerBound)
                 }.onEnded { _ in finishEditing() })
-        }.frame(height: 44).accessibilityElement().accessibilityLabel(label)
+        }.frame(height: 44).accessibilityElement().accessibilityLabel(LocalizedStringKey(label))
             .onChange(of: dragging) { _, dragging in if !dragging { finishEditing() } }
             .accessibilityValue(durationLabel(value)).accessibilityAdjustableAction { direction in
                 value = min(range.upperBound, max(range.lowerBound, value + (direction == .increment ? 1 : -1)))
@@ -460,12 +460,12 @@ private struct PlayerRailButton: View {
                                 y: -rect.minY * geometry.size.height / rect.height)
                 }.frame(width: 36, height: 36).clipped().blendMode(.screen)
                     .allowsHitTesting(false)
-                Text(title).font(.caption2.weight(.medium)).foregroundStyle(.white)
+                LocalizedText(title).font(.caption2.weight(.medium)).foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
             }.frame(minWidth: 48, minHeight: 54)
                 .contentShape(.interaction, Rectangle())
         }.buttonStyle(PressStyle())
-            .accessibilityLabel(accessibilityTitle)
+            .accessibilityLabel(LocalizedStringKey(accessibilityTitle))
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

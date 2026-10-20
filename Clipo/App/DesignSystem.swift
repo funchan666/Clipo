@@ -36,14 +36,14 @@ struct TennisCourtBanner: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("ON COURT · ON REPEAT")
+            LocalizedText("ON COURT · ON REPEAT")
                 .font(.caption2.weight(.bold)).tracking(2)
                 .foregroundStyle(ClipoStyle.accent)
-            Text("A better game\nstarts here.")
+            LocalizedText("A better game\nstarts here.")
                 .font(.system(.largeTitle, design: .serif, weight: .medium))
                 .foregroundStyle(ClipoStyle.paper)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Watch. Practise. Repeat.")
+            LocalizedText("Watch. Practise. Repeat.")
                 .font(.subheadline).foregroundStyle(ClipoStyle.paper)
         }
         .padding(24).frame(maxWidth: .infinity, minHeight: 240, alignment: .leading)
@@ -61,6 +61,7 @@ enum ClipoGlyph: Int {
     case play, pause, close, back, sound, mute, folder, settings
 }
 struct Glyph: View {
+    @Environment(\.layoutDirection) private var direction
     let symbol: ClipoGlyph
     var size: CGFloat = 25
     var tint: Color = .white
@@ -85,7 +86,9 @@ struct Glyph: View {
         }
         .frame(width: size * 1.65, height: size * 1.65)
         .clipped().contentShape(.interaction, Rectangle())
-        .blendMode(.screen).accessibilityHidden(true)
+        .blendMode(.screen)
+        .scaleEffect(x: symbol == .back && direction == .rightToLeft ? -1 : 1, y: 1)
+        .accessibilityHidden(true)
     }
 }
 struct IconButton: View {
@@ -98,7 +101,7 @@ struct IconButton: View {
             Glyph(symbol: symbol).allowsHitTesting(false).frame(width: 48, height: 48)
                 .background(selected ? ClipoStyle.raised : Color.clear, in: RoundedRectangle(cornerRadius: 16))
                 .contentShape(.interaction, Rectangle())
-        }.buttonStyle(PressStyle()).accessibilityLabel(label)
+        }.buttonStyle(PressStyle()).accessibilityLabel(LocalizedStringKey(label))
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
@@ -115,7 +118,7 @@ struct ActionButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(busy ? "Please wait…" : title).font(.body.weight(.semibold))
+            LocalizedText(busy ? "Please wait…" : title).font(.body.weight(.semibold))
                 .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 14)
                 .foregroundStyle(primary ? ClipoStyle.ink : Color.white)
                 .frame(maxWidth: .infinity, minHeight: 54)
@@ -130,8 +133,8 @@ struct MessagePanel: View {
     var action: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(title).font(.title3.weight(.semibold)).foregroundStyle(.white)
-            Text(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
+            LocalizedText(title).font(.title3.weight(.semibold)).foregroundStyle(.white)
+            LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
             if let actionTitle, let action { ActionButton(title: actionTitle, primary: false, action: action) }
         }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
@@ -140,7 +143,7 @@ struct MessagePanel: View {
 struct ErrorNote: View {
     let message: String
     var body: some View {
-        Text(message).font(.subheadline).foregroundStyle(ClipoStyle.danger)
+        LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.danger)
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
             .accessibilityLabel("Error: \(message)")
     }
@@ -190,7 +193,7 @@ struct SheetHeading: View {
     var close: () -> Void
     var body: some View {
         HStack {
-            Text(title).font(.title3.weight(.bold)).lineLimit(2)
+            LocalizedText(title).font(.title3.weight(.bold)).lineLimit(2)
             Spacer()
             IconButton(symbol: .close, label: "Close", action: close)
         }.padding(.horizontal, 20).padding(.top, 12)
@@ -203,13 +206,13 @@ struct SectionLabel: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title).font(.headline)
+                LocalizedText(title).font(.headline)
                 Spacer(minLength: 12)
-                if let detail { Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary) }
+                if let detail { LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary) }
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.headline)
-                if let detail { Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary) }
+                LocalizedText(title).font(.headline)
+                if let detail { LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary) }
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -241,8 +244,8 @@ struct FeatureRow: View {
                 .frame(width: 48, height: 48)
                 .background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 14))
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                LocalizedText(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)

@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct ClipoApp: App {
+    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.en.rawValue
+    private var language: AppLanguage { AppLanguage(rawValue: languageCode) ?? .en }
     @StateObject private var api: APIClient
     @StateObject private var library: LibraryStore
     @StateObject private var quota: QuotaStore
@@ -22,6 +24,8 @@ struct ClipoApp: App {
             ClipoStartupHost().environmentObject(api).environmentObject(library)
                 .environmentObject(quota).environmentObject(commerce).environmentObject(ads)
                 .environmentObject(accountAccess)
+                .environment(\.locale, language.locale)
+                .environment(\.layoutDirection, language.direction)
                 .preferredColorScheme(.dark).tint(ClipoStyle.accent)
         }
     }
@@ -118,7 +122,7 @@ struct ClipoTabBar: View {
                     .contentShape(.interaction, Rectangle())
                 }
                 .buttonStyle(PressStyle())
-                .accessibilityLabel(item.name)
+                .accessibilityLabel(LocalizedStringKey(item.name))
                 .accessibilityAddTraits(selection == item ? .isSelected : [])
                 .accessibilityIdentifier("tab.\(item.name.lowercased())")
             }
@@ -173,7 +177,7 @@ struct ClipoRootView: View {
             .overlay(alignment: .top) {
                 if let message = library.error {
                     HStack {
-                        Text(message).font(.subheadline)
+                        LocalizedText(message).font(.subheadline)
                         IconButton(symbol: .close, label: "Dismiss message") { library.error = nil }
                     }.padding(14).background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 18)).padding()
                 }

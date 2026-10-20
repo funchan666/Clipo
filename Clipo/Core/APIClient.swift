@@ -123,7 +123,7 @@ final class APIClient: ObservableObject {
         guard let session else { throw ClipoError.unauthorized }
         return try await perform("/app-api/flow/release-package/getV2", query: [
             "platform": "IOS", "name": configuration.bundleID, "version": configuration.version,
-            "lang": Bundle.main.preferredLocalizations.first ?? "en", "userId": session.userId.value,
+            "lang": AppLanguage.current.rawValue, "userId": session.userId.value,
             "time": TimeZone.current.identifier, "input": UITextInputMode.activeInputModes.compactMap(\.primaryLanguage).joined(separator: ",")
         ], authenticated: false)
     }

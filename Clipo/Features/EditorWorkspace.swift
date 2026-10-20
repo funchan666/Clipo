@@ -46,10 +46,10 @@ struct ToolsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 TennisArtwork(kind: .lesson, height: 200)
-                Text("See your game\nfrom a new angle.")
+                LocalizedText("See your game\nfrom a new angle.")
                     .font(.system(.largeTitle, design: .serif, weight: .medium))
                     .foregroundStyle(ClipoStyle.paper)
-                Text("Bring in your practice footage. Slow down a serve, focus on your footwork, or keep your best rally.")
+                LocalizedText("Bring in your practice footage. Slow down a serve, focus on your footwork, or keep your best rally.")
                     .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 TennisGuideEntry { showingGuide = true }
                 VStack(spacing: 0) {
@@ -58,8 +58,8 @@ struct ToolsView: View {
                             HStack(spacing: 16) {
                                 Glyph(symbol: tool.glyph, size: 26).allowsHitTesting(false)
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(tool.title).font(.headline)
-                                    Text(tool.detail).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                                    LocalizedText(tool.title).font(.headline)
+                                    LocalizedText(tool.detail).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                             }.padding(.vertical, 20).padding(.horizontal, 20)
@@ -70,7 +70,7 @@ struct ToolsView: View {
                     }
                 }.background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
                 ActionButton(title: "Review a practice video") { selectedTool = .studio }
-                Text("Processed on your device. Finished files appear in Library under Exports.")
+                LocalizedText("Processed on your device. Finished files appear in Library under Exports.")
                     .font(.footnote).foregroundStyle(ClipoStyle.secondary)
             }.clipoPage()
         }.clipoScreenBackground()
@@ -114,12 +114,12 @@ struct EditorWorkspace: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 if selected == nil {
-                    Text(initialTool.detail)
+                    LocalizedText(initialTool.detail)
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 }
                 if let selected {
                     HStack {
-                        Text(selected.title).font(.subheadline).lineLimit(1)
+                        LocalizedText(selected.title).font(.subheadline).lineLimit(1)
                         Spacer()
                         if !editor.isExporting, !editor.isPreparingPreview {
                             Button("Change") { self.selected = nil; editor.close() }.foregroundStyle(ClipoStyle.accent)
@@ -128,7 +128,7 @@ struct EditorWorkspace: View {
                     VideoSurface(player: editor.preview.player, fill: false)
                         .aspectRatio(4.0 / 3.0, contentMode: .fit).background(.black).clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay(alignment: .bottomTrailing) { PreviewButton(playback: editor.preview).padding(8) }
-                    if editor.isLoading { Text("Preparing your video…").foregroundStyle(ClipoStyle.secondary) }
+                    if editor.isLoading { LocalizedText("Preparing your video…").foregroundStyle(ClipoStyle.secondary) }
                     if editor.isPreparingPreview { AccountLoadingIndicator(title: "Preparing preview…").frame(maxWidth: .infinity) }
                     if initialTool == .studio {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -147,7 +147,7 @@ struct EditorWorkspace: View {
                     if let error { ErrorNote(message: error) }
                     if editor.isExporting {
                         VStack(spacing: 14) {
-                            Text("Exporting · \(Int(editor.progress * 100))%").font(.headline.monospacedDigit())
+                            LocalizedText("Exporting · \(Int(editor.progress * 100))%").font(.headline.monospacedDigit())
                             GeometryReader { geometry in
                                 Color.clear.background(ClipoStyle.raised)
                                     .overlay(alignment: .leading) { ClipoStyle.accent.frame(width: geometry.size.width * CGFloat(editor.progress)) }
@@ -162,18 +162,18 @@ struct EditorWorkspace: View {
                         ActionButton(title: "Preview changes", primary: false) { Task { await editor.applyPreview() } }
                             .disabled(editor.isLoading || editor.isPreparingPreview || editor.duration <= 0)
                     }
-                    Text("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 } else {
                     VStack(alignment: .leading, spacing: 24) {
                         TennisArtwork(kind: .lesson, height: 176)
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Start with a video.").font(.title2.weight(.bold)).tracking(-0.5)
-                            Text("Choose a clip from your device. We’ll keep your original untouched.")
+                            LocalizedText("Start with a video.").font(.title2.weight(.bold)).tracking(-0.5)
+                            LocalizedText("Choose a clip from your device. We’ll keep your original untouched.")
                                 .font(.subheadline).foregroundStyle(ClipoStyle.secondary).lineSpacing(3)
                         }
                         VStack(spacing: 10) {
                             PhotosPicker(selection: $picker, matching: .videos, photoLibrary: .shared()) {
-                                Text(importing ? "Importing…" : "Choose from Photos").font(.body.weight(.semibold))
+                                LocalizedText(importing ? "Importing…" : "Choose from Photos").font(.body.weight(.semibold))
                                     .padding(.horizontal, 16).padding(.vertical, 16)
                                     .frame(maxWidth: .infinity, minHeight: 54).foregroundStyle(ClipoStyle.ink)
                                     .background(ClipoStyle.accent, in: RoundedRectangle(cornerRadius: 16))
@@ -188,8 +188,8 @@ struct EditorWorkspace: View {
                             HStack(spacing: 16) {
                                 TennisArtwork(kind: .bag, height: 72).frame(width: 108)
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text("Export your way").font(.subheadline.weight(.semibold))
-                                    Text("Save a video or extract an audio track.").font(.caption)
+                                    LocalizedText("Export your way").font(.subheadline.weight(.semibold))
+                                    LocalizedText("Save a video or extract an audio track.").font(.caption)
                                         .foregroundStyle(ClipoStyle.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
@@ -204,8 +204,8 @@ struct EditorWorkspace: View {
                                 HStack(spacing: 14) {
                                     Glyph(symbol: .feed, size: 28)
                                     VStack(alignment: .leading, spacing: 5) {
-                                        Text(movie.title).font(.headline).lineLimit(1)
-                                        Text(movie.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                                        Text(verbatim: movie.title).font(.headline).lineLimit(1)
+                                        Text(verbatim: movie.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(ClipoStyle.secondary)
                                     }
                                     Spacer()
                                     Glyph(symbol: .edit, size: 22)
@@ -247,7 +247,7 @@ struct EditorWorkspace: View {
         VStack(alignment: .leading, spacing: 20) {
             switch tool {
             case "Trim":
-                Text("Keep the good part.").font(.title3.bold())
+                LocalizedText("Keep the good part.").font(.title3.bold())
                 if !editor.thumbnails.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 2) {
@@ -257,35 +257,35 @@ struct EditorWorkspace: View {
                         }
                     }.clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                HStack { Text("Start"); Spacer(); Text(durationLabel(editor.recipe.start)).monospacedDigit() }
+                HStack { LocalizedText("Start"); Spacer(); Text(verbatim: durationLabel(editor.recipe.start)).monospacedDigit() }
                 ClipoScrubber(value: Binding(get: { editor.recipe.start }, set: { editor.recipe.start = min($0, editor.recipe.end - 0.1); editor.preview.seek($0) }), range: 0...max(0.1, editor.duration), label: "Trim start")
-                HStack { Text("End"); Spacer(); Text(durationLabel(editor.recipe.end)).monospacedDigit() }
+                HStack { LocalizedText("End"); Spacer(); Text(verbatim: durationLabel(editor.recipe.end)).monospacedDigit() }
                 ClipoScrubber(value: Binding(get: { editor.recipe.end }, set: { editor.recipe.end = max($0, editor.recipe.start + 0.1) }), range: 0...max(0.1, editor.duration), label: "Trim end")
-                Text("Final duration · \(durationLabel((editor.recipe.end - editor.recipe.start) / editor.recipe.speed))").font(.footnote).foregroundStyle(ClipoStyle.accent)
+                LocalizedText("Final duration · \(durationLabel((editor.recipe.end - editor.recipe.start) / editor.recipe.speed))").font(.footnote).foregroundStyle(ClipoStyle.accent)
             case "Frame":
-                Text("Find the frame.").font(.title3.bold())
+                LocalizedText("Find the frame.").font(.title3.bold())
                 FlowChoices(values: VideoFrame.allCases.map(\.rawValue), selected: editor.recipe.frame.rawValue) { value in editor.recipe.frame = VideoFrame(rawValue: value) ?? .original }
                 ActionButton(title: "Rotate 90° · \((editor.recipe.quarterTurns % 4) * 90)°", primary: false) { editor.recipe.quarterTurns = (editor.recipe.quarterTurns + 1) % 4 }
                 ActionButton(title: editor.recipe.mirrored ? "Mirror: On" : "Mirror: Off", primary: false) { editor.recipe.mirrored.toggle() }
-                Text("Frames crop from the center. Use Preview changes to inspect the result.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                LocalizedText("Frames crop from the center. Use Preview changes to inspect the result.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
             case "Speed":
-                Text("Set the pace.").font(.title3.bold())
+                LocalizedText("Set the pace.").font(.title3.bold())
                 FlowChoices(values: ["0.5×", "0.75×", "1×", "1.5×", "2×"], selected: String(format: "%g×", editor.recipe.speed)) { value in editor.recipe.speed = Double(value.replacingOccurrences(of: "×", with: "")) ?? 1 }
             case "Audio":
                 if initialTool == .audio {
-                    Text("Keep the soundtrack.").font(.title3.bold())
-                    Text("Extract the original audio track into an M4A file. Videos without an audio track cannot be converted.")
+                    LocalizedText("Keep the soundtrack.").font(.title3.bold())
+                    LocalizedText("Extract the original audio track into an M4A file. Videos without an audio track cannot be converted.")
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 } else {
-                    Text("Let it speak. Or don’t.").font(.title3.bold())
+                    LocalizedText("Let it speak. Or don’t.").font(.title3.bold())
                     ActionButton(title: editor.recipe.muted ? "Audio: Muted" : "Audio: Original", primary: false) { editor.recipe.muted.toggle() }
                     ActionButton(title: "Extract audio as M4A", primary: false) { export(audio: true, title: selected?.title ?? "Audio") }
-                    Text("Audio extraction uses your trim and speed settings.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText("Audio extraction uses your trim and speed settings.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 }
             default:
-                Text("Ready for its next screen.").font(.title3.bold())
+                LocalizedText("Ready for its next screen.").font(.title3.bold())
                 FlowChoices(values: ExportQuality.allCases.map(\.rawValue), selected: editor.recipe.quality.rawValue) { value in editor.recipe.quality = ExportQuality(rawValue: value) ?? .full }
-                Text("MP4 · Up to the selected resolution · 30 fps\nSmaller resolutions reduce export size. Source videos are never upscaled.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                LocalizedText("MP4 · Up to the selected resolution · 30 fps\nSmaller resolutions reduce export size. Source videos are never upscaled.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
             }
         }.padding(22).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 20))
     }
@@ -326,7 +326,7 @@ struct FlowChoices: View {
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 88))], spacing: 8) {
             ForEach(values, id: \.self) { value in
-                Button(value) { action(value) }.font(.subheadline.weight(.semibold))
+                Button(LocalizedStringKey(value)) { action(value) }.font(.subheadline.weight(.semibold))
                     .multilineTextAlignment(.center).padding(.horizontal, 10).padding(.vertical, 12)
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(value == selected ? ClipoStyle.ink : .white)

@@ -26,10 +26,10 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HStack(spacing: 10) {
-                    Text("YOUR DAILY PRACTICE").font(.caption2.weight(.bold))
+                    LocalizedText("YOUR DAILY PRACTICE").font(.caption2.weight(.bold))
                         .tracking(2).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
-                    Button(commerce.premium ? "PLUS" : "Get Plus") { paywall = true }
+                    Button(LocalizedStringKey(commerce.premium ? "PLUS" : "Get Plus")) { paywall = true }
                         .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
                         .padding(.horizontal, 16).frame(minHeight: 44)
                         .background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
@@ -52,8 +52,8 @@ struct HomeView: View {
                 if !channels.isEmpty {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Lesson collections").font(.headline)
-                            Text("Keep learning, one session at a time.").font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            LocalizedText("Lesson collections").font(.headline)
+                            LocalizedText("Keep learning, one session at a time.").font(.caption).foregroundStyle(ClipoStyle.secondary)
                         }.frame(maxWidth: .infinity, alignment: .leading)
                         TennisArtwork(kind: .notebook, height: 76).frame(width: 114)
                     }
@@ -63,8 +63,8 @@ struct HomeView: View {
                                 HStack(spacing: 14) {
                                     MediaCover(url: WebAddress.media(item.shortCover), folder: false).frame(width: 62, height: 72).clipShape(RoundedRectangle(cornerRadius: 12))
                                     VStack(alignment: .leading, spacing: 5) {
-                                        Text(title).font(.headline).lineLimit(2)
-                                        if let count = info.videoFileCount { Text("\(count) videos").font(.caption).foregroundStyle(ClipoStyle.secondary) }
+                                        LocalizedText(title).font(.headline).lineLimit(2)
+                                        if let count = info.videoFileCount { LocalizedText("\(count) videos").font(.caption).foregroundStyle(ClipoStyle.secondary) }
                                     }
                                     Spacer()
                                 }
@@ -96,7 +96,7 @@ struct HomeView: View {
                 Glyph(symbol: .link, size: 20)
                     .frame(width: 40, height: 40)
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
-                Text("Open a lesson").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+                LocalizedText("Open a lesson").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
             }
             TextField("Lesson link or short code", text: $link, axis: .vertical)
                 .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -120,14 +120,14 @@ struct HomeView: View {
                     .environment(\.colorScheme, .light).accessibilityLabel("Access password")
             }
             Button(action: resolve) {
-                Text(loading ? "Opening link…" : "Open link")
+                LocalizedText(loading ? "Opening link…" : "Open link")
                     .font(.body.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 16)
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .foregroundStyle(ClipoStyle.accent)
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 16))
             }.buttonStyle(PressStyle()).disabled(loading || link.nilIfBlank == nil)
             if api.session != nil {
-                Text(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
+                LocalizedText(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
                     .font(.caption).foregroundStyle(ClipoStyle.paperSecondary)
             }
         }.padding(22).background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
@@ -148,8 +148,8 @@ struct HomeView: View {
     private var linkGuide: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Have a lesson link?").font(.subheadline.weight(.semibold))
-                Text("Paste the link or code shared with you.")
+                LocalizedText("Have a lesson link?").font(.subheadline.weight(.semibold))
+                LocalizedText("Paste the link or code shared with you.")
                     .font(.caption).foregroundStyle(ClipoStyle.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Button("How to") { showingLinkGuide = true }
@@ -161,7 +161,7 @@ struct HomeView: View {
         if !library.history.isEmpty {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("Recently opened").font(.headline)
+                    LocalizedText("Recently opened").font(.headline)
                     Spacer()
                     Button("Clear") { library.clearHistory() }
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
@@ -171,8 +171,8 @@ struct HomeView: View {
                     HStack {
                         Button { link = visit.link; resolve() } label: {
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(visit.title).font(.headline).lineLimit(1)
-                                Text(visit.link).font(.caption).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
+                                Text(verbatim: visit.title).font(.headline).lineLimit(1)
+                                Text(verbatim: visit.link).font(.caption).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
                             }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                                 .contentShape(Rectangle())
                         }.buttonStyle(PressStyle()).disabled(loading)
@@ -183,7 +183,7 @@ struct HomeView: View {
         }
     }
     private var passwordButton: some View {
-        Button(usePassword ? "Hide password" : "Has a password?") { usePassword.toggle() }
+        Button(LocalizedStringKey(usePassword ? "Hide password" : "Has a password?")) { usePassword.toggle() }
             .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
             .frame(minHeight: 44).buttonStyle(PressStyle())
     }
@@ -192,8 +192,8 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 18) {
                 TennisArtwork(kind: artwork, height: 116)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(title).font(.headline).foregroundStyle(.white)
-                    Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(title).font(.headline).foregroundStyle(.white)
+                    LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -251,8 +251,8 @@ struct ChannelView: View {
                                 MediaCover(url: WebAddress.media(item.coverImage), folder: item.isFolder == true)
                                     .frame(width: 80, height: 94).clipShape(RoundedRectangle(cornerRadius: 14))
                                 VStack(alignment: .leading, spacing: 7) {
-                                    Text(item.name ?? "Untitled").font(.headline).lineLimit(3)
-                                    Text(item.isFolder == true ? "\(item.childrenFileNum ?? 0) videos" : durationLabel(item.length ?? 0))
+                                    LocalizedText(item.name ?? "Untitled").font(.headline).lineLimit(3)
+                                    LocalizedText(item.isFolder == true ? "\(item.childrenFileNum ?? 0) videos" : durationLabel(item.length ?? 0))
                                         .font(.caption.monospacedDigit()).foregroundStyle(ClipoStyle.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 Glyph(symbol: item.isFolder == true ? .folder : .play, size: 20)
@@ -301,7 +301,7 @@ struct LinkGuideSheet: View {
                     FeatureRow(symbol: .link, title: "1. Copy your shared link", detail: "Use a tennis lesson link or short code shared with you.")
                     FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste link or enter the code exactly as received. Uppercase and lowercase letters matter.")
                     FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to watch the lesson or browse its collection. Add the access password if one was provided.")
-                    Text("A link not opening? Check the code and password, or ask the sender for a new link.")
+                    LocalizedText("A link not opening? Check the code and password, or ask the sender for a new link.")
                         .font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Got it") { dismiss() }
                 }.clipoPage()

@@ -112,14 +112,14 @@ struct TennisGuideEntry: View {
                     TennisArtwork(kind: .notebook, height: 80).frame(width: 80)
                 }
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Tennis field notes")
+                    LocalizedText("Tennis field notes")
                         .font(.system(.title3, design: .serif, weight: .semibold))
                         .foregroundStyle(ClipoStyle.paper)
-                    Text(compact ? "Strokes, scoring & the four majors" : "A little knowledge for your next session.")
+                    LocalizedText(compact ? "Strokes, scoring & the four majors" : "A little knowledge for your next session.")
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if !compact {
-                        Text("\(TennisNote.all.count) short reads · Available offline")
+                        LocalizedText("\(TennisNote.all.count) short reads · Available offline")
                             .font(.caption).foregroundStyle(ClipoStyle.accent)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
@@ -148,11 +148,11 @@ struct TennisGuideView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Know the game.\nEnjoy every point.")
+                            LocalizedText("Know the game.\nEnjoy every point.")
                                 .font(.system(.largeTitle, design: .serif, weight: .medium))
                                 .foregroundStyle(ClipoStyle.paper)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Text("Short reads, from your first forehand to the biggest stages.")
+                            LocalizedText("Short reads, from your first forehand to the biggest stages.")
                                 .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         }
                         FlowChoices(values: categories, selected: category) { category = $0 }
@@ -160,14 +160,14 @@ struct TennisGuideView: View {
                             ForEach(notes) { note in
                                 NavigationLink(value: note.id) {
                                     VStack(alignment: .leading, spacing: 9) {
-                                        Text(note.category.uppercased())
+                                        LocalizedText(note.category)
                                             .font(.caption2.weight(.bold)).tracking(1.5)
                                             .foregroundStyle(ClipoStyle.accent)
                                         HStack(alignment: .top, spacing: 12) {
                                             VStack(alignment: .leading, spacing: 7) {
-                                                Text(note.title).font(.title3.weight(.semibold))
+                                                LocalizedText(note.title).font(.title3.weight(.semibold))
                                                     .foregroundStyle(ClipoStyle.paper)
-                                                Text(note.summary).font(.subheadline)
+                                                LocalizedText(note.summary).font(.subheadline)
                                                     .foregroundStyle(ClipoStyle.secondary)
                                             }.fixedSize(horizontal: false, vertical: true)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -180,7 +180,7 @@ struct TennisGuideView: View {
                                 Divider().overlay(ClipoStyle.line)
                             }
                         }
-                        Text("All notes can be read offline. Original summaries with links to further reading.")
+                        LocalizedText("All notes can be read offline. Original summaries with links to further reading.")
                             .font(.caption).foregroundStyle(ClipoStyle.secondary)
                     }.clipoPage()
                 }
@@ -204,7 +204,7 @@ private struct TennisNoteReader: View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 IconButton(symbol: .back, label: "Back to field notes") { dismiss() }
-                Text(note.category).font(.subheadline.weight(.semibold))
+                LocalizedText(note.category).font(.subheadline.weight(.semibold))
                     .foregroundStyle(ClipoStyle.secondary)
                 Spacer(minLength: 0)
             }.padding(.horizontal, 16).padding(.top, 8)
@@ -212,36 +212,36 @@ private struct TennisNoteReader: View {
                 VStack(alignment: .leading, spacing: 28) {
                     TennisArtwork(kind: note.artwork, height: 150)
                     VStack(alignment: .leading, spacing: 14) {
-                        Text(note.title)
+                        LocalizedText(note.title)
                             .font(.system(.largeTitle, design: .serif, weight: .medium))
                             .foregroundStyle(ClipoStyle.paper).accessibilityAddTraits(.isHeader)
-                        Text(note.summary).font(.title3).foregroundStyle(ClipoStyle.secondary)
+                        LocalizedText(note.summary).font(.title3).foregroundStyle(ClipoStyle.secondary)
                     }
                     ForEach(note.sections.indices, id: \.self) { index in
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(note.sections[index].title).font(.headline)
+                            LocalizedText(note.sections[index].title).font(.headline)
                                 .accessibilityAddTraits(.isHeader)
-                            Text(note.sections[index].body).font(.body).lineSpacing(5)
+                            LocalizedText(note.sections[index].body).font(.body).lineSpacing(5)
                                 .foregroundStyle(ClipoStyle.paper.opacity(0.9))
                                 .textSelection(.enabled)
                         }.fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("ONE THING TO REMEMBER").font(.caption2.weight(.bold)).tracking(1.5)
-                        Text(note.takeaway).font(.body.weight(.medium)).lineSpacing(3)
+                        LocalizedText("ONE THING TO REMEMBER").font(.caption2.weight(.bold)).tracking(1.5)
+                        LocalizedText(note.takeaway).font(.body.weight(.medium)).lineSpacing(3)
                     }.foregroundStyle(ClipoStyle.ink)
                         .padding(22).frame(maxWidth: .infinity, alignment: .leading)
                         .background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 20))
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Further reading").font(.headline)
-                        Text("Official sources · Opens online")
+                        LocalizedText("Further reading").font(.headline)
+                        LocalizedText("Official sources · Opens online")
                             .font(.caption).foregroundStyle(ClipoStyle.secondary)
                         ForEach(note.sources, id: \.address) { reference in
                             if let url = URL(string: reference.address) {
                                 Button {
                                     source = PolicyDocument(title: reference.title, url: url)
                                 } label: {
-                                    Text(reference.title).font(.subheadline.weight(.medium))
+                                    LocalizedText(reference.title).font(.subheadline.weight(.medium))
                                         .multilineTextAlignment(.leading)
                                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                                         .contentShape(Rectangle())

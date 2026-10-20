@@ -26,8 +26,8 @@ struct LibraryView: View {
                                 HStack(spacing: 14) {
                                     MediaCover(url: clip.coverURL).frame(width: 76, height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
                                     VStack(alignment: .leading, spacing: 8) {
-                                        Text(clip.title).font(.headline).lineLimit(3)
-                                        Text(clip.channel).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                                        Text(verbatim: clip.title).font(.headline).lineLimit(3)
+                                        Text(verbatim: clip.channel).font(.caption).foregroundStyle(ClipoStyle.secondary)
                                     }.frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }.buttonStyle(PressStyle())
@@ -47,8 +47,8 @@ struct LibraryView: View {
                                 .frame(width: 60, height: 76)
                                 .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 16))
                             VStack(alignment: .leading, spacing: 7) {
-                                Text(movie.title).font(.headline).lineLimit(2)
-                                Text(movie.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                                Text(verbatim: movie.title).font(.headline).lineLimit(2)
+                                Text(verbatim: movie.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(ClipoStyle.secondary)
                                 HStack(spacing: 20) {
                                     if movie.filename.hasSuffix("m4a") == false {
                                         Button("Edit") { edit(movie) }.frame(minHeight: 44)
@@ -67,8 +67,8 @@ struct LibraryView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         SheetHeading(title: "Delete this local copy?") { removing = nil }
-                        Text(movie.title).font(.headline)
-                        Text("The copy in Clipo will be removed. The original in Photos or Files will stay untouched.").foregroundStyle(ClipoStyle.secondary)
+                        Text(verbatim: movie.title).font(.headline)
+                        LocalizedText("The copy in Clipo will be removed. The original in Photos or Files will stay untouched.").foregroundStyle(ClipoStyle.secondary)
                         ActionButton(title: "Delete local copy") { library.delete(movie); removing = nil }
                         ActionButton(title: "Keep it", primary: false) { removing = nil }
                     }.padding(24)
@@ -85,8 +85,8 @@ private struct LibraryEmptyState: View {
         VStack(spacing: 18) {
             TennisArtwork(kind: artwork, height: 184)
             VStack(spacing: 10) {
-                Text(title).font(.title3.weight(.semibold))
-                Text(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                LocalizedText(title).font(.title3.weight(.semibold))
+                LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                     .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             }
         }.multilineTextAlignment(.center).padding(.horizontal, 24).padding(.vertical, 28)

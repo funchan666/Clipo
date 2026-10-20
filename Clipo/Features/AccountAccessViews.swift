@@ -29,7 +29,7 @@ struct AccountLoadingIndicator: View {
                     reduceMotion || scenePhase != .active ? nil : .easeInOut(duration: 0.6)
                 }
                 .accessibilityHidden(true)
-            Text(title).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
+            LocalizedText(title).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
         }.padding(28).frame(maxWidth: 280)
             .foregroundStyle(.white)
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
@@ -67,14 +67,14 @@ struct AccountDecisionDialog: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    Text(title).font(.title2.weight(.bold)).foregroundStyle(.white)
+                    LocalizedText(title).font(.title2.weight(.bold)).foregroundStyle(.white)
                         .accessibilityAddTraits(.isHeader).accessibilityFocused($titleFocused)
-                    Text(message).font(.body).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(message).font(.body).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if showsPolicies { PolicyLinks() }
                     VStack(spacing: 10) {
                         Button(action: confirm) {
-                            Text(confirmTitle).font(.body.weight(.semibold))
+                            LocalizedText(confirmTitle).font(.body.weight(.semibold))
                                 .multilineTextAlignment(.center).padding(16)
                                 .frame(maxWidth: .infinity, minHeight: 54)
                                 .foregroundStyle(ClipoStyle.ink)
@@ -224,6 +224,8 @@ struct PolicyWebView: UIViewRepresentable {
 }
 
 struct AccountSettingsSection: View {
+    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.en.rawValue
+    @State private var languagePicker = false
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var ads: RewardedAds
@@ -233,8 +235,13 @@ struct AccountSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
+            Button { languagePicker = true } label: {
+                AccountMenuRow(title: "App language", detail: (AppLanguage(rawValue: languageCode) ?? .en).nativeName)
+            }.buttonStyle(PressStyle())
+                .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+                .accessibilityIdentifier("account.language")
             VStack(alignment: .leading, spacing: 12) {
-                Text("Privacy & subscriptions").font(.headline)
+                LocalizedText("Privacy & subscriptions").font(.headline)
                 VStack(spacing: 0) {
                     if let url = api.configuration.privacyURL {
                         Button { document = PolicyDocument(title: "Privacy Policy", url: url) } label: {
@@ -263,6 +270,7 @@ struct AccountSettingsSection: View {
             if let error = ads.error { ErrorNote(message: error) }
         }
             .sheet(item: $document) { PolicyBrowser(document: $0) }
+            .sheet(isPresented: $languagePicker) { LanguagePicker() }
     }
 
     private var rowDivider: some View {
@@ -279,10 +287,10 @@ private struct AccountMenuRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.subheadline.weight(.medium))
+                LocalizedText(title).font(.subheadline.weight(.medium))
                     .foregroundStyle(destructive ? ClipoStyle.danger : ClipoStyle.paper)
                 if let detail {
-                    Text(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
                 }
             }.fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
