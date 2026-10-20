@@ -60,7 +60,6 @@ enum SecureStorage {
 final class APIClient: ObservableObject {
     private let diagnostics = Logger(subsystem: "com.clipo.video", category: "API")
     @Published private(set) var session: VisitorSession?
-    @Published private(set) var hasEnteredApp = false
     let configuration: ClipoConfiguration
     private let transport: URLSession
     private var loginTask: Task<VisitorSession, Error>?
@@ -78,30 +77,18 @@ final class APIClient: ObservableObject {
                 let saved = try JSONDecoder().decode(VisitorSession.self, from: data)
                 if !saved.accessToken.isEmpty {
                     session = saved
-                    hasEnteredApp = try SecureStorage.read("visitor-awaiting-welcome") == nil
                 }
             }
         } catch {
             session = nil
-            hasEnteredApp = false
             storageFailure = error
         }
     }
 
-    // Prepare a real guest for package/ad configuration without bypassing the welcome gate.
+    // Startup authenticates a real guest; no separate welcome gate or implied consent record.
     func prepareVisitor() async throws {
         guard session == nil else { return }
-        try SecureStorage.write(Data([1]), key: "visitor-awaiting-welcome")
         _ = try await signIn()
-    }
-
-    // Only the explicit consent-checked welcome action may open the main interface.
-    func enterApp() async throws {
-        if session == nil { try await prepareVisitor() }
-        try Task.checkCancellation()
-        guard session != nil else { throw ClipoError.unauthorized }
-        try SecureStorage.remove("visitor-awaiting-welcome")
-        hasEnteredApp = true
     }
 
     @discardableResult func signIn() async throws -> VisitorSession {
@@ -130,29 +117,6 @@ final class APIClient: ObservableObject {
         loginTask = task
         defer { loginTask = nil }
         return try await task.value
-    }
-
-    func signOut() throws {
-        try SecureStorage.remove("visitor")
-        sessionGeneration = UUID()
-        loginTask?.cancel()
-        loginTask = nil
-        session = nil
-        hasEnteredApp = false
-        storageFailure = nil
-    }
-
-    // Explicitly local simulation until a server deletion contract is supplied.
-    // Keep local media and immutable purchase recovery records intact.
-    func resetLocalAccount() throws {
-        let installation = try SecureStorage.read("installation")
-        try SecureStorage.remove("installation")
-        do {
-            try signOut()
-        } catch {
-            if let installation { try SecureStorage.write(installation, key: "installation") }
-            throw error
-        }
     }
 
     func releaseConfiguration() async throws -> ReleaseConfiguration {

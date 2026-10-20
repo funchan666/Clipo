@@ -53,7 +53,7 @@ struct DiscoverView: View {
                         ClipoIllustration(name: "ClipoArtDiscover", height: 208)
                         Text("Sign in, find your next favorite, and keep swiping.")
                             .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                        SignInPanel()
+                        ConnectionPanel()
                     }.clipoPage()
                 }
             } else if feed.clips.isEmpty {

@@ -44,7 +44,7 @@ struct MembershipView: View {
                     }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                         .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                 } else {
-                    if api.session == nil { SignInPanel() }
+                    if api.session == nil { ConnectionPanel() }
                     VStack(spacing: 12) {
                         ForEach(plans) { plan in
                             planRow(plan)
@@ -214,7 +214,6 @@ struct AccountView: View {
     @EnvironmentObject private var quota: QuotaStore
     @EnvironmentObject private var ads: RewardedAds
     @EnvironmentObject private var accountAccess: AccountAccessFlow
-    var signedOut: () -> Void
     @State private var paywall = false
     private var unavailable: Bool {
         accountAccess.isBusy || commerce.busy || commerce.preparingPurchase || ads.busy || ads.isPresenting
@@ -237,8 +236,8 @@ struct AccountView: View {
                     }
                     membershipCard
                     allowance
-                    AccountSettingsSection(signedOut: signedOut)
-                } else { SignInPanel() }
+                    AccountSettingsSection()
+                } else { ConnectionPanel() }
                 Text("Version \(api.configuration.version)")
                     .font(.caption).foregroundStyle(ClipoStyle.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 4)

@@ -53,70 +53,6 @@ struct AccountBusyModifier: ViewModifier {
     }
 }
 
-// One shared gate for the welcome screen and every signed-out content panel.
-struct LoginControls: View {
-    @EnvironmentObject private var api: APIClient
-    @EnvironmentObject private var ads: RewardedAds
-    @EnvironmentObject private var accountAccess: AccountAccessFlow
-    @State private var agreed = false
-    @State private var needsConsent = false
-    @State private var error: String?
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if let error { ErrorNote(message: error) }
-            ActionButton(title: "One-tap sign in", busy: accountAccess.isBusy) {
-                guard agreed else { needsConsent = true; return }
-                guard !accountAccess.isBusy else { return }
-                error = nil
-                Task {
-                    do {
-                        try await accountAccess.perform("Signing you in…") {
-                            try await api.enterApp()
-                        }
-                    } catch is CancellationError {
-                        // Another account operation owns the presentation.
-                    } catch { self.error = error.localizedDescription }
-                }
-            }.disabled(ads.isPreparingAppOpen || ads.isPresenting)
-                .accessibilityIdentifier("login.submit")
-            HStack(alignment: .top, spacing: 6) {
-                Button { agreed.toggle() } label: {
-                    ConsentCheckbox(selected: agreed).frame(width: 30, height: 30)
-                        .frame(width: 44, height: 44)
-                        .contentShape(.interaction, Rectangle())
-                }.buttonStyle(PressStyle())
-                    .accessibilityLabel("Agree to the Terms of Use and Privacy Policy")
-                    .accessibilityValue(agreed ? "Checked" : "Not checked")
-                    .accessibilityAddTraits(agreed ? .isSelected : [])
-                    .accessibilityIdentifier("login.consent")
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("I agree to the")
-                        .font(.footnote).foregroundStyle(ClipoStyle.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 10)
-                    PolicyLinks()
-                }
-            }.frame(maxWidth: .infinity, alignment: .center)
-        }
-        .fullScreenCover(isPresented: $needsConsent) {
-            AccountDecisionDialog(title: "One small step first", message: "Please read the Terms of Use and Privacy Policy, then tick the agreement box to continue.", confirmTitle: "Back to sign in", showsPolicies: true, confirm: { needsConsent = false })
-                .presentationBackground(.clear)
-        }
-    }
-}
-
-struct ConsentCheckbox: View {
-    let selected: Bool
-    var body: some View {
-        GeometryReader { geometry in
-            Image("ClipoConsentStates").resizable().interpolation(.high)
-                .frame(width: geometry.size.width * 2, height: geometry.size.height)
-                .offset(x: selected ? -geometry.size.width : 0)
-                .allowsHitTesting(false)
-        }.clipped().accessibilityHidden(true)
-    }
-}
-
 // Native text/layout over the app's existing surfaces; no rendered text artwork.
 struct AccountDecisionDialog: View {
     let title: String
@@ -287,19 +223,11 @@ struct PolicyWebView: UIViewRepresentable {
     }
 }
 
-private enum AccountExitAction: String, Identifiable {
-    case signOut, resetLocalAccount
-    var id: String { rawValue }
-}
-
 struct AccountSettingsSection: View {
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var ads: RewardedAds
     @EnvironmentObject private var accountAccess: AccountAccessFlow
-    let signedOut: () -> Void
-    @State private var confirmation: AccountExitAction?
-    @State private var pendingAction: AccountExitAction?
     @State private var error: String?
     @State private var document: PolicyDocument?
     private var unavailable: Bool { accountAccess.isBusy || commerce.busy || commerce.preparingPurchase || ads.busy || ads.isPreparingAppOpen || ads.isPresenting }
@@ -333,63 +261,15 @@ struct AccountSettingsSection: View {
                 }.background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                     .buttonStyle(PressStyle()).disabled(unavailable)
             }
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Account").font(.headline)
-                VStack(spacing: 0) {
-                    Button { confirmation = .signOut } label: {
-                        AccountMenuRow(title: "Sign out")
-                    }.accessibilityIdentifier("settings.signOut")
-                    rowDivider
-                    Button { confirmation = .resetLocalAccount } label: {
-                        AccountMenuRow(title: "Delete account", detail: "Local test only", destructive: true)
-                    }.accessibilityIdentifier("settings.deleteAccount")
-                }.background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
-                    .buttonStyle(PressStyle()).disabled(unavailable)
-                Text("Test mode: deletion resets this device’s sign-in only. Your server account and local files remain.")
-                    .font(.caption).foregroundStyle(ClipoStyle.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let error { ErrorNote(message: error) }
             if let error = ads.error { ErrorNote(message: error) }
         }
             .sheet(item: $document) { PolicyBrowser(document: $0) }
-            .fullScreenCover(item: $confirmation, onDismiss: performPendingAction) { action in
-                AccountDecisionDialog(
-                    title: action == .signOut ? "See you next time?" : "Reset this local account?",
-                    message: action == .signOut
-                        ? "You’ll return to the welcome screen. Saved clips and local files will stay on this device. This does not cancel your Apple subscription."
-                        : "This is a test of account deletion. It clears your sign-in and device login identity, so the next sign-in requests a new guest account. It does not delete your server account, local files or Apple subscription.",
-                    confirmTitle: action == .signOut ? "Sign out" : "Reset local account",
-                    destructive: action == .resetLocalAccount,
-                    cancel: { confirmation = nil },
-                    confirm: { pendingAction = action; confirmation = nil }
-                ).presentationBackground(.clear)
-            }
     }
 
     private var rowDivider: some View {
         Divider().overlay(ClipoStyle.line).padding(.horizontal, 20)
     }
 
-    private func performPendingAction() {
-        guard let action = pendingAction else { return }
-        pendingAction = nil
-        guard !unavailable else { error = "Please wait for your current operation to finish."; return }
-        error = nil
-        Task {
-            do {
-                try await accountAccess.perform(action == .signOut ? "Signing you out…" : "Resetting local account…") {
-                    // A brief local transition makes feedback visible; it is not server progress.
-                    try await Task.sleep(for: .milliseconds(300))
-                    if action == .signOut { try api.signOut() }
-                    else { try api.resetLocalAccount() }
-                    signedOut()
-                }
-            } catch is CancellationError {
-                // No success or navigation is emitted for an interrupted operation.
-            } catch { self.error = error.localizedDescription }
-        }
-    }
 }
 
 // Plain native rows with the original raster navigation glyph.

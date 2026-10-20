@@ -28,7 +28,7 @@ struct ClipoApp: App {
 }
 
 // Keeps the original splash visible during the bounded cold-start ad opportunity.
-// Guest authentication prepares configuration; entering the app remains a separate welcome action.
+// Guest authentication prepares configuration and opens the app directly.
 struct ClipoStartupHost: View {
     @EnvironmentObject private var ads: RewardedAds
     @EnvironmentObject private var commerce: CommerceStore
@@ -141,14 +141,14 @@ struct ClipoRootView: View {
     var body: some View {
         ZStack {
             ClipoStyle.background.ignoresSafeArea()
-            if api.hasEnteredApp, api.session != nil {
+            if api.session != nil {
                 Group {
                     switch tab {
                     case .home: HomeView(openAccount: { tab = .me }, discover: { tab = .discover }, openTools: { tab = .tools })
                     case .discover: DiscoverView()
                     case .tools: ToolsView()
                     case .library: LibraryView { movie in editing = movie }
-                    case .me: AccountView { editing = nil; tab = .home }
+                    case .me: AccountView()
                     }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -157,7 +157,7 @@ struct ClipoRootView: View {
                     }
                 }
             } else {
-                WelcomeView()
+                ConnectionPanel().padding(24)
             }
         }.foregroundStyle(.white)
             .sheet(item: $editing) { EditorSheet(initialMovie: $0) }
@@ -177,44 +177,33 @@ struct ClipoRootView: View {
     }
 }
 
-struct WelcomeView: View {
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 40
+// A network recovery surface, not a second login or consent gate.
+struct ConnectionPanel: View {
+    @EnvironmentObject private var api: APIClient
+    @State private var error: String?
+    @State private var connecting = false
+    @State private var attempt = 0
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 12)
-                    Image("ClipoArtWelcome")
-                        .resizable().interpolation(.high).scaledToFit()
-                        .frame(maxWidth: 400)
-                        .frame(height: min(max(geometry.size.height * 0.46, 220), 370))
-                        .accessibilityHidden(true)
-                    Text("Your next\nfavorite.")
-                        .font(.system(size: titleSize, weight: .bold, design: .rounded))
-                        .tracking(-1.2).lineSpacing(0)
-                        .foregroundStyle(ClipoStyle.paper)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                        .padding(.top, 24)
-                    Spacer(minLength: 32)
-                    LoginControls()
-                }
-                .padding(.horizontal, 28).padding(.vertical, 20)
-                .frame(minHeight: geometry.size.height)
-                .frame(maxWidth: 480).frame(maxWidth: .infinity)
+        VStack(spacing: 24) {
+            TennisArtwork(kind: .racket, height: 170)
+            if let error {
+                MessagePanel(title: "Let’s reconnect.", message: error)
+                ActionButton(title: "Try again", busy: connecting) { attempt += 1 }
+            } else {
+                AccountLoadingIndicator(title: "Getting your court ready…")
             }
-            .scrollIndicators(.hidden)
-        }.clipoScreenBackground()
-    }
-}
-
-struct SignInPanel: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            MessagePanel(title: "Your next clip is one tap away.", message: "Sign in to open links, browse videos and manage your membership.")
-            LoginControls()
+            PolicyLinks()
+        }
+        .frame(maxWidth: 440).frame(maxWidth: .infinity)
+        .task(id: attempt) {
+            guard api.session == nil else { return }
+            connecting = true
+            error = nil
+            defer { connecting = false }
+            do { try await api.prepareVisitor() }
+            catch is CancellationError { }
+            catch { self.error = error.localizedDescription }
         }
     }
 }

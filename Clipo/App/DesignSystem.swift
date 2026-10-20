@@ -2,16 +2,59 @@ import SwiftUI
 
 // Native layout and typography; every pictorial mark comes from the original raster atlas.
 enum ClipoStyle {
-    static let background = Color(red: 0.047, green: 0.055, blue: 0.055)
-    static let surface = Color(red: 0.09, green: 0.105, blue: 0.10)
-    static let raised = Color(red: 0.145, green: 0.16, blue: 0.15)
+    static let background = Color(red: 0.035, green: 0.09, blue: 0.075)
+    static let surface = Color(red: 0.065, green: 0.16, blue: 0.13)
+    static let raised = Color(red: 0.12, green: 0.23, blue: 0.19)
     static let accent = Color(red: 0.847, green: 1, blue: 0.384)
     static let ink = Color(red: 0.055, green: 0.07, blue: 0.04)
     static let secondary = Color(red: 0.65, green: 0.69, blue: 0.65)
-    static let paper = Color(red: 0.93, green: 0.95, blue: 0.87)
+    static let paper = Color(red: 0.949, green: 0.941, blue: 0.867)
     static let paperSecondary = Color(red: 0.32, green: 0.37, blue: 0.29)
     static let line = Color.white.opacity(0.10)
     static let danger = Color(red: 1, green: 0.64, blue: 0.59)
+}
+
+// Display-only cropping of the original four-cell tennis illustration.
+struct TennisArtwork: View {
+    enum Kind: Int { case racket, lesson, bag, notebook }
+    let kind: Kind
+    var height: CGFloat = 160
+    var body: some View {
+        GeometryReader { geometry in
+            Image("ClipoTennisKit").resizable().interpolation(.high)
+                .frame(width: geometry.size.width * 2, height: geometry.size.height * 2)
+                .offset(x: -CGFloat(kind.rawValue % 2) * geometry.size.width,
+                        y: -CGFloat(kind.rawValue / 2) * geometry.size.height)
+                .allowsHitTesting(false)
+        }
+        .frame(width: height, height: height).clipped()
+        .frame(maxWidth: .infinity).accessibilityHidden(true)
+    }
+}
+
+struct TennisCourtBanner: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("ON COURT · ON REPEAT")
+                .font(.caption2.weight(.bold)).tracking(2)
+                .foregroundStyle(ClipoStyle.accent)
+            Text("A better game\nstarts here.")
+                .font(.system(.largeTitle, design: .serif, weight: .medium))
+                .foregroundStyle(ClipoStyle.paper)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Watch. Practise. Repeat.")
+                .font(.subheadline).foregroundStyle(ClipoStyle.paper)
+        }
+        .padding(24).frame(maxWidth: .infinity, minHeight: 240, alignment: .leading)
+        .background {
+            // Foreground text remains native and resizes independently of the artwork.
+            Image("ClipoTennisCourt").resizable().scaledToFill()
+                .overlay(ClipoStyle.background.opacity(typeSize.isAccessibilitySize ? 0.65 : 0.35))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .accessibilityElement(children: .combine)
+    }
 }
 enum ClipoGlyph: Int {
     case home, feed, edit, library, link, search, bookmark, download

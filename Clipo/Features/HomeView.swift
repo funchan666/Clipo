@@ -36,7 +36,7 @@ struct HomeView: View {
                 linkComposer
                 linkGuide
                 if let error { ErrorNote(message: error) }
-                if api.session == nil { SignInPanel() }
+                if api.session == nil { ConnectionPanel() }
                 recentLinks
                 VStack(alignment: .leading, spacing: 16) {
                     SectionLabel(title: "Watch or create")
