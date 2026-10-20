@@ -10,8 +10,8 @@ Native SwiftUI iPhone app for shared tennis lessons and local practice-video rev
 Backend: `https://devapi.io-jp.com`. Target Bundle ID: `com.cliporows.toolskeep` (the target overrides the older xcconfig fallback).
 Configuration: `Config/Clipo.xcconfig` and `Clipo/Resources/Commerce.json`.
 
-Monthly product: `ypsmwxmscbzeixig`, USD reference price 9.99.
-Yearly product: `xfpkaphmqxhtgzvx`, USD reference price 99.99.
+Monthly product: `coins_1.99`, USD reference price 9.99.
+Yearly product: `conis_4.99`, USD reference price 99.99.
 Google official test ads are enabled. Apple registration, production ad configuration and unresolved backend contracts are listed in the handoff.
 
 The latest short demonstration covers startup, authorized consent and login, short-code playback, the five tabs, local editing preview, library, account/policy, membership and a rewarded test ad. It is not a full acceptance test or a completed purchase test. No source changes or new build were made for this recording. Old test recordings and incremental reports were removed at the user's request; app source, test code, artwork and policy files were preserved.

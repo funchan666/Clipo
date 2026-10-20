@@ -1,16 +1,28 @@
 import Foundation
 import Combine
 
+enum AllowanceKind: String, Codable, CaseIterable, Identifiable {
+    case watch, download
+    var id: String { rawValue }
+}
+
 struct DailyUsage: Codable {
     var day: Date
     var watched: Set<String> = []
+    // Legacy keys remain decodable. Favorites no longer consume any allowance.
     var favoritesUsed = 0
     var completedRewardIDs: Set<UUID> = []
     var extraWatches = 0
     var extraFavorites = 0
     var luckyRewardIDs: Set<UUID>?
     var lastLuckyReward: Date?
+    var schemaVersion: Int?
+    var downloaded: Set<String>?
+    var downloadsUsed: Int?
+    var completedDownloadRewardIDs: Set<UUID>?
+    var extraDownloads: Int?
 }
+
 @MainActor
 final class QuotaStore: ObservableObject {
     @Published private(set) var usage: DailyUsage?
@@ -19,22 +31,26 @@ final class QuotaStore: ObservableObject {
     private var policy: CommerceConfiguration?
     private var remote: QuotaConfiguration?
     private var storageOK = true
-    private var timeZone = TimeZone.current
-    var unlimited: Bool { (usage?.completedRewardIDs.count ?? 0) >= (policy?.unlimitedAfterCompletedAds ?? Int.max) }
+    var unlimited: Bool { isUnlimited(.watch) }
+    var downloadsUnlimited: Bool { isUnlimited(.download) }
     var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watched.count ?? 0)) }
-    var favoritesLeft: Int { max(0, (remote?.unlimitedAfterAdCount ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraFavorites ?? 0) - (usage?.favoritesUsed ?? 0)) }
-    private var favoriteReward: Int { max(0, remote?.favoriteBaseLimit ?? policy?.favoriteReward ?? 0) }
-    var rewardSummary: String {
-        guard let policy else { return "Rewards are unavailable." }
-        if unlimited { return "Viewing is already unlimited until 5 AM. Watch a full ad for \(favoriteReward) more saves." }
-        let count = usage?.completedRewardIDs.count ?? 0
-        if count + 1 >= policy.unlimitedAfterCompletedAds { return "Watch a full ad for unlimited viewing until 5 AM and \(favoriteReward) more saves." }
-        return "Watch a full ad for \(nextWatchReward) more views and \(favoriteReward) more saves."
+    var downloadsLeft: Int { max(0, (remote?.unlimitedAfterAdCount ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraDownloads ?? 0) - (usage?.downloadsUsed ?? 0)) }
+    private var downloadReward: Int { max(0, remote?.favoriteBaseLimit ?? policy?.favoriteReward ?? 0) }
+    func isUnlimited(_ kind: AllowanceKind) -> Bool { completedAds(kind) >= 4 }
+    func completedAds(_ kind: AllowanceKind) -> Int {
+        kind == .watch ? (usage?.completedRewardIDs.count ?? 0) : (usage?.completedDownloadRewardIDs?.count ?? 0)
+    }
+    func remaining(_ kind: AllowanceKind) -> Int { kind == .watch ? watchesLeft : downloadsLeft }
+    func rewardSummary(for kind: AllowanceKind) -> String {
+        if completedAds(kind) >= 3 {
+            return kind == .watch ? "Finish this ad for unlimited views until 05:00 UTC." : "Finish this ad for unlimited downloads until 05:00 UTC."
+        }
+        return kind == .watch ? "Watch a full ad for more views." : "Watch a full ad for more downloads."
     }
     private var nextWatchReward: Int {
-        let index = min(usage?.completedRewardIDs.count ?? 0, 2)
-        let remoteValues = [remote?.firstAdRewardWatchCount, remote?.secondAdRewardWatchCount, remote?.thirdAdRewardWatchCount]
-        return max(0, remoteValues[index] ?? policy?.watchRewards[safe: index] ?? 0)
+        let index = min(completedAds(.watch), 2)
+        let values = [remote?.firstAdRewardWatchCount, remote?.secondAdRewardWatchCount, remote?.thirdAdRewardWatchCount]
+        return max(0, values[index] ?? policy?.watchRewards[safe: index] ?? 0)
     }
     func configure(userID: String?, policy: CommerceConfiguration?, remote: QuotaConfiguration?) {
         self.policy = policy
@@ -44,20 +60,29 @@ final class QuotaStore: ObservableObject {
         usage = nil
         storageOK = true
         error = nil
-        timeZone = .current
         guard userID != nil else { return }
         do {
-            if let data = try SecureStorage.read(key) { usage = try JSONDecoder().decode(DailyUsage.self, from: data) }
-            else { try commit(DailyUsage(day: boundary())) }
+            if let data = try SecureStorage.read(key) {
+                var saved = try JSONDecoder().decode(DailyUsage.self, from: data)
+                if saved.schemaVersion != 2 {
+                    // Preserve existing viewing spend/rewards during the one-time UTC migration.
+                    // The old favorite ledger never represented a downloaded file.
+                    saved.day = boundary()
+                    saved.schemaVersion = 2
+                    saved.downloaded = []
+                    saved.downloadsUsed = 0
+                    saved.completedDownloadRewardIDs = []
+                    saved.extraDownloads = 0
+                    try commit(saved)
+                } else { usage = saved }
+            } else { try commit(freshDay()) }
             resetIfNeeded()
         } catch { storageOK = false; self.error = "Daily allowance could not be read. Please try again later." }
     }
     func resetIfNeeded() {
         guard storageOK, userID != nil, let usage else { return }
-        let today = boundary()
-        // Only move forward; turning the clock back cannot restore spent allowance.
-        if today > usage.day {
-            do { try commit(DailyUsage(day: today)) }
+        if boundary() > usage.day {
+            do { try commit(freshDay(downloaded: usage.downloaded ?? [])) }
             catch { storageOK = false; self.error = error.localizedDescription }
         }
     }
@@ -69,62 +94,72 @@ final class QuotaStore: ObservableObject {
         guard mayWatch(id, premium: premium) else { return false }
         if premium || unlimited { return true }
         guard var next = usage else { return false }
+        guard !next.watched.contains(id) else { return true }
         next.watched.insert(id)
         do { try commit(next); return true }
         catch { self.error = error.localizedDescription; return false }
     }
-    func consumeFavorite(premium: Bool) -> Bool {
+    func mayDownload(_ id: String, premium: Bool) -> Bool {
         resetIfNeeded()
-        if premium { return true }
-        guard storageOK, favoritesLeft > 0, var next = usage else { return false }
-        next.favoritesUsed += 1
-        do { try commit(next); return true }
-        catch { self.error = error.localizedDescription; return false }
+        return storageOK && userID != nil && (premium || downloadsUnlimited || usage?.downloaded?.contains(id) == true || downloadsLeft > 0)
     }
-    func refundFavorite() {
-        guard var next = usage, next.favoritesUsed > 0 else { return }
-        next.favoritesUsed -= 1
-        do { try commit(next) } catch { self.error = error.localizedDescription }
-    }
-    func reward(_ id: UUID, owner: String) throws {
-        guard owner == userID, storageOK else { throw ClipoError.storage }
-        resetIfNeeded()
-        guard var next = usage, policy != nil else { throw ClipoError.configuration }
-        guard !next.completedRewardIDs.contains(id) else { return }
-        next.extraWatches += nextWatchReward
-        next.extraFavorites += favoriteReward
-        next.completedRewardIDs.insert(id)
+    // Called only after a complete, durable offline file exists. The lifetime ID set
+    // also makes recovery after an interrupted index write and re-download idempotent.
+    func recordDownload(_ id: String, owner: String, premium: Bool) throws {
+        guard owner == userID, mayDownload(id, premium: premium), var next = usage else { throw ClipoError.storage }
+        guard next.downloaded?.contains(id) != true else { return }
+        next.downloaded = (next.downloaded ?? []).union([id])
+        if !premium && !downloadsUnlimited { next.downloadsUsed = (next.downloadsUsed ?? 0) + 1 }
         try commit(next)
     }
-    // A no-fill gift never advances the completed-ad phase or unlocks unlimited viewing.
-    // Optional fields keep existing daily ledgers readable.
-    func rewardNoFill(_ id: UUID, owner: String) throws -> String? {
+    func canRequestReward(for kind: AllowanceKind, premium: Bool) -> Bool {
+        resetIfNeeded()
+        return !premium && storageOK && userID != nil && policy != nil && !isUnlimited(kind) && remaining(kind) == 0
+    }
+    func reward(_ id: UUID, owner: String, kind: AllowanceKind) throws {
         guard owner == userID, storageOK else { throw ClipoError.storage }
         resetIfNeeded()
         guard var next = usage, policy != nil else { throw ClipoError.configuration }
-        guard next.luckyRewardIDs?.contains(id) != true else { return nil }
-        let now = Date()
-        if let last = next.lastLuckyReward, now.timeIntervalSince(last) < 60 {
-            throw ClipoError.service("Your last bonus was just added. Please wait a minute before trying again.")
+        if kind == .watch {
+            guard !next.completedRewardIDs.contains(id) else { return }
+            next.extraWatches += nextWatchReward
+            next.completedRewardIDs.insert(id)
+        } else {
+            guard next.completedDownloadRewardIDs?.contains(id) != true else { return }
+            next.extraDownloads = (next.extraDownloads ?? 0) + downloadReward
+            next.completedDownloadRewardIDs = (next.completedDownloadRewardIDs ?? []).union([id])
         }
-        let views = unlimited ? 0 : nextWatchReward
-        let saves = favoriteReward
-        next.extraWatches += views
-        next.extraFavorites += saves
-        next.luckyRewardIDs = (next.luckyRewardIDs ?? []).union([id])
-        next.lastLuckyReward = now
         try commit(next)
-        return views > 0 ? "\(views) more views and \(saves) more saves have been added. Your ad progress stays the same."
-            : "\(saves) more saves have been added. Your unlimited viewing stays active."
+    }
+    func rewardNoFill(_ id: UUID, owner: String, kind: AllowanceKind) throws -> String? {
+        guard owner == userID, storageOK else { throw ClipoError.storage }
+        resetIfNeeded()
+        guard var next = usage, policy != nil else { throw ClipoError.configuration }
+        guard !isUnlimited(kind), remaining(kind) == 0, next.luckyRewardIDs?.contains(id) != true else { return nil }
+        // No cooldown; no-fill gifts never advance either completed-ad counter.
+        // At stage four nextWatchReward remains the third-stage amount.
+        if kind == .watch { next.extraWatches += nextWatchReward }
+        else { next.extraDownloads = (next.extraDownloads ?? 0) + downloadReward }
+        next.luckyRewardIDs = (next.luckyRewardIDs ?? []).union([id])
+        try commit(next)
+        return kind == .watch ? "More views added. Your ad progress stays the same." : "More downloads added. Your ad progress stays the same."
     }
     private var key: String { "quota.\(userID ?? "none")" }
+    private func freshDay(downloaded: Set<String> = []) -> DailyUsage {
+        var value = DailyUsage(day: boundary())
+        value.schemaVersion = 2
+        value.downloaded = downloaded
+        value.downloadsUsed = 0
+        value.completedDownloadRewardIDs = []
+        value.extraDownloads = 0
+        return value
+    }
     private func boundary() -> Date {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let now = Date()
-        let start = calendar.startOfDay(for: now)
-        let five = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: now) ?? start
-        return now >= five ? five : (calendar.date(byAdding: .day, value: -1, to: five) ?? five)
+        let five = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: now)!
+        return now >= five ? five : calendar.date(byAdding: .day, value: -1, to: five)!
     }
     private func commit(_ value: DailyUsage) throws {
         try SecureStorage.write(JSONEncoder().encode(value), key: key)
