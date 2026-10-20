@@ -8,6 +8,7 @@ struct ClipoApp: App {
     @StateObject private var library: LibraryStore
     @StateObject private var quota: QuotaStore
     @StateObject private var commerce: CommerceStore
+    @StateObject private var offline: OfflineStore
     @StateObject private var ads: RewardedAds
     @StateObject private var accountAccess = AccountAccessFlow()
     init() {
@@ -16,13 +17,15 @@ struct ClipoApp: App {
         _api = StateObject(wrappedValue: api)
         _library = StateObject(wrappedValue: LibraryStore())
         _quota = StateObject(wrappedValue: quota)
-        _commerce = StateObject(wrappedValue: CommerceStore(api: api, quota: quota))
+        let commerce = CommerceStore(api: api, quota: quota)
+        _commerce = StateObject(wrappedValue: commerce)
+        _offline = StateObject(wrappedValue: OfflineStore(api: api, quota: quota, commerce: commerce))
         _ads = StateObject(wrappedValue: RewardedAds())
     }
     var body: some Scene {
         WindowGroup {
             ClipoStartupHost().environmentObject(api).environmentObject(library)
-                .environmentObject(quota).environmentObject(commerce).environmentObject(ads)
+                .environmentObject(quota).environmentObject(commerce).environmentObject(ads).environmentObject(offline)
                 .environmentObject(accountAccess)
                 .environment(\.locale, language.locale)
                 .environment(\.layoutDirection, language.direction)
@@ -139,6 +142,7 @@ struct ClipoRootView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var quota: QuotaStore
+    @EnvironmentObject private var offline: OfflineStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab: ClipoTab = .home
     @State private var editing: LocalMovie?
@@ -170,7 +174,10 @@ struct ClipoRootView: View {
             }
         }.foregroundStyle(.white)
             .sheet(item: $editing) { EditorSheet(initialMovie: $0) }
-            .task(id: api.session?.userId.value) { await commerce.refresh() }
+            .task(id: api.session?.userId.value) {
+                await commerce.refresh()
+                await offline.resumePending()
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { quota.resetIfNeeded() }
             }

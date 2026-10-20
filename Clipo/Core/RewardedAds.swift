@@ -29,8 +29,9 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
 
     private static let demoAppOpenUnitID = "ca-app-pub-3940256099942544/5575463023"
 
-    func watch(commerce: CommerceStore, quota: QuotaStore) async {
+    func watch(commerce: CommerceStore, quota: QuotaStore, kind: AllowanceKind) async {
         guard !busy, !isPresenting, !isPreparingAppOpen else { return }
+        guard quota.canRequestReward(for: kind, premium: commerce.premium) else { return }
         guard let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
             error = "Rewarded ads are not available right now. No views have been deducted."; return
         }
@@ -70,9 +71,9 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             ad.present(from: nil) { [weak self] in
                 guard let self, !self.rewardGranted else { return }
                 do {
-                    try quota.reward(rewardID, owner: owner)
+                    try quota.reward(rewardID, owner: owner, kind: kind)
                     self.rewardGranted = true
-                    self.message = "Your viewing and save allowance has been updated."
+                    self.message = kind == .watch ? "Your viewing allowance has been updated." : "Your download allowance has been updated."
                 } catch { self.error = "The ad finished, but its reward could not be saved. \(error.localizedDescription)" }
             }
         } catch {
@@ -82,7 +83,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             if loadingRewarded, failure.domain == GADErrorDomain, failure.code == 1 {
                 do {
                     guard commerce.api.session?.userId.value == owner else { throw ClipoError.unauthorized }
-                    if let gift = try quota.rewardNoFill(attemptID, owner: owner) {
+                    if let gift = try quota.rewardNoFill(attemptID, owner: owner, kind: kind) {
                         luckyReward = LuckyRewardNotice(message: gift)
                     }
                 } catch { self.error = error.localizedDescription }
