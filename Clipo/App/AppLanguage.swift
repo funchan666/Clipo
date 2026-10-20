@@ -35,6 +35,62 @@ enum L10n {
         bundles[language]?.localizedString(forKey: key, value: key, table: "Localizable") ?? key
     }
 
+
+    // Existing service/store contracts return String messages. Translate their known templates
+    // at display time so a language switch also updates a visible error or quota message.
+    private static let messagePatterns: [(String, NSRegularExpression)] = [
+        "Error: %@",
+        "%@ short reads · Available offline",
+        "Access through %@.",
+        "Continue with %@",
+        "%@, %@ per %@",
+        "per %@",
+        "%@ views · %@ saves left today",
+        "Version %@",
+        "ID · %@",
+        "%@ videos",
+        "%@ views left today",
+        "%@ item · On this device",
+        "%@ items · On this device",
+        "Exporting · %@%",
+        "Final duration · %@",
+        "Rotate 90° · %@°",
+        "No ad is available right now. %@",
+        "Purchase service is unavailable (%@).",
+        "The service is unavailable (%@). Please try again.",
+        "Purchase is pending confirmation. %@",
+        "The ad finished, but its reward could not be saved. %@",
+        "An ad could not be loaded. Please try again later. %@",
+        "Viewing is already unlimited until 5 AM. Watch a full ad for %@ more saves.",
+        "Watch a full ad for unlimited viewing until 5 AM and %@ more saves.",
+        "Watch a full ad for %@ more views and %@ more saves.",
+        "%@ more views and %@ more saves have been added. Your ad progress stays the same.",
+        "%@ more saves have been added. Your unlimited viewing stays active.",
+        "Preview could not play. %@",
+        "The export finished but could not be added to your library. %@",
+
+    ].compactMap { key in
+        let pattern = "\\A" + key.components(separatedBy: "%@")
+            .map { NSRegularExpression.escapedPattern(for: $0) }.joined(separator: "(.+?)") + "\\z"
+        guard let expression = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else { return nil }
+        return (key, expression)
+    }
+
+    static func display(_ value: String, language: AppLanguage = .current, depth: Int = 0) -> String {
+        guard language != .en else { return value }
+        let exact = text(value, language: language)
+        guard exact == value, depth < 3 else { return exact }
+        let source = value as NSString
+        for (key, expression) in messagePatterns {
+            guard let match = expression.firstMatch(in: value, range: NSRange(location: 0, length: source.length)) else { continue }
+            let arguments = (1..<match.numberOfRanges).map {
+                display(source.substring(with: match.range(at: $0)), language: language, depth: depth + 1)
+            }
+            return format(key, arguments, language: language)
+        }
+        return value
+    }
+
     /// Explicit arguments keep amounts, file names and server content out of translation lookup.
     static func format(_ key: String, _ arguments: [String], language: AppLanguage = .current) -> String {
         let template = text(key, language: language)
@@ -64,7 +120,7 @@ struct LocalizedText: View {
     init(_ key: String, _ arguments: String...) { self.key = key; self.arguments = arguments }
     var body: some View {
         let language = AppLanguage(rawValue: locale.language.languageCode?.identifier ?? "en") ?? .en
-        Text(verbatim: arguments.isEmpty ? L10n.text(key, language: language) : L10n.format(key, arguments, language: language))
+        Text(verbatim: arguments.isEmpty ? L10n.display(key, language: language) : L10n.format(key, arguments, language: language))
     }
 }
 
