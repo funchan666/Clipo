@@ -32,7 +32,7 @@ struct HomeView: View {
                     Button(LocalizedStringKey(commerce.premium ? "PLUS" : "Get Plus")) { paywall = true }
                         .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
                         .padding(.horizontal, 16).frame(minHeight: 44)
-                        .background(ClipoStyle.surface, in: Capsule()).buttonStyle(PressStyle())
+                        .background { OriginalSurface(tone: .pine) }.buttonStyle(PressStyle())
                     IconButton(symbol: .settings, label: "Open Me and account settings", action: openAccount)
                 }
                 TennisCourtBanner()
@@ -125,7 +125,7 @@ struct HomeView: View {
                     .font(.body.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 16)
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .foregroundStyle(ClipoStyle.accent)
-                    .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 16))
+                    .background { OriginalSurface(tone: .pine) }
             }.buttonStyle(PressStyle()).disabled(loading || link.nilIfBlank == nil)
             if api.session != nil {
                 LocalizedText(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")

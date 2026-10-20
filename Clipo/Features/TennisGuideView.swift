@@ -20,6 +20,25 @@ private struct TennisNote: Identifiable {
     let takeaway: String
     let sources: [Source]
 
+    var cover: CourtArtwork.Subject {
+        switch id {
+        case "forehand": .forehand
+        case "backhand": .backhand
+        case "serve": .serve
+        case "scoring": .scoring
+        default: .majors
+        }
+    }
+    var shortTitle: String {
+        switch id {
+        case "forehand": "Forehand"
+        case "backhand": "Backhand"
+        case "serve": "Serve"
+        case "scoring": "Scoring"
+        default: "Majors"
+        }
+    }
+
     // Original summaries, checked against the linked primary sources on 2026-10-20.
     // Keep these evergreen: no live rankings, event dates, results or prize money.
     static let all: [TennisNote] = [
@@ -107,35 +126,27 @@ struct TennisGuideEntry: View {
     let open: () -> Void
     var body: some View {
         Button(action: open) {
-            HStack(alignment: .center, spacing: 16) {
-                if !compact {
-                    TennisArtwork(kind: .notebook, height: 80).frame(width: 80)
-                }
-                VStack(alignment: .leading, spacing: 7) {
-                    LocalizedText("Tennis field notes")
-                        .font(.system(.title3, design: .serif, weight: .semibold))
+            HStack(spacing: 18) {
+                CourtArtwork(subject: .serve).frame(width: compact ? 72 : 94, height: compact ? 88 : 116)
+                VStack(alignment: .leading, spacing: 8) {
+                    LocalizedText("Tennis field notes").font(.headline)
                         .foregroundStyle(ClipoStyle.paper)
-                    LocalizedText(compact ? "Strokes, scoring & the four majors" : "A little knowledge for your next session.")
-                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if !compact {
-                        LocalizedText("\(TennisNote.all.count) short reads · Available offline")
-                            .font(.caption).foregroundStyle(ClipoStyle.accent)
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                    LocalizedText("\(TennisNote.all.count) short reads · Available offline")
+                        .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                }.fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
                 Glyph(symbol: .back, size: 12, tint: ClipoStyle.accent)
                     .rotationEffect(.degrees(180)).frame(width: 20)
-            }
-            .padding(20).frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-            .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
-            .contentShape(Rectangle())
-        }.buttonStyle(PressStyle())
-            .accessibilityIdentifier("tennisGuide.open")
+            }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                .background { OriginalSurface(tone: .pine) }
+                .contentShape(Rectangle())
+        }.buttonStyle(PressStyle()).accessibilityIdentifier("tennisGuide.open")
     }
 }
 
 struct TennisGuideView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var category = "All"
     private let categories = ["All", "Technique", "Rules", "Majors"]
     private var notes: [TennisNote] {
@@ -146,52 +157,54 @@ struct TennisGuideView: View {
             VStack(spacing: 0) {
                 SheetHeading(title: "Tennis field notes") { dismiss() }
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            LocalizedText("Know the game.\nEnjoy every point.")
-                                .font(.system(.largeTitle, design: .serif, weight: .medium))
-                                .foregroundStyle(ClipoStyle.paper)
-                                .fixedSize(horizontal: false, vertical: true)
-                            LocalizedText("Short reads, from your first forehand to the biggest stages.")
-                                .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                    VStack(alignment: .leading, spacing: 20) {
+                        CourtFilter(values: categories, selected: category) { category = $0 }
+                        if let first = notes.first {
+                            NavigationLink(value: first.id) {
+                                ViewThatFits(in: .horizontal) {
+                                    HStack(spacing: 20) {
+                                        CourtArtwork(subject: first.cover).frame(width: 148, height: 148)
+                                        VStack(alignment: .leading, spacing: 14) {
+                                            LocalizedText(first.shortTitle).font(.title2.weight(.semibold))
+                                                .fixedSize(horizontal: false, vertical: true)
+                                            Glyph(symbol: .back, size: 16, tint: ClipoStyle.ink)
+                                                .rotationEffect(.degrees(180))
+                                        }.frame(minWidth: 112, maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    VStack(alignment: .leading, spacing: 14) {
+                                        CourtArtwork(subject: first.cover).aspectRatio(1.4, contentMode: .fit)
+                                        LocalizedText(first.shortTitle).font(.title2.weight(.semibold))
+                                    }
+                                }.padding(14).foregroundStyle(ClipoStyle.ink)
+                                    .background { OriginalSurface(tone: .ivory) }
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(PressStyle()).accessibilityIdentifier("tennisGuide.\(first.id)")
                         }
-                        FlowChoices(values: categories, selected: category) { category = $0 }
-                        VStack(spacing: 0) {
-                            ForEach(notes) { note in
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : 140), spacing: 16)], alignment: .leading, spacing: 22) {
+                            ForEach(Array(notes.dropFirst())) { note in
                                 NavigationLink(value: note.id) {
-                                    VStack(alignment: .leading, spacing: 9) {
-                                        LocalizedText(note.category)
-                                            .font(.caption2.weight(.bold)).tracking(1.5)
-                                            .foregroundStyle(ClipoStyle.accent)
-                                        HStack(alignment: .top, spacing: 12) {
-                                            VStack(alignment: .leading, spacing: 7) {
-                                                LocalizedText(note.title).font(.title3.weight(.semibold))
-                                                    .foregroundStyle(ClipoStyle.paper)
-                                                LocalizedText(note.summary).font(.subheadline)
-                                                    .foregroundStyle(ClipoStyle.secondary)
-                                            }.fixedSize(horizontal: false, vertical: true)
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        CourtArtwork(subject: note.cover).aspectRatio(1, contentMode: .fit)
+                                        HStack(alignment: .top, spacing: 8) {
+                                            LocalizedText(note.shortTitle).font(.headline)
+                                                .fixedSize(horizontal: false, vertical: true)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                            Glyph(symbol: .back, size: 12, tint: ClipoStyle.secondary)
-                                                .rotationEffect(.degrees(180)).frame(width: 20, height: 32)
+                                            Glyph(symbol: .back, size: 10, tint: ClipoStyle.accent)
+                                                .rotationEffect(.degrees(180)).padding(.top, 3)
                                         }
-                                    }.padding(.vertical, 22).frame(maxWidth: .infinity, alignment: .leading)
-                                        .contentShape(Rectangle())
+                                    }.foregroundStyle(ClipoStyle.paper).contentShape(Rectangle())
                                 }.buttonStyle(PressStyle()).accessibilityIdentifier("tennisGuide.\(note.id)")
-                                Divider().overlay(ClipoStyle.line)
                             }
                         }
-                        LocalizedText("All notes can be read offline. Original summaries with links to further reading.")
-                            .font(.caption).foregroundStyle(ClipoStyle.secondary)
                     }.clipoPage()
                 }
-            }
-            .clipoScreenBackground().foregroundStyle(ClipoStyle.paper)
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: String.self) { id in
-                if let note = TennisNote.all.first(where: { $0.id == id }) {
-                    TennisNoteReader(note: note)
+            }.clipoScreenBackground().foregroundStyle(ClipoStyle.paper)
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(for: String.self) { id in
+                    if let note = TennisNote.all.first(where: { $0.id == id }) {
+                        TennisNoteReader(note: note)
+                    }
                 }
-            }
         }
     }
 }
@@ -210,12 +223,11 @@ private struct TennisNoteReader: View {
             }.padding(.horizontal, 16).padding(.top, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    TennisArtwork(kind: note.artwork, height: 150)
+                    CourtArtwork(subject: note.cover).aspectRatio(1, contentMode: .fit).frame(maxWidth: 360)
                     VStack(alignment: .leading, spacing: 14) {
                         LocalizedText(note.title)
-                            .font(.system(.largeTitle, design: .serif, weight: .medium))
+                            .font(.title2.weight(.semibold))
                             .foregroundStyle(ClipoStyle.paper).accessibilityAddTraits(.isHeader)
-                        LocalizedText(note.summary).font(.title3).foregroundStyle(ClipoStyle.secondary)
                     }
                     ForEach(note.sections.indices, id: \.self) { index in
                         VStack(alignment: .leading, spacing: 10) {
@@ -231,7 +243,7 @@ private struct TennisNoteReader: View {
                         LocalizedText(note.takeaway).font(.body.weight(.medium)).lineSpacing(3)
                     }.foregroundStyle(ClipoStyle.ink)
                         .padding(22).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 20))
+                        .background { OriginalSurface(tone: .ivory) }
                     VStack(alignment: .leading, spacing: 6) {
                         LocalizedText("Further reading").font(.headline)
                         LocalizedText("Official sources · Opens online")

@@ -370,3 +370,7 @@
 "year" = "año";
 "Retry" = "Reintentar";
 "Playback" = "Reproducción";
+"Forehand" = "Derecha";
+"Backhand" = "Revés";
+"Serve" = "Saque";
+"Scoring" = "Puntuación";

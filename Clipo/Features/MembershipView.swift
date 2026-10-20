@@ -146,7 +146,7 @@ struct MembershipView: View {
                 }
             }
             .padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(selected ? ClipoStyle.paper : ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+            .background { OriginalSurface(tone: selected ? .ivory : .pine) }
             .contentShape(.interaction, RoundedRectangle(cornerRadius: 22))
         }.buttonStyle(PressStyle()).disabled(interactionLocked)
             .accessibilityLabel(Text(verbatim: L10n.display("\(plan.label), \(price) per \(plan.period.rawValue)", language: AppLanguage.from(locale))))

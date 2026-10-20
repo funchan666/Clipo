@@ -370,3 +370,7 @@
 "year" = "year";
 "Retry" = "Retry";
 "Playback" = "Playback";
+"Forehand" = "Forehand";
+"Backhand" = "Backhand";
+"Serve" = "Serve";
+"Scoring" = "Scoring";

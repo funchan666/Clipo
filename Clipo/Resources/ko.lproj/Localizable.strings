@@ -370,3 +370,7 @@
 "year" = "년";
 "Retry" = "다시 시도";
 "Playback" = "재생";
+"Forehand" = "포핸드";
+"Backhand" = "백핸드";
+"Serve" = "서브";
+"Scoring" = "점수 계산";

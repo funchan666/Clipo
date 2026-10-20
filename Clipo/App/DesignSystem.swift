@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // Native layout and typography; every pictorial mark comes from the original raster atlas.
 enum ClipoStyle {
@@ -124,7 +125,8 @@ struct ActionButton: View {
                 .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 14)
                 .foregroundStyle(primary ? ClipoStyle.ink : Color.white)
                 .frame(maxWidth: .infinity, minHeight: 54)
-                .background(primary ? ClipoStyle.accent : ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 16))
+                .background { OriginalSurface(tone: primary ? .accent : .pine) }
+                .contentShape(.interaction, Rectangle())
         }.buttonStyle(PressStyle()).disabled(busy)
     }
 }
@@ -252,6 +254,78 @@ struct FeatureRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
+        }
+    }
+}
+
+// These components only display/crop original generated bitmap artwork.
+// Native code supplies layout, accessible labels and touch handling, never drawn artwork.
+struct CourtArtwork: View {
+    enum Subject: Int { case forehand, backhand, serve, scoring, majors, review, speed, frame, audio }
+    let subject: Subject
+    // Measured boundaries in the generated 1254px atlas; row heights are not identical.
+    private var crop: CGRect {
+        let rows: [CGFloat] = [0, 418, 808, 1254]
+        let row = subject.rawValue / 3
+        return CGRect(x: CGFloat(subject.rawValue % 3) * 418 + 1,
+                      y: rows[row] + 1, width: 416, height: rows[row + 1] - rows[row] - 2)
+    }
+    var body: some View {
+        GeometryReader { geometry in
+            let scale = max(geometry.size.width / crop.width, geometry.size.height / crop.height)
+            Image("ClipoCourtEditorial").resizable().interpolation(.high)
+                .frame(width: 1254 * scale, height: 1254 * scale)
+                .offset(x: -crop.minX * scale + (geometry.size.width - crop.width * scale) / 2,
+                        y: -crop.minY * scale + (geometry.size.height - crop.height * scale) / 2)
+        }.environment(\.layoutDirection, .leftToRight).clipped()
+            .allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
+struct OriginalSurface: View {
+    enum Tone: Int { case accent, pine, ivory, sage }
+    let tone: Tone
+    // Raster extraction only. No paths, drawing contexts or generated shapes.
+    // Cap insets preserve the artist's corners on both short chips and large panels.
+    private static let surfaces: [UIImage] = {
+        guard let source = UIImage(named: "ClipoCourtControls")?.cgImage else { return [] }
+        let width = CGFloat(source.width), rowHeight = CGFloat(source.height) / 4
+        return (0..<4).compactMap { row in
+            let rect = CGRect(x: 6, y: CGFloat(row) * rowHeight + 6, width: width - 12, height: rowHeight - 12)
+            guard let tile = source.cropping(to: rect) else { return nil }
+            return UIImage(cgImage: tile, scale: 3, orientation: .up)
+        }
+    }()
+    var body: some View {
+        if Self.surfaces.indices.contains(tone.rawValue) {
+            Image(uiImage: Self.surfaces[tone.rawValue])
+                .resizable(capInsets: EdgeInsets(top: 14, leading: 22, bottom: 14, trailing: 22), resizingMode: .stretch)
+                .environment(\.layoutDirection, .leftToRight)
+                .allowsHitTesting(false).accessibilityHidden(true)
+        }
+    }
+}
+
+struct CourtFilter: View {
+    let values: [String]
+    let selected: String
+    let select: (String) -> Void
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(values, id: \.self) { value in
+                    Button { select(value) } label: {
+                        LocalizedText(value).font(.subheadline.weight(.semibold))
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.horizontal, 22).padding(.vertical, 14)
+                            .frame(minHeight: 48)
+                            .foregroundStyle(selected == value ? ClipoStyle.ink : ClipoStyle.paper)
+                            .background { OriginalSurface(tone: selected == value ? .accent : .pine) }
+                            .contentShape(Rectangle())
+                    }.buttonStyle(PressStyle())
+                        .accessibilityAddTraits(selected == value ? .isSelected : [])
+                }
+            }
         }
     }
 }
