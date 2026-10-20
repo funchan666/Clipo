@@ -2,6 +2,12 @@ import Foundation
 import Combine
 import StoreKit
 
+private struct PurchaseFailure: Codable {
+    let status: String
+    let transactionID: String
+    let receipt: String
+}
+
 private struct PurchaseRecord: Codable {
     let id: String
     let orderID: String
@@ -13,6 +19,7 @@ private struct PurchaseRecord: Codable {
     var transactionIDs: Set<String> = []
     var confirmedIDs: Set<String> = []
     var abandoned = false
+    var failure: PurchaseFailure?
 }
 
 @MainActor
@@ -38,6 +45,7 @@ final class CommerceStore: NSObject, ObservableObject {
     private var receiptRequest: SKReceiptRefreshRequest?
     private var receiptContinuation: CheckedContinuation<Void, Error>?
     private var processing: Set<String> = []
+    private var processingFailures: Set<String> = []
     private var ownerID: String?
     private var refreshID = UUID()
     var premium: Bool { expiration.map { $0 > Date() } ?? false }
@@ -205,8 +213,38 @@ final class CommerceStore: NSObject, ObservableObject {
     }
     func retryPending() {
         guard ledgerAvailable else { return }
+        for record in records where record.failure != nil {
+            Task { await reportFailure(recordID: record.id) }
+        }
         for transaction in SKPaymentQueue.default().transactions where transaction.transactionState == .purchased || transaction.transactionState == .restored {
             Task { await confirm(transaction) }
+        }
+    }
+    // A durable outbox allows cancellation/error reporting to retry after network loss
+    // or a relaunch, without retaining a failed StoreKit transaction in the queue.
+    private func reportFailure(recordID: String) async {
+        guard !processingFailures.contains(recordID),
+              let record = records.first(where: { $0.id == recordID }),
+              let failure = record.failure else { return }
+        processingFailures.insert(recordID)
+        defer { processingFailures.remove(recordID) }
+        do {
+            guard record.apiHost == api.configuration.apiBaseURL?.absoluteString else { throw ClipoError.configuration }
+            let owner = api.session?.userId.value == record.owner.userId.value ? (api.session ?? record.owner) : record.owner
+            let body: [String: Any] = [
+                "verificationData": failure.receipt, "purchaseID": record.orderID,
+                "status": failure.status, "transactionId": failure.transactionID,
+                "sandBoxTest": record.billing.sandBoxTest ?? false,
+                "iosVerifyShareKey": record.billing.iosVerifyShareKey ?? ""
+            ]
+            _ = try await api.paymentRequest(path: "/app-api/flow/rights-order/buySuccess", body: body, owner: owner)
+            guard let index = records.firstIndex(where: { $0.id == recordID }) else { return }
+            var next = records
+            next[index].failure = nil
+            try save(next)
+        } catch {
+            // Keep the original status/owner and retry on refresh. Never report success.
+            self.error = "Purchase status is waiting to sync. Please try again when connected."
         }
     }
     private func confirm(_ transaction: SKPaymentTransaction) async {
@@ -310,13 +348,23 @@ extension CommerceStore: SKProductsRequestDelegate, SKRequestDelegate, SKPayment
                 case .purchased, .restored: await confirm(transaction)
                 case .failed:
                     busy = false
-                    if let index = records.firstIndex(where: { $0.id == transaction.payment.applicationUsername }) {
-                        var next = records; next[index].abandoned = true
-                        do { try save(next) } catch { self.error = error.localizedDescription; continue }
+                    guard let index = records.firstIndex(where: { $0.id == transaction.payment.applicationUsername }) else {
+                        self.error = "An Apple purchase is awaiting account reconciliation. Its original order could not be identified; it has not been discarded."
+                        continue
                     }
-                    if (transaction.error as? SKError)?.code == .paymentCancelled { message = "Purchase cancelled." }
+                    let cancelled = (transaction.error as? SKError)?.code == .paymentCancelled
+                    var next = records
+                    next[index].abandoned = true
+                    next[index].failure = PurchaseFailure(
+                        status: cancelled ? "canceled" : "error",
+                        transactionID: transaction.transactionIdentifier ?? "",
+                        receipt: Bundle.main.appStoreReceiptURL.flatMap { try? Data(contentsOf: $0) }?.base64EncodedString() ?? "")
+                    do { try save(next) } catch { self.error = error.localizedDescription; continue }
+                    if cancelled { message = "Purchase cancelled." }
                     else { error = transaction.error?.localizedDescription ?? "Purchase could not be completed." }
                     queue.finishTransaction(transaction)
+                    let recordID = next[index].id
+                    Task { await reportFailure(recordID: recordID) }
                 case .deferred: busy = false; message = "Your purchase is waiting for approval."
                 case .purchasing: busy = true
                 @unknown default: break

@@ -56,6 +56,29 @@ enum SecureStorage {
     }
 }
 
+enum InstallationIdentity {
+    static func prepare() throws {
+        let files = FileManager.default
+        let support = files.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try files.createDirectory(at: support, withIntermediateDirectories: true)
+        var marker = support.appendingPathComponent("ClipoInstallation")
+        guard !files.fileExists(atPath: marker.path) else { return }
+        // Older versions always created this sandbox directory. Preserve their UUID on
+        // upgrade; an uninstall removes it. Keychain alone is not evidence of an install.
+        let legacyLibrary = files.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ClipoMedia", isDirectory: true)
+        if !files.fileExists(atPath: legacyLibrary.path) {
+            try SecureStorage.remove("visitor")
+            try SecureStorage.remove("installation")
+        }
+        // Purchase ledgers deliberately survive: unpaid/undelivered orders retain owners.
+        try Data(UUID().uuidString.utf8).write(to: marker, options: .atomic)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try marker.setResourceValues(values)
+    }
+}
+
 @MainActor
 final class APIClient: ObservableObject {
     private let diagnostics = Logger(subsystem: "com.clipo.video", category: "API")
@@ -73,6 +96,7 @@ final class APIClient: ObservableObject {
         config.timeoutIntervalForResource = 30
         transport = URLSession(configuration: config)
         do {
+            try InstallationIdentity.prepare()
             if let data = try SecureStorage.read("visitor") {
                 let saved = try JSONDecoder().decode(VisitorSession.self, from: data)
                 if !saved.accessToken.isEmpty {
