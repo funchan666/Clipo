@@ -328,10 +328,20 @@ extension CommerceStore: SKProductsRequestDelegate, SKRequestDelegate, SKPayment
         Task { @MainActor in
             busy = false
             if queue.transactions.isEmpty { message = "Apple has no pending purchases to restore." }
+            else if message == "Checking your Apple purchases…" { message = nil }
             await refresh()
         }
     }
     nonisolated func paymentQueue(_ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: Error) {
-        Task { @MainActor in busy = false; self.error = error.localizedDescription }
+        Task { @MainActor in
+            busy = false
+            message = nil
+            if (error as? SKError)?.code == .paymentCancelled {
+                self.error = nil
+                message = "Restore cancelled. Your purchases have not changed."
+            } else {
+                self.error = "Apple couldn’t restore purchases. Sign in to your Apple account and try again."
+            }
+        }
     }
 }

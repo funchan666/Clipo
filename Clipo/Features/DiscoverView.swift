@@ -69,7 +69,7 @@ struct DiscoverView: View {
                                 ForEach(feed.clips) { clip in
                                     ClipPage(clip: clip, active: activeID == clip.id && !searchOpen,
                                              controlInsets: container.safeAreaInsets)
-                                        .frame(width: geometry.size.width, height: geometry.size.height).id(clip.id)
+                                        .frame(width: geometry.size.width, height: geometry.size.height).clipped().id(clip.id)
                                 }
                                 if feed.error != nil || feed.hasMore {
                                     VStack(spacing: 16) {
@@ -79,7 +79,7 @@ struct DiscoverView: View {
                                         .frame(width: geometry.size.width, height: geometry.size.height)
                                 }
                             }.scrollTargetLayout()
-                        }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID).scrollIndicators(.hidden)
+                        }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID, anchor: .top).scrollIndicators(.hidden)
                             .onChange(of: activeID) { _, id in
                                 if let index = feed.clips.firstIndex(where: { $0.id == id }), index >= feed.clips.count - 3 {
                                     Task { await feed.load(api: api) }
@@ -126,23 +126,31 @@ struct PlayerScreen: View {
     @Environment(\.dismiss) private var dismiss
     let route: PlayerRoute
     @State private var activeID: String?
+    init(route: PlayerRoute) {
+        self.route = route
+        _activeID = State(initialValue: route.startID)
+    }
     var body: some View {
         GeometryReader { container in
-            GeometryReader { geometry in
+            ScrollViewReader { proxy in
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
                         ForEach(route.clips) { clip in
                             ClipPage(clip: clip, active: activeID == clip.id,
                                      controlInsets: container.safeAreaInsets)
-                                .frame(width: geometry.size.width, height: geometry.size.height).id(clip.id)
+                                .containerRelativeFrame([.horizontal, .vertical])
+                                .clipped().id(clip.id)
                         }
                     }.scrollTargetLayout()
-                }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID).scrollIndicators(.hidden)
+                }
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $activeID, anchor: .top)
+                .scrollIndicators(.hidden)
+                .task { proxy.scrollTo(route.startID, anchor: .top) }
             }.ignoresSafeArea(.container, edges: .all)
         }.clipoScreenBackground(.black).overlay(alignment: .topLeading) {
-            IconButton(symbol: .back, label: "Back") { dismiss() }
-                .shadow(color: .black.opacity(0.6), radius: 3, y: 1).padding(12)
-        }.onAppear { activeID = route.startID }.preferredColorScheme(.dark)
+            IconButton(symbol: .back, label: "Back") { dismiss() }.padding(12)
+        }.preferredColorScheme(.dark)
     }
 }
 
@@ -233,7 +241,7 @@ struct ClipPage: View {
                 IconButton(symbol: playback.muted ? .mute : .sound,
                            label: playback.muted ? "Unmute" : "Mute") {
                     playback.setMuted(!playback.muted)
-                }.shadow(color: .black.opacity(0.6), radius: 3, y: 1)
+                }
             }.padding(.top, 12)
             Spacer(minLength: 16)
             HStack(alignment: .bottom, spacing: 16) {
