@@ -41,6 +41,7 @@ enum VideoTool: String, Identifiable, CaseIterable {
 
 struct ToolsView: View {
     @State private var selectedTool: VideoTool?
+    @State private var showingGuide = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -50,6 +51,7 @@ struct ToolsView: View {
                     .foregroundStyle(ClipoStyle.paper)
                 Text("Bring in your practice footage. Slow down a serve, focus on your footwork, or keep your best rally.")
                     .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                TennisGuideEntry { showingGuide = true }
                 VStack(spacing: 0) {
                     ForEach([VideoTool.speed, .frame, .audio]) { tool in
                         Button { selectedTool = tool } label: {
@@ -73,6 +75,7 @@ struct ToolsView: View {
             }.clipoPage()
         }.clipoScreenBackground()
             .sheet(item: $selectedTool) { EditorSheet(initialTool: $0) }
+            .sheet(isPresented: $showingGuide) { TennisGuideView() }
     }
 }
 

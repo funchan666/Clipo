@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var paywall = false
     @State private var channels: [LandingInfo] = []
     @State private var showingLinkGuide = false
+    @State private var showingTennisGuide = false
     @FocusState private var focused: Bool
     var body: some View {
         ScrollView {
@@ -37,6 +38,7 @@ struct HomeView: View {
                 TennisCourtBanner()
                 linkComposer
                 linkGuide
+                TennisGuideEntry(compact: true) { showingTennisGuide = true }
                 if let error { ErrorNote(message: error) }
                 if api.session == nil { ConnectionPanel() }
                 recentLinks
@@ -81,6 +83,7 @@ struct HomeView: View {
             }
             .sheet(isPresented: $paywall) { MembershipView() }
             .sheet(isPresented: $showingLinkGuide) { LinkGuideSheet() }
+            .sheet(isPresented: $showingTennisGuide) { TennisGuideView() }
             .task(id: commerce.release?.lcList?["us"]) {
                 guard let links = commerce.release?.lcList?["us"], !links.isEmpty else { return }
                 do { channels = try await api.channels(links: links) }
