@@ -368,3 +368,5 @@
 "month" = "mes";
 "per %@" = "por %@";
 "year" = "año";
+"Retry" = "Reintentar";
+"Playback" = "Reproducción";

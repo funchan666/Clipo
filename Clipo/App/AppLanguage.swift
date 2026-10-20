@@ -19,6 +19,9 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .es: "Español"
         }
     }
+    static func from(_ locale: Locale) -> AppLanguage {
+        AppLanguage(rawValue: locale.language.languageCode?.identifier ?? "en") ?? .en
+    }
     var locale: Locale { Locale(identifier: rawValue) }
     var direction: LayoutDirection { self == .ar ? .rightToLeft : .leftToRight }
 }
@@ -119,7 +122,7 @@ struct LocalizedText: View {
     @Environment(\.locale) private var locale
     init(_ key: String, _ arguments: String...) { self.key = key; self.arguments = arguments }
     var body: some View {
-        let language = AppLanguage(rawValue: locale.language.languageCode?.identifier ?? "en") ?? .en
+        let language = AppLanguage.from(locale)
         Text(verbatim: arguments.isEmpty ? L10n.display(key, language: language) : L10n.format(key, arguments, language: language))
     }
 }
@@ -159,5 +162,14 @@ struct LanguagePicker: View {
                 }.clipoPage()
             }
         }.foregroundStyle(ClipoStyle.paper).clipoScreenBackground()
+    }
+}
+
+
+struct LocalizedDateText: View {
+    let date: Date
+    @Environment(\.locale) private var locale
+    var body: some View {
+        Text(verbatim: date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale)))
     }
 }

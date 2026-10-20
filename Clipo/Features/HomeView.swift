@@ -63,7 +63,7 @@ struct HomeView: View {
                                 HStack(spacing: 14) {
                                     MediaCover(url: WebAddress.media(item.shortCover), folder: false).frame(width: 62, height: 72).clipShape(RoundedRectangle(cornerRadius: 12))
                                     VStack(alignment: .leading, spacing: 5) {
-                                        LocalizedText(title).font(.headline).lineLimit(2)
+                                        Text(verbatim: title).font(.headline).lineLimit(2)
                                         if let count = info.videoFileCount { LocalizedText("\(count) videos").font(.caption).foregroundStyle(ClipoStyle.secondary) }
                                     }
                                     Spacer()
@@ -99,6 +99,7 @@ struct HomeView: View {
                 LocalizedText("Open a lesson").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
             }
             TextField("Lesson link or short code", text: $link, axis: .vertical)
+                .environment(\.layoutDirection, .leftToRight)
                 .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .focused($focused).font(.body).foregroundStyle(ClipoStyle.ink)
                 .tint(ClipoStyle.ink).padding(16)
@@ -251,7 +252,7 @@ struct ChannelView: View {
                                 MediaCover(url: WebAddress.media(item.coverImage), folder: item.isFolder == true)
                                     .frame(width: 80, height: 94).clipShape(RoundedRectangle(cornerRadius: 14))
                                 VStack(alignment: .leading, spacing: 7) {
-                                    LocalizedText(item.name ?? "Untitled").font(.headline).lineLimit(3)
+                                    Text(verbatim: item.name ?? L10n.text("Untitled")).font(.headline).lineLimit(3)
                                     LocalizedText(item.isFolder == true ? "\(item.childrenFileNum ?? 0) videos" : durationLabel(item.length ?? 0))
                                         .font(.caption.monospacedDigit()).foregroundStyle(ClipoStyle.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading)

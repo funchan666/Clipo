@@ -2,6 +2,7 @@ import SwiftUI
 import StoreKit
 
 struct MembershipView: View {
+    @Environment(\.locale) private var locale
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var commerce: CommerceStore
     @EnvironmentObject private var quota: QuotaStore
@@ -38,7 +39,7 @@ struct MembershipView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         LocalizedText("Your membership is active").font(.headline)
                         if let expiration = commerce.expiration {
-                            LocalizedText("Access through \(expiration.formatted(date: .abbreviated, time: .omitted)).")
+                            LocalizedText("Access through \(expiration.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale))).")
                                 .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         }
                     }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
@@ -148,7 +149,7 @@ struct MembershipView: View {
             .background(selected ? ClipoStyle.paper : ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
             .contentShape(.interaction, RoundedRectangle(cornerRadius: 22))
         }.buttonStyle(PressStyle()).disabled(interactionLocked)
-            .accessibilityLabel("\(plan.label), \(price) per \(plan.period.rawValue)")
+            .accessibilityLabel(Text(verbatim: L10n.display("\(plan.label), \(price) per \(plan.period.rawValue)", language: AppLanguage.from(locale))))
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityIdentifier("membership.plan.\(plan.period.rawValue)")
     }
@@ -163,7 +164,7 @@ struct MembershipView: View {
 
     private func planPrice(_ price: String, plan: CommerceConfiguration.Product, foreground: Color, secondary: Color) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text(verbatim: price).font(.title.weight(.bold)).foregroundStyle(foreground).fixedSize()
+            Text(verbatim: price).environment(\.layoutDirection, .leftToRight).font(.title.weight(.bold)).foregroundStyle(foreground).fixedSize()
             LocalizedText("per \(plan.period.rawValue)").font(.caption).foregroundStyle(secondary)
         }
     }

@@ -355,7 +355,8 @@ struct ClipPage: View {
             .disabled(!allowed || playback.duration <= 0 || playback.error != nil)
             .overlay(alignment: .top) {
                 if scrubbing {
-                    LocalizedText("\(durationLabel(scrubPosition)) / \(durationLabel(playback.duration))")
+                    Text(verbatim: "\(durationLabel(scrubPosition)) / \(durationLabel(playback.duration))")
+                        .environment(\.layoutDirection, .leftToRight)
                         .font(.caption.monospacedDigit()).offset(y: -8)
                         .allowsHitTesting(false)
                 }
@@ -415,7 +416,8 @@ struct ClipoScrubber: View {
                     if !editing { editing = true; onEditingChanged(true) }
                     value = range.lowerBound + min(1, max(0, gesture.location.x / max(1, geometry.size.width))) * (range.upperBound - range.lowerBound)
                 }.onEnded { _ in finishEditing() })
-        }.frame(height: 44).accessibilityElement().accessibilityLabel(LocalizedStringKey(label))
+        }.frame(height: 44).environment(\.layoutDirection, .leftToRight)
+            .accessibilityElement().accessibilityLabel(LocalizedStringKey(label))
             .onChange(of: dragging) { _, dragging in if !dragging { finishEditing() } }
             .accessibilityValue(durationLabel(value)).accessibilityAdjustableAction { direction in
                 value = min(range.upperBound, max(range.lowerBound, value + (direction == .increment ? 1 : -1)))

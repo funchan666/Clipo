@@ -205,7 +205,7 @@ struct EditorWorkspace: View {
                                     Glyph(symbol: .feed, size: 28)
                                     VStack(alignment: .leading, spacing: 5) {
                                         Text(verbatim: movie.title).font(.headline).lineLimit(1)
-                                        Text(verbatim: movie.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                                        LocalizedDateText(date: movie.date).font(.caption).foregroundStyle(ClipoStyle.secondary)
                                     }
                                     Spacer()
                                     Glyph(symbol: .edit, size: 22)

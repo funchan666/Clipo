@@ -48,7 +48,7 @@ struct LibraryView: View {
                                 .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 16))
                             VStack(alignment: .leading, spacing: 7) {
                                 Text(verbatim: movie.title).font(.headline).lineLimit(2)
-                                Text(verbatim: movie.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                                LocalizedDateText(date: movie.date).font(.caption).foregroundStyle(ClipoStyle.secondary)
                                 HStack(spacing: 20) {
                                     if movie.filename.hasSuffix("m4a") == false {
                                         Button("Edit") { edit(movie) }.frame(minHeight: 44)

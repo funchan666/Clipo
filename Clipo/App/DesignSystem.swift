@@ -27,6 +27,7 @@ struct TennisArtwork: View {
                         y: -CGFloat(kind.rawValue / 2) * geometry.size.height)
                 .allowsHitTesting(false)
         }
+        .environment(\.layoutDirection, .leftToRight)
         .frame(width: height, height: height).clipped()
         .frame(maxWidth: .infinity).accessibilityHidden(true)
     }
@@ -84,6 +85,7 @@ struct Glyph: View {
                 // The enlarged atlas is artwork, never an independent touch target.
                 .allowsHitTesting(false)
         }
+        .environment(\.layoutDirection, .leftToRight)
         .frame(width: size * 1.65, height: size * 1.65)
         .clipped().contentShape(.interaction, Rectangle())
         .blendMode(.screen)
@@ -141,11 +143,12 @@ struct MessagePanel: View {
     }
 }
 struct ErrorNote: View {
+    @Environment(\.locale) private var locale
     let message: String
     var body: some View {
         LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.danger)
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
-            .accessibilityLabel("Error: \(message)")
+            .accessibilityLabel(Text(verbatim: L10n.display("Error: \(message)", language: AppLanguage.from(locale))))
     }
 }
 struct FieldStyle: ViewModifier {
