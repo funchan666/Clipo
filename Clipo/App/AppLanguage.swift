@@ -28,7 +28,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
 enum L10n {
     private static let bundles: [AppLanguage: Bundle] = Dictionary(uniqueKeysWithValues:
-        AppLanguage.allCases.compactMap { language in
+        AppLanguage.allCases.compactMap { language -> (AppLanguage, Bundle)? in
             guard let path = Bundle.main.path(forResource: language.rawValue, ofType: "lproj"),
                   let bundle = Bundle(path: path) else { return nil }
             return (language, bundle)
@@ -72,7 +72,7 @@ enum L10n {
         "Preview could not play. %@",
         "The export finished but could not be added to your library. %@",
 
-    ].compactMap { key in
+    ].compactMap { key -> (String, NSRegularExpression)? in
         let pattern = "\\A" + key.components(separatedBy: "%@")
             .map { NSRegularExpression.escapedPattern(for: $0) }.joined(separator: "(.+?)") + "\\z"
         guard let expression = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else { return nil }
