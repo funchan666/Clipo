@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7EAA15000000000000000001 /* Clipo/Features/TennisGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EAA15000000000000000002 /* Clipo/Features/TennisGuideView.swift */; };
 		0A80A0B8549C3D5AB3BBC1FC /* Clipo/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47A27C0CD55779B5085CB27B /* Clipo/Resources/Assets.xcassets */; };
 		16EB816FD26D57C86FA63242 /* Clipo/Resources/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B01A9BEACE5275588553E5AD /* Clipo/Resources/PrivacyInfo.xcprivacy */; };
 		260CF880F17F5608D6824066 /* Clipo/Core/CommerceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */; };
@@ -19,6 +18,7 @@
 		6AF10A27CB2DD141266F1710 /* Clipo/Core/QuotaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E822DCE2A437F4FCB346A9 /* Clipo/Core/QuotaStore.swift */; };
 		79CDD73938BF2D09D9492954 /* Clipo/Core/APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B808EADBFC1086054EA47A /* Clipo/Core/APIClient.swift */; };
 		7B7855892215464D7C4CB60A /* Clipo/Core/RewardedAds.swift in Sources */ = {isa = PBXBuildFile; fileRef = 675FC4243CA06F6ED86F21AC /* Clipo/Core/RewardedAds.swift */; };
+		7EAA15000000000000000001 /* Clipo/Features/TennisGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EAA15000000000000000002 /* Clipo/Features/TennisGuideView.swift */; };
 		81F1CA728D14A09FCC01D07F /* Clipo/App/DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4BD89A549F49134CAB0C817 /* Clipo/App/DesignSystem.swift */; };
 		8B7AC1860EA6FD5B4C472DA6 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 1E2EBF992EE4434C89FA31D5 /* GoogleMobileAds */; };
 		8C78E63A9D2775413DFCA438 /* Clipo/Features/HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 198C628051C30B581DC8DE92 /* Clipo/Features/HomeView.swift */; };
@@ -33,7 +33,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		7EAA15000000000000000002 /* Clipo/Features/TennisGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/TennisGuideView.swift; sourceTree = SOURCE_ROOT; };
 		17682BB59D393EEB797E5420 /* Clipo/Features/EditorWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/EditorWorkspace.swift; sourceTree = SOURCE_ROOT; };
 		1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LibraryStore.swift; sourceTree = SOURCE_ROOT; };
 		198C628051C30B581DC8DE92 /* Clipo/Features/HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/HomeView.swift; sourceTree = SOURCE_ROOT; };
@@ -46,6 +45,7 @@
 		62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/DiscoverView.swift; sourceTree = SOURCE_ROOT; };
 		675FC4243CA06F6ED86F21AC /* Clipo/Core/RewardedAds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/RewardedAds.swift; sourceTree = SOURCE_ROOT; };
 		7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/LibraryView.swift; sourceTree = SOURCE_ROOT; };
+		7EAA15000000000000000002 /* Clipo/Features/TennisGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/TennisGuideView.swift; sourceTree = SOURCE_ROOT; };
 		86E8C246447DD4C5D9405F57 /* Clipo/Resources/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Clipo/Resources/Info.plist; sourceTree = SOURCE_ROOT; };
 		A09B10000000000000000002 /* Clipo/Resources/LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Clipo/Resources/LaunchScreen.storyboard; sourceTree = SOURCE_ROOT; };
 		A8792157CB4F27FB949C035F /* Clipo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Clipo.app; sourceTree = BUILT_PRODUCTS_DIR; };
