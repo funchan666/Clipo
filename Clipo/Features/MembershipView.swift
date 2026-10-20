@@ -2,6 +2,7 @@ import SwiftUI
 import StoreKit
 
 struct MembershipView: View {
+    var rewardKind: AllowanceKind? = nil
     @Environment(\.locale) private var locale
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var commerce: CommerceStore
@@ -31,7 +32,7 @@ struct MembershipView: View {
                     LocalizedText(commerce.premium ? "More court time." : "Keep your game growing.")
                         .font(.system(.largeTitle, design: .serif, weight: .medium))
                         .foregroundStyle(ClipoStyle.paper)
-                    LocalizedText("Unlimited views. Unlimited saves.")
+                    LocalizedText("Unlimited views. Unlimited downloads.")
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
 
@@ -112,6 +113,7 @@ struct MembershipView: View {
         }
         .clipoScreenBackground().foregroundStyle(.white)
         .task { await commerce.refresh() }
+        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in quota.resetIfNeeded() }
         .onDisappear { purchaseTask?.cancel(); purchaseTask = nil }
         .interactiveDismissDisabled(interactionLocked)
         .fullScreenCover(item: $ads.luckyReward) { reward in
@@ -181,13 +183,19 @@ struct MembershipView: View {
     private var rewardOption: some View {
         VStack(alignment: .leading, spacing: 12) {
             LocalizedText("Or, keep it free").font(.headline)
-            LocalizedText(quota.rewardSummary).font(.footnote).foregroundStyle(ClipoStyle.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            ActionButton(title: "Watch an ad", primary: false, busy: ads.busy || ads.isPresenting) {
-                Task { await ads.watch(commerce: commerce, quota: quota) }
-            }.disabled(purchasing)
-            LocalizedText(quota.unlimited ? "Unlimited views until 5 AM" : "\(quota.watchesLeft) views · \(quota.favoritesLeft) saves left today")
-                .font(.caption).foregroundStyle(ClipoStyle.secondary)
+            ForEach(rewardKind.map { [$0] } ?? AllowanceKind.allCases) { kind in
+                if quota.canRequestReward(for: kind, premium: commerce.premium) {
+                    LocalizedText(quota.rewardSummary(for: kind)).font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    ActionButton(title: kind == .watch ? "Get more views" : "Get more downloads",
+                                 primary: false, busy: ads.busy || ads.isPresenting) {
+                        Task { await ads.watch(commerce: commerce, quota: quota, kind: kind) }
+                    }.disabled(purchasing || ads.isPreparingAppOpen)
+                }
+            }
+            LocalizedText(quota.unlimited ? "Unlimited views until 05:00 UTC" : "\(quota.watchesLeft) views left today")
+            LocalizedText(quota.downloadsUnlimited ? "Unlimited downloads until 05:00 UTC" : "\(quota.downloadsLeft) downloads left today")
+            LocalizedText("Ad rewards unlock when the corresponding allowance runs out.")
+                .font(.caption).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
             if let error = ads.error { ErrorNote(message: error) }
             if let error = quota.error { ErrorNote(message: error) }
             if let message = ads.message {
@@ -286,7 +294,7 @@ struct AccountView: View {
         VStack(alignment: .leading, spacing: 8) {
             LocalizedText(commerce.premium ? "Your court pass." : "Go further with Plus.")
                 .font(.title2.weight(.bold)).tracking(-0.5).foregroundStyle(ClipoStyle.ink)
-            LocalizedText("Unlimited views & saves.")
+            LocalizedText("Unlimited views. Unlimited downloads.")
                 .font(.footnote).foregroundStyle(ClipoStyle.paperSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             LocalizedText(commerce.premium ? "Manage membership" : "Explore plans")
@@ -304,14 +312,14 @@ struct AccountView: View {
                     Button("Get more") { paywall = true }
                         .font(.footnote.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
                         .frame(minHeight: 44).buttonStyle(PressStyle()).disabled(unavailable)
-                        .accessibilityLabel("Get more daily views and saves")
+                        .accessibilityLabel("Get more daily views and downloads")
                 }
             }
             HStack(alignment: .top, spacing: 20) {
                 balance(value: commerce.premium || quota.unlimited ? "Unlimited" : "\(quota.watchesLeft)", label: "Views left")
-                balance(value: commerce.premium ? "Unlimited" : "\(quota.favoritesLeft)", label: "Saves left")
+                balance(value: commerce.premium || quota.downloadsUnlimited ? "Unlimited" : "\(quota.downloadsLeft)", label: "Downloads left")
             }
-            LocalizedText(commerce.premium ? "Included with your membership" : "Daily allowance resets at 5 AM")
+            LocalizedText(commerce.premium ? "Included with your membership" : "Daily allowance resets at 05:00 UTC")
                 .font(.caption).foregroundStyle(ClipoStyle.secondary)
         }
     }

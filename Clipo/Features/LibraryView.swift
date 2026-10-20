@@ -2,13 +2,15 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var offline: OfflineStore
     var edit: (LocalMovie) -> Void
     @State private var filter = "Saved"
     @State private var player: PlayerRoute?
     @State private var sharing: SharedFile?
     @State private var removing: LocalMovie?
     private var itemCount: Int {
-        filter == "Saved" ? library.favorites.count : library.movies.filter { $0.isExport == (filter == "Exports") }.count
+        if filter == "Downloads" { return offline.videos.count }
+        return filter == "Saved" ? library.favorites.count : library.movies.filter { $0.isExport == (filter == "Exports") }.count
     }
     var body: some View {
         ScrollView {
@@ -16,8 +18,19 @@ struct LibraryView: View {
                 if itemCount > 0 {
                     TennisArtwork(kind: .notebook, height: 128)
                 }
-                FlowChoices(values: ["Saved", "Imports", "Exports"], selected: filter) { filter = $0 }
+                FlowChoices(values: ["Saved", "Downloads", "Imports", "Exports"], selected: filter) { filter = $0 }
                 SectionLabel(title: filter, detail: "\(itemCount) \(itemCount == 1 ? "item" : "items") · On this device")
+                if offline.downloadingID != nil {
+                    if let title = offline.currentTitle { Text(verbatim: title).font(.subheadline).lineLimit(2) }
+                    LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.caption)
+                    ActionButton(title: "Cancel download", primary: false) { Task { await offline.cancel() } }
+                }
+                if let error = offline.error {
+                    ErrorNote(message: error)
+                    if offline.downloadingID != nil {
+                        ActionButton(title: "Retry", primary: false) { Task { await offline.retryCompletion() } }
+                    }
+                }
                 if filter == "Saved" {
                     if library.favorites.isEmpty { LibraryEmptyState(artwork: .notebook, title: "Build your lesson collection.", message: "Save lessons as you watch. Come back to the ideas you want to try on court.") }
                     ForEach(library.favorites) { clip in
@@ -32,6 +45,30 @@ struct LibraryView: View {
                                 }
                             }.buttonStyle(PressStyle())
                             IconButton(symbol: .bookmark, label: "Remove saved video", selected: true) { library.toggle(clip) }
+                        }
+                    }
+                } else if filter == "Downloads" {
+                    if offline.videos.isEmpty {
+                        LibraryEmptyState(artwork: .notebook, title: "Available offline",
+                                          message: "Download a lesson from its playback options to watch without a connection.")
+                    }
+                    ForEach(offline.videos) { video in
+                        HStack(spacing: 14) {
+                            Button {
+                                let clips = offline.videos.compactMap { item -> Clip? in
+                                    offline.cached(item.id) == nil ? nil : offline.playable(item.clip)
+                                }
+                                if clips.contains(where: { $0.id == video.id }) {
+                                    player = PlayerRoute(clips: clips, startID: video.id)
+                                } else { offline.error = "This download is no longer on this device. Download it again." }
+                            } label: {
+                                HStack(spacing: 14) {
+                                    Glyph(symbol: .download, size: 28).frame(width: 60, height: 72)
+                                    Text(verbatim: video.clip.title).font(.headline).lineLimit(3)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }.contentShape(Rectangle())
+                            }.buttonStyle(PressStyle())
+                            IconButton(symbol: .close, label: "Remove download") { offline.remove(video) }
                         }
                     }
                 } else {
@@ -74,6 +111,37 @@ struct LibraryView: View {
                     }.padding(24)
                 }.clipoScreenBackground().presentationDetents([.medium, .large])
             }
+    }
+}
+
+// Uses the existing original bitmap action surfaces; no new system artwork.
+struct OfflineDownloadButton: View {
+    let clip: Clip
+    @EnvironmentObject private var offline: OfflineStore
+    @EnvironmentObject private var quota: QuotaStore
+    @EnvironmentObject private var commerce: CommerceStore
+    @State private var downloadGate = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if offline.cached(clip.id) != nil {
+                LocalizedText("Available offline").font(.subheadline).foregroundStyle(ClipoStyle.accent)
+            } else if offline.downloadingID == clip.id {
+                LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.caption)
+                ActionButton(title: "Cancel download", primary: false) { Task { await offline.cancel() } }
+            } else {
+                ActionButton(title: "Download for offline", primary: false) {
+                    if quota.mayDownload(clip.id, premium: commerce.premium) {
+                        Task { await offline.download(clip) }
+                    } else { downloadGate = true }
+                }.disabled(offline.busy || clip.playbackURL.isFileURL)
+            }
+            if let error = offline.error {
+                ErrorNote(message: error)
+                if offline.downloadingID == clip.id {
+                    ActionButton(title: "Retry", primary: false) { Task { await offline.retryCompletion() } }
+                }
+            }
+        }.sheet(isPresented: $downloadGate) { MembershipView(rewardKind: .download) }
     }
 }
 

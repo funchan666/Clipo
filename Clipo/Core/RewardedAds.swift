@@ -31,6 +31,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
 
     func watch(commerce: CommerceStore, quota: QuotaStore, kind: AllowanceKind) async {
         guard !busy, !isPresenting, !isPreparingAppOpen else { return }
+        quota.resetIfNeeded()
         guard quota.canRequestReward(for: kind, premium: commerce.premium) else { return }
         guard let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
             error = "Rewarded ads are not available right now. No views have been deducted."; return
