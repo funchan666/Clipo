@@ -38,8 +38,8 @@ final class QuotaStore: ObservableObject {
     var unlimited: Bool { isUnlimited(.watch) }
     var downloadsUnlimited: Bool { isUnlimited(.download) }
     var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watchSpend ?? usage?.watched.count ?? 0)) }
-    var downloadsLeft: Int { max(0, (remote?.unlimitedAfterAdCount ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraDownloads ?? 0) - (usage?.downloadsUsed ?? 0)) }
-    private var downloadReward: Int { max(0, remote?.favoriteBaseLimit ?? policy?.favoriteReward ?? 0) }
+    var downloadsLeft: Int { max(0, (remote?.dailyDownloadLimit ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraDownloads ?? 0) - (usage?.downloadsUsed ?? 0)) }
+    private var downloadReward: Int { max(0, remote?.downloadRewardCount ?? policy?.favoriteReward ?? 0) }
     func isUnlimited(_ kind: AllowanceKind) -> Bool { completedAds(kind) >= 4 }
     func completedAds(_ kind: AllowanceKind) -> Int {
         kind == .watch ? (usage?.completedRewardIDs.count ?? 0) : (usage?.completedDownloadRewardIDs?.count ?? 0)

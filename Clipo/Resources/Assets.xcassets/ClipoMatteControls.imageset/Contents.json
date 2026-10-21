@@ -1,4 +1,12 @@
 {
-  "images": [{ "filename": "artwork.png", "idiom": "universal" }],
-  "info": { "author": "xcode", "version": 1 }
+  "images": [
+    {
+      "filename": "clipo-matte-controls.png",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
 }

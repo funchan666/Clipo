@@ -1,0 +1,148 @@
+{
+  "before_bytes": 42076051,
+  "after_bytes": 10500656,
+  "reduction_percent": 75.0,
+  "retired": [
+    "ClipoMark",
+    "ClipoConsentStates",
+    "ClipoArtChannels",
+    "ClipoArtPlus",
+    "ClipoArtTools",
+    "ClipoArtWelcome",
+    "ClipoArtLibrary",
+    "ClipoArtDiscover",
+    "ClipoArtStudio",
+    "ClipoArtExport",
+    "ClipoArtLink",
+    "TabStudioNormal",
+    "TabStudioSelected"
+  ],
+  "images": [
+    [
+      "ClipoCourtEditorial",
+      2879570,
+      622685,
+      "JPEG quality 92, original dimensions"
+    ],
+    [
+      "ClipoLaunchMark",
+      1319994,
+      936019,
+      "lossless PNG"
+    ],
+    [
+      "ClipoCourtControls",
+      3150391,
+      2704314,
+      "lossless PNG"
+    ],
+    [
+      "TabHomeNormal",
+      176162,
+      10015,
+      "252px tab PNG"
+    ],
+    [
+      "TabDiscoverSelected",
+      715185,
+      30839,
+      "252px tab PNG"
+    ],
+    [
+      "TabLibraryNormal",
+      205241,
+      9634,
+      "252px tab PNG"
+    ],
+    [
+      "TabMeNormal",
+      195801,
+      8974,
+      "252px tab PNG"
+    ],
+    [
+      "TabDiscoverNormal",
+      232552,
+      11636,
+      "252px tab PNG"
+    ],
+    [
+      "TabHomeSelected",
+      726595,
+      32112,
+      "252px tab PNG"
+    ],
+    [
+      "TabToolsSelected",
+      774992,
+      29662,
+      "252px tab PNG"
+    ],
+    [
+      "TabMeSelected",
+      719125,
+      29376,
+      "252px tab PNG"
+    ],
+    [
+      "TabLibrarySelected",
+      710246,
+      28876,
+      "252px tab PNG"
+    ],
+    [
+      "TabToolsNormal",
+      212392,
+      10524,
+      "252px tab PNG"
+    ],
+    [
+      "ServePracticeHero",
+      2672037,
+      485431,
+      "JPEG quality 92, original dimensions"
+    ],
+    [
+      "ClipoGlyphAtlas",
+      669823,
+      545149,
+      "lossless PNG"
+    ],
+    [
+      "ClipoTennisKit",
+      1784718,
+      1616684,
+      "lossless PNG"
+    ],
+    [
+      "ClipoLoadingMark",
+      163422,
+      93890,
+      "lossless PNG"
+    ],
+    [
+      "ClipoMatteControls",
+      1498562,
+      1185290,
+      "lossless PNG"
+    ],
+    [
+      "ClipoTennisCourt",
+      3217935,
+      650050,
+      "JPEG quality 92, original dimensions"
+    ],
+    [
+      "ClipoPlayerScrim",
+      449857,
+      260979,
+      "lossless PNG"
+    ],
+    [
+      "ClipoPlayerActions",
+      481059,
+      356519,
+      "lossless PNG"
+    ]
+  ]
+}

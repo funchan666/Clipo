@@ -165,6 +165,7 @@ struct PolicyWebView: UIViewRepresentable {
         configuration.websiteDataStore = .nonPersistent()
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = context.coordinator
+        view.uiDelegate = context.coordinator
         view.allowsBackForwardNavigationGestures = true
         view.isOpaque = false
         return view
@@ -176,13 +177,20 @@ struct PolicyWebView: UIViewRepresentable {
     }
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         view.navigationDelegate = nil
+        view.uiDelegate = nil
         view.stopLoading()
     }
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let state: PolicyBrowserState
         var requestID: Int?
         init(state: PolicyBrowserState) { self.state = state }
+        // Legal documents have no camera or microphone use case.
+        func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                     initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
+                     decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+            decisionHandler(.deny)
+        }
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             state.loading = true
             state.error = nil
