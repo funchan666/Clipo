@@ -90,7 +90,7 @@ GET /app-api/flow/release-package/getV2
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---:|---|
 | `platform` | `string` | 是 | `IOS` 或 `Android` |
-| `name` | `string` | 是 | `包名` |
+| `name` | `string` | 是 | 当前版本按 2026-10-21 确认固定传 `Clipo`，不是 Bundle ID |
 | `version` | `string` | 是 | App 版本，不含构建号 |
 | `lang` | `string` | 是 | 当前应用语言 |
 | `userId` | `string` | 是 | `登录接口返回的userId字段值` |
@@ -100,7 +100,7 @@ GET /app-api/flow/release-package/getV2
 示例：
 
 ```http
-GET /app-api/flow/release-package/getV2?platform=Android&name=appName&version=1.0.0&lang=en&userId=001
+GET /app-api/flow/release-package/getV2?platform=IOS&name=Clipo&version=1.0.0&lang=en&userId=001
 ```
 
 ### 响应
@@ -374,6 +374,8 @@ GET /app-api/flow/land-page/list_by_links_page
 | `list[].childrenFileNum` | `number` | 子文件数量，可在 `extraInfo` 中提供 |
 
 ## 4.6 推荐/搜索视频 search-check
+
+2026-10-21 客户端调整：首页输入和推荐页搜索均调用本接口。非空输入原样作为 `query`，不截取 URL 末段、不转大小写、不回退到 `info_by_links`。推荐页无搜索词时省略 `query`。本接口未定义密码参数，首页不再提供密码输入。结果继续沿用 `feedId`／`nextCursor` 分页及竖向播放器。
 
 ```http
 GET /app-api/flow/search-check

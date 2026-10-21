@@ -33,7 +33,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         guard !busy, !isPresenting, !isPreparingAppOpen else { return }
         quota.resetIfNeeded()
         guard quota.canRequestReward(for: kind, premium: commerce.premium) else { return }
-        guard let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
+        guard commerce.rightsVerified, let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
             error = "Rewarded ads are not available right now. No views have been deducted."; return
         }
         let demoMode = (Bundle.main.object(forInfoDictionaryKey: "ClipoAdsTestMode") as? String) == "YES"
@@ -64,7 +64,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             loadingRewarded = true
             let ad = try await RewardedAd.load(with: unitID, request: Request())
             loadingRewarded = false
-            guard commerce.api.session?.userId.value == owner else { throw ClipoError.unauthorized }
+            guard commerce.api.session?.userId.value == owner, !commerce.premium else { throw ClipoError.unauthorized }
             rewarded = ad
             ad.fullScreenContentDelegate = self
             let rewardID = UUID()
@@ -244,7 +244,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         if ad is AppOpenAd { finishAppOpen(); return }
         rewarded = nil
         isPresenting = false
-        if !rewardGranted, error == nil { message = "No reward was received. Finish a rewarded ad to get more views." }
+        if !rewardGranted, error == nil { message = "No reward was received. Finish the ad to receive your reward." }
     }
     func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         if ad is AppOpenAd { finishAppOpen(); return }

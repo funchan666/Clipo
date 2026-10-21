@@ -43,6 +43,7 @@ final class OfflineStore: NSObject, ObservableObject {
     private var restored = false
     private var finalizing = false
     @Published private var preparing = false
+    @Published private var restoring = false
     private lazy var hlsSession: AVAssetDownloadURLSession = {
         let config = URLSessionConfiguration.background(withIdentifier: api.configuration.bundleID + ".offline.hls")
         config.isDiscretionary = false
@@ -55,7 +56,7 @@ final class OfflineStore: NSObject, ObservableObject {
         config.sessionSendsLaunchEvents = false
         return URLSession(configuration: config, delegate: self, delegateQueue: .main)
     }()
-    var busy: Bool { preparing || downloadingID != nil }
+    var busy: Bool { restoring || preparing || downloadingID != nil }
     var currentTitle: String? { index.transfer?.clip.title }
 
     init(api: APIClient, quota: QuotaStore, commerce: CommerceStore) {
@@ -86,6 +87,8 @@ final class OfflineStore: NSObject, ObservableObject {
     func resumePending() async {
         guard readable, !restored, api.session != nil else { return }
         restored = true
+        restoring = true
+        defer { restoring = false }
         let hlsTasks = await hlsSession.allTasks
         let fileTasks = await fileSession.allTasks
         let tasks = hlsTasks + fileTasks
@@ -95,11 +98,16 @@ final class OfflineStore: NSObject, ObservableObject {
         guard transfer.owner == api.session?.userId.value else {
             matching.forEach { $0.cancel() }; fail(transfer.id, message: "Download interrupted. Please try again."); return
         }
-        if transfer.completed { await finishIfReady() }
+        if transfer.completed {
+            if transfer.relativePath == nil, matching.isEmpty {
+                fail(transfer.id, message: "Download interrupted. Please try again.")
+            } else { await finishIfReady() }
+        }
         else if matching.isEmpty { fail(transfer.id, message: "Download interrupted. Please try again.") }
         else { matching.forEach { $0.resume() } }
     }
     func download(_ clip: Clip) async {
+        await resumePending()
         guard readable, !busy, cached(clip.id) == nil,
               let owner = api.session?.userId.value, !clip.playbackURL.isFileURL else { return }
         guard quota.mayDownload(clip.id, premium: commerce.premium) else {
@@ -154,17 +162,27 @@ final class OfflineStore: NSObject, ObservableObject {
     }
     private func receiveLocation(id: UUID, url: URL) {
         guard var transfer = index.transfer, transfer.id == id else {
-            if !index.videos.contains(where: { $0.url == url }) { try? FileManager.default.removeItem(at: url) }
+            let resolved = url.resolvingSymlinksInPath()
+            if !index.videos.contains(where: { $0.url.resolvingSymlinksInPath() == resolved }) {
+                try? FileManager.default.removeItem(at: url)
+            }
             return
         }
-        let prefix = NSHomeDirectory() + "/"
-        guard url.path.hasPrefix(prefix) else { fail(id, message: "Download could not be saved."); return }
-        transfer.relativePath = String(url.path.dropFirst(prefix.count))
+        let prefix = URL(fileURLWithPath: NSHomeDirectory()).resolvingSymlinksInPath().path + "/"
+        let path = url.resolvingSymlinksInPath().path
+        guard path.hasPrefix(prefix) else { fail(id, message: "Download could not be saved."); return }
+        transfer.relativePath = String(path.dropFirst(prefix.count))
         do {
             var next = index; next.transfer = transfer
             try persist(next)
             Task { await finishIfReady() }
-        } catch { self.error = error.localizedDescription }
+        } catch {
+            // Keep the location in memory if disk space prevents journaling; Retry
+            // persists it before charging. A process loss may orphan a file, not a charge.
+            index.transfer = transfer
+            publish()
+            self.error = "Download is waiting to be saved. Tap Retry."
+        }
     }
     private func completed(id: UUID, failure: Error?) {
         guard var transfer = index.transfer, transfer.id == id else { return }
@@ -177,7 +195,11 @@ final class OfflineStore: NSObject, ObservableObject {
             var next = index; next.transfer = transfer
             try persist(next)
             Task { await finishIfReady() }
-        } catch { self.error = error.localizedDescription }
+        } catch {
+            index.transfer = transfer
+            publish()
+            self.error = "Download is waiting to be saved. Tap Retry."
+        }
     }
     private func finishIfReady() async {
         guard !finalizing, let transfer = index.transfer, transfer.completed,
@@ -192,6 +214,11 @@ final class OfflineStore: NSObject, ObservableObject {
             guard playable, !transfer.isHLS || asset.assetCache?.isPlayableOffline == true else {
                 fail(transfer.id, message: "This video is not available for offline playback."); return
             }
+        } catch {
+            fail(transfer.id, message: "This video is not available for offline playback.")
+            return
+        }
+        do {
             guard index.transfer?.id == transfer.id, transfer.owner == api.session?.userId.value else { return }
             try quota.recordDownload(video.id, owner: transfer.owner, premium: transfer.premium || commerce.premium)
             var next = index
@@ -206,7 +233,13 @@ final class OfflineStore: NSObject, ObservableObject {
             self.error = "Download is waiting to be saved. Tap Retry."
         }
     }
-    func retryCompletion() async { error = nil; await finishIfReady() }
+    func retryCompletion() async {
+        do {
+            try persist(index)
+            error = nil
+            await finishIfReady()
+        } catch { self.error = "Download is waiting to be saved. Tap Retry." }
+    }
     private func fail(_ id: UUID, message: String?) {
         guard let transfer = index.transfer, transfer.id == id else { return }
         do {

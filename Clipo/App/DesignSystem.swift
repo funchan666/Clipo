@@ -20,13 +20,28 @@ struct TennisArtwork: View {
     enum Kind: Int { case racket, lesson, bag, notebook }
     let kind: Kind
     var height: CGFloat = 160
+    // The bag crosses the atlas midpoint. Exclude its stray edge from the notebook tile.
+    private static let notebook: UIImage? = {
+        guard let source = UIImage(named: "ClipoTennisKit")?.cgImage,
+              let tile = source.cropping(to: CGRect(
+                x: CGFloat(source.width) * 0.53, y: CGFloat(source.height) * 0.5,
+                width: CGFloat(source.width) * 0.47, height: CGFloat(source.height) * 0.5
+              )) else { return nil }
+        return UIImage(cgImage: tile)
+    }()
     var body: some View {
         GeometryReader { geometry in
+            if kind == .notebook, let notebook = Self.notebook {
+                Image(uiImage: notebook).resizable().interpolation(.high).scaledToFit()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .allowsHitTesting(false)
+            } else {
             Image("ClipoTennisKit").resizable().interpolation(.high)
                 .frame(width: geometry.size.width * 2, height: geometry.size.height * 2)
                 .offset(x: -CGFloat(kind.rawValue % 2) * geometry.size.width,
                         y: -CGFloat(kind.rawValue / 2) * geometry.size.height)
                 .allowsHitTesting(false)
+            }
         }
         .environment(\.layoutDirection, .leftToRight)
         .frame(width: height, height: height).clipped()
@@ -102,7 +117,9 @@ struct IconButton: View {
     var body: some View {
         Button(action: action) {
             Glyph(symbol: symbol).allowsHitTesting(false).frame(width: 48, height: 48)
-                .background(selected ? ClipoStyle.raised : Color.clear, in: RoundedRectangle(cornerRadius: 16))
+                .background {
+                    if selected { OriginalSurface(tone: .pine) }
+                }
                 .contentShape(.interaction, Rectangle())
         }.buttonStyle(PressStyle()).accessibilityLabel(LocalizedStringKey(label))
             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -114,6 +131,21 @@ struct PressStyle: ButtonStyle {
         configuration.label.opacity(!isEnabled ? 0.6 : (configuration.isPressed ? 0.65 : 1))
     }
 }
+// Compact controls retain their full localized label; enclosing layouts can scroll
+// or use ViewThatFits instead of splitting words into multiple lines.
+struct CompactActionStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.footnote.weight(.semibold))
+            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 16).frame(minHeight: 44)
+            .foregroundStyle(ClipoStyle.paper)
+            .background { OriginalSurface(tone: .pine) }
+            .contentShape(.interaction, Rectangle())
+            .opacity(!isEnabled ? 0.6 : (configuration.isPressed ? 0.65 : 1))
+    }
+}
 struct ActionButton: View {
     let title: String
     var primary = true
@@ -122,6 +154,7 @@ struct ActionButton: View {
     var body: some View {
         Button(action: action) {
             LocalizedText(busy ? "Please wait…" : title).font(.body.weight(.semibold))
+                .lineLimit(1).minimumScaleFactor(0.75)
                 .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 14)
                 .foregroundStyle(primary ? ClipoStyle.ink : Color.white)
                 .frame(maxWidth: .infinity, minHeight: 54)
@@ -306,6 +339,48 @@ struct OriginalSurface: View {
     }
 }
 
+// Original matte raster alternatives, scoped to Home and Library. Keep the older
+// control atlas intact for screens outside this refinement.
+struct MatteSurface: View {
+    enum Tone: Int { case lime, pine, pineOnPaper, sageOnPaper }
+    let tone: Tone
+    private static let tiles: [UIImage] = {
+        guard let source = UIImage(named: "ClipoMatteControls")?.cgImage else { return [] }
+        // Measured silhouettes in the 1254px original. Extraction only, no drawing.
+        let tops: [CGFloat] = [66, 379, 689, 996]
+        let scale = CGFloat(source.width) / 1254
+        return tops.compactMap { top in
+            let bounds = CGRect(x: 65 * scale, y: top * scale,
+                                width: 1125 * scale, height: 198 * scale)
+            guard let tile = source.cropping(to: bounds.integral) else { return nil }
+            return UIImage(cgImage: tile, scale: 3, orientation: .up)
+        }
+    }()
+    var body: some View {
+        if Self.tiles.indices.contains(tone.rawValue) {
+            Image(uiImage: Self.tiles[tone.rawValue])
+                .resizable(capInsets: EdgeInsets(top: 18, leading: 18, bottom: 18, trailing: 18), resizingMode: .stretch)
+                .environment(\.layoutDirection, .leftToRight)
+                .allowsHitTesting(false).accessibilityHidden(true)
+        }
+    }
+}
+
+struct MatteActionStyle: ButtonStyle {
+    var onPaper = false
+    @Environment(\.isEnabled) private var isEnabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.footnote.weight(.semibold))
+            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: 44)
+            .foregroundStyle(onPaper ? ClipoStyle.ink : ClipoStyle.paper)
+            .background { MatteSurface(tone: onPaper ? .sageOnPaper : .pine) }
+            .contentShape(Rectangle())
+            .opacity(!isEnabled ? 0.6 : (configuration.isPressed ? 0.75 : 1))
+    }
+}
+
 struct CourtFilter: View {
     let values: [String]
     let selected: String
@@ -316,6 +391,7 @@ struct CourtFilter: View {
                 ForEach(values, id: \.self) { value in
                     Button { select(value) } label: {
                         LocalizedText(value).font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                             .padding(.horizontal, 22).padding(.vertical, 14)
                             .frame(minHeight: 48)

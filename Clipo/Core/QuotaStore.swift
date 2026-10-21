@@ -17,6 +17,7 @@ struct DailyUsage: Codable {
     var luckyRewardIDs: Set<UUID>?
     var lastLuckyReward: Date?
     var schemaVersion: Int?
+    var watchSpend: Int?
     var downloaded: Set<String>?
     var downloadsUsed: Int?
     var completedDownloadRewardIDs: Set<UUID>?
@@ -33,7 +34,7 @@ final class QuotaStore: ObservableObject {
     private var storageOK = true
     var unlimited: Bool { isUnlimited(.watch) }
     var downloadsUnlimited: Bool { isUnlimited(.download) }
-    var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watched.count ?? 0)) }
+    var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watchSpend ?? usage?.watched.count ?? 0)) }
     var downloadsLeft: Int { max(0, (remote?.unlimitedAfterAdCount ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraDownloads ?? 0) - (usage?.downloadsUsed ?? 0)) }
     private var downloadReward: Int { max(0, remote?.favoriteBaseLimit ?? policy?.favoriteReward ?? 0) }
     func isUnlimited(_ kind: AllowanceKind) -> Bool { completedAds(kind) >= 4 }
@@ -69,6 +70,7 @@ final class QuotaStore: ObservableObject {
                     // The old favorite ledger never represented a downloaded file.
                     saved.day = boundary()
                     saved.schemaVersion = 2
+                    saved.watchSpend = saved.watched.count
                     saved.downloaded = []
                     saved.downloadsUsed = 0
                     saved.completedDownloadRewardIDs = []
@@ -92,10 +94,11 @@ final class QuotaStore: ObservableObject {
     }
     func recordWatch(_ id: String, premium: Bool) -> Bool {
         guard mayWatch(id, premium: premium) else { return false }
-        if premium || unlimited { return true }
         guard var next = usage else { return false }
         guard !next.watched.contains(id) else { return true }
+        let previousSpend = next.watchSpend ?? next.watched.count
         next.watched.insert(id)
+        next.watchSpend = previousSpend + (premium || unlimited ? 0 : 1)
         do { try commit(next); return true }
         catch { self.error = error.localizedDescription; return false }
     }
@@ -135,6 +138,7 @@ final class QuotaStore: ObservableObject {
         resetIfNeeded()
         guard var next = usage, policy != nil else { throw ClipoError.configuration }
         guard !isUnlimited(kind), remaining(kind) == 0, next.luckyRewardIDs?.contains(id) != true else { return nil }
+        guard (kind == .watch ? nextWatchReward : downloadReward) > 0 else { return nil }
         // No cooldown; no-fill gifts never advance either completed-ad counter.
         // At stage four nextWatchReward remains the third-stage amount.
         if kind == .watch { next.extraWatches += nextWatchReward }
@@ -147,6 +151,7 @@ final class QuotaStore: ObservableObject {
     private func freshDay(downloaded: Set<String> = []) -> DailyUsage {
         var value = DailyUsage(day: boundary())
         value.schemaVersion = 2
+        value.watchSpend = 0
         value.downloaded = downloaded
         value.downloadsUsed = 0
         value.completedDownloadRewardIDs = []

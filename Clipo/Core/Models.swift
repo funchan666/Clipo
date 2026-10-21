@@ -178,8 +178,8 @@ struct IOSBillingConfiguration: Codable { let iosVerifyShareKey: String?; let sa
 struct QuotaConfiguration: Decodable {
     let dailyWatchLimit: Int?
     // Backend field names are misleading; the confirmed API comments define their roles.
-    let unlimitedAfterAdCount: Int? // Daily base favorite allowance, not the ad threshold.
-    let favoriteBaseLimit: Int? // Favorite reward per completed ad.
+    let unlimitedAfterAdCount: Int? // Confirmed daily download allowance; legacy server key, not the ad threshold.
+    let favoriteBaseLimit: Int? // Confirmed download reward per completed download ad; favorites are free.
     let firstAdRewardWatchCount: Int?
     let secondAdRewardWatchCount: Int?
     let thirdAdRewardWatchCount: Int?

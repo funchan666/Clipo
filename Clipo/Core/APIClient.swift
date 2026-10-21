@@ -62,17 +62,21 @@ enum InstallationIdentity {
         let support = files.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try files.createDirectory(at: support, withIntermediateDirectories: true)
         var marker = support.appendingPathComponent("ClipoInstallation")
-        guard !files.fileExists(atPath: marker.path) else { return }
+        let existing = try? String(contentsOf: marker, encoding: .utf8)
+        if existing == "ready" { return }
         // Older versions always created this sandbox directory. Preserve their UUID on
         // upgrade; an uninstall removes it. Keychain alone is not evidence of an install.
         let legacyLibrary = files.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ClipoMedia", isDirectory: true)
-        if !files.fileExists(atPath: legacyLibrary.path) {
+        if existing == "reset" || !files.fileExists(atPath: legacyLibrary.path) {
+            // Persist reset intent before touching Keychain so an interrupted reset
+            // cannot be mistaken for a legacy upgrade on the next launch.
+            try Data("reset".utf8).write(to: marker, options: .atomic)
             try SecureStorage.remove("visitor")
             try SecureStorage.remove("installation")
         }
         // Purchase ledgers deliberately survive: unpaid/undelivered orders retain owners.
-        try Data(UUID().uuidString.utf8).write(to: marker, options: .atomic)
+        try Data("ready".utf8).write(to: marker, options: .atomic)
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         try marker.setResourceValues(values)
@@ -97,19 +101,17 @@ final class APIClient: ObservableObject {
         transport = URLSession(configuration: config)
         do {
             try InstallationIdentity.prepare()
-            if let data = try SecureStorage.read("visitor") {
-                let saved = try JSONDecoder().decode(VisitorSession.self, from: data)
-                if !saved.accessToken.isEmpty {
-                    session = saved
-                }
-            }
+            // A persisted token is not a completed login for this process. Every cold
+            // start authenticates again with the existing installation UUID. Keep the
+            // stored credentials and purchase ledger intact for recovery ownership.
         } catch {
             session = nil
             storageFailure = error
         }
     }
 
-    // Startup authenticates a real guest; no separate welcome gate or implied consent record.
+    // Once per process after success; concurrent startup/retry callers share loginTask.
+    // Background returns and view/layout changes reuse this process's live session.
     func prepareVisitor() async throws {
         guard session == nil else { return }
         _ = try await signIn()
@@ -146,7 +148,7 @@ final class APIClient: ObservableObject {
     func releaseConfiguration() async throws -> ReleaseConfiguration {
         guard let session else { throw ClipoError.unauthorized }
         return try await perform("/app-api/flow/release-package/getV2", query: [
-            "platform": "IOS", "name": configuration.bundleID, "version": configuration.version,
+            "platform": "IOS", "name": "Clipo", "version": configuration.version,
             "lang": AppLanguage.current.rawValue, "userId": session.userId.value,
             "time": TimeZone.current.identifier, "input": UITextInputMode.activeInputModes.compactMap(\.primaryLanguage).joined(separator: ",")
         ], authenticated: false)
@@ -207,6 +209,14 @@ final class APIClient: ObservableObject {
         if authenticated, effectiveQuery["userId"] != nil { effectiveQuery["userId"] = session?.userId.value }
         components.queryItems = effectiveQuery.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
         guard let url = components.url else { throw ClipoError.configuration }
+        #if DEBUG
+        // Targeted request diagnostics: never emit credentials or the entered search text.
+        if path == "/app-api/flow/release-package/getV2" {
+            diagnostics.debug("Release configuration name: \(effectiveQuery["name"] ?? "", privacy: .public)")
+        } else if path == "/app-api/flow/search-check" {
+            diagnostics.debug("Search request: query UTF-8 bytes \(effectiveQuery["query"]?.utf8.count ?? 0), paginated \(effectiveQuery["cursor"] != nil)")
+        }
+        #endif
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.httpBody = body

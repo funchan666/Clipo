@@ -83,24 +83,22 @@ struct MembershipView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 24) { recoveryLinks }
-                        VStack(alignment: .leading, spacing: 0) { recoveryLinks }
+                        HStack(spacing: 10) { recoveryLinks }
+                        VStack(alignment: .leading, spacing: 10) { recoveryLinks }
                     }
                     LocalizedText("Auto-renewing subscription. Cancel in your Apple account at least 24 hours before renewal. Payment is charged after Apple confirmation.")
                         .font(.caption).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     PolicyLinks()
                     Button("Purchase help") { purchaseHelp.toggle() }
-                        .font(.caption).foregroundStyle(ClipoStyle.secondary)
-                        .frame(minHeight: 44).buttonStyle(PressStyle())
+                        .buttonStyle(CompactActionStyle())
                     if purchaseHelp {
                         LocalizedText("If a payment is waiting to be confirmed, retry without purchasing again.")
                             .font(.footnote).foregroundStyle(ClipoStyle.secondary)
-                        Button("Retry purchase confirmation") {
+                        ActionButton(title: "Retry purchase confirmation", primary: false) {
                             attemptedPurchaseAction = true
                             commerce.retryPending()
-                        }.frame(minHeight: 44).buttonStyle(PressStyle())
-                            .disabled(interactionLocked)
+                        }.disabled(interactionLocked)
                     }
                 }
             }.padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 24)
@@ -209,10 +207,9 @@ struct MembershipView: View {
         Button("Restore purchases") {
             attemptedPurchaseAction = true
             commerce.restore()
-        }.disabled(interactionLocked).frame(minHeight: 44)
-            .buttonStyle(PressStyle()).font(.footnote.weight(.medium))
+        }.disabled(interactionLocked).buttonStyle(CompactActionStyle())
         Link("Manage subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
-            .font(.footnote.weight(.medium)).frame(minHeight: 44)
+            .buttonStyle(CompactActionStyle())
             .disabled(interactionLocked)
     }
 }

@@ -45,37 +45,43 @@ struct ToolsView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     private let tools: [VideoTool] = [.speed, .frame, .audio]
     var body: some View {
-        ScrollView {
-            VStack(spacing: 22) {
-                Button { selectedTool = .studio } label: {
-                    VStack(spacing: 0) {
-                        CourtArtwork(subject: .review).aspectRatio(1.8, contentMode: .fit)
-                        HStack(spacing: 12) {
-                            LocalizedText("Review practice").font(.title3.weight(.semibold))
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 4)
-                            Glyph(symbol: .back, size: 14, tint: ClipoStyle.ink).rotationEffect(.degrees(180))
-                        }.padding(20).foregroundStyle(ClipoStyle.ink)
-                            .background { OriginalSurface(tone: .ivory) }
-                    }.contentShape(Rectangle())
-                }.buttonStyle(PressStyle()).accessibilityIdentifier("tools.studio")
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 220 : 92), spacing: 12)], alignment: .leading, spacing: 16) {
-                    ForEach(tools) { tool in
-                        Button { selectedTool = tool } label: {
-                            VStack(spacing: 10) {
-                                CourtArtwork(subject: subject(tool)).aspectRatio(1, contentMode: .fit)
-                                LocalizedText(tool.editorTab).font(.subheadline.weight(.semibold))
-                                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                                    .padding(.horizontal, 8).padding(.vertical, 12).frame(maxWidth: .infinity, minHeight: 48)
-                                    .background { OriginalSurface(tone: .pine) }
-                            }.foregroundStyle(ClipoStyle.paper).contentShape(Rectangle())
-                        }.buttonStyle(PressStyle())
-                            .accessibilityLabel(LocalizedStringKey(tool.title))
-                            .accessibilityIdentifier("tools.\(tool.rawValue)")
-                    }
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Artwork alone extends behind the status area; controls stay below it.
+                    CourtArtwork(subject: .review)
+                        .frame(height: min(geometry.size.width * 0.82, 420) + geometry.safeAreaInsets.top)
+                    VStack(spacing: 22) {
+                        Button { selectedTool = .studio } label: {
+                            HStack(spacing: 12) {
+                                LocalizedText("Review practice").font(.title3.weight(.semibold))
+                                    .lineLimit(1).minimumScaleFactor(0.8)
+                                Spacer(minLength: 4)
+                                Glyph(symbol: .back, size: 14, tint: ClipoStyle.ink).rotationEffect(.degrees(180))
+                            }.padding(.horizontal, 22).frame(minHeight: 60)
+                                .foregroundStyle(ClipoStyle.ink)
+                                .background { OriginalSurface(tone: .ivory) }
+                                .contentShape(Rectangle())
+                        }.buttonStyle(PressStyle()).accessibilityIdentifier("tools.studio")
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 220 : 92), spacing: 12)], alignment: .leading, spacing: 16) {
+                            ForEach(tools) { tool in
+                                Button { selectedTool = tool } label: {
+                                    VStack(spacing: 8) {
+                                        CourtArtwork(subject: subject(tool)).aspectRatio(1, contentMode: .fit)
+                                        LocalizedText(tool.editorTab).font(.subheadline.weight(.semibold))
+                                            .lineLimit(1).minimumScaleFactor(0.8)
+                                            .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 48)
+                                            .background { OriginalSurface(tone: .pine) }
+                                    }.foregroundStyle(ClipoStyle.paper).contentShape(Rectangle())
+                                }.buttonStyle(PressStyle())
+                                    .accessibilityLabel(LocalizedStringKey(tool.title))
+                                    .accessibilityIdentifier("tools.\(tool.rawValue)")
+                            }
+                        }
+                        TennisGuideEntry { showingGuide = true }
+                    }.clipoPage()
                 }
-                TennisGuideEntry { showingGuide = true }
-            }.clipoPage()
+            }.ignoresSafeArea(.container, edges: .top)
         }.clipoScreenBackground()
             .sheet(item: $selectedTool) { EditorSheet(initialTool: $0) }
             .sheet(isPresented: $showingGuide) { TennisGuideView() }
@@ -128,7 +134,8 @@ struct EditorWorkspace: View {
                         LocalizedText(selected.title).font(.subheadline).lineLimit(1)
                         Spacer()
                         if !editor.isExporting, !editor.isPreparingPreview {
-                            Button("Change") { self.selected = nil; editor.close() }.foregroundStyle(ClipoStyle.accent)
+                            Button("Change") { self.selected = nil; editor.close() }
+                                .buttonStyle(CompactActionStyle())
                         }
                     }
                     VideoSurface(player: editor.preview.player, fill: false)
@@ -140,7 +147,9 @@ struct EditorWorkspace: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(tools, id: \.self) { name in
-                                    Button(LocalizedStringKey(name)) { tool = name }.font(.subheadline.weight(.semibold)).padding(.horizontal, 20).frame(minHeight: 48)
+                                    Button(LocalizedStringKey(name)) { tool = name }.font(.subheadline.weight(.semibold))
+                                        .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                                        .padding(.horizontal, 20).frame(minHeight: 48)
                                         .foregroundStyle(tool == name ? ClipoStyle.ink : .white)
                                         .background { OriginalSurface(tone: tool == name ? .accent : .pine) }.buttonStyle(PressStyle())
                                         .accessibilityAddTraits(tool == name ? .isSelected : [])
@@ -180,6 +189,7 @@ struct EditorWorkspace: View {
                         VStack(spacing: 10) {
                             PhotosPicker(selection: $picker, matching: .videos, photoLibrary: .shared()) {
                                 LocalizedText(importing ? "Importing…" : "Choose from Photos").font(.body.weight(.semibold))
+                                    .lineLimit(1).minimumScaleFactor(0.75)
                                     .padding(.horizontal, 16).padding(.vertical, 16)
                                     .frame(maxWidth: .infinity, minHeight: 54).foregroundStyle(ClipoStyle.ink)
                                     .background { OriginalSurface(tone: .accent) }
@@ -322,7 +332,7 @@ struct PreviewButton: View {
     @ObservedObject var playback: PlaybackController
     var body: some View {
         IconButton(symbol: playback.isPlaying ? .pause : .play, label: playback.isPlaying ? "Pause preview" : "Play preview") { playback.toggle() }
-            .background(.black.opacity(0.65), in: Circle())
+            .background { OriginalSurface(tone: .pine) }
     }
 }
 struct FlowChoices: View {
@@ -330,17 +340,7 @@ struct FlowChoices: View {
     let selected: String
     var action: (String) -> Void
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 88))], spacing: 8) {
-            ForEach(values, id: \.self) { value in
-                Button(LocalizedStringKey(value)) { action(value) }.font(.subheadline.weight(.semibold))
-                    .multilineTextAlignment(.center).padding(.horizontal, 10).padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .foregroundStyle(value == selected ? ClipoStyle.ink : .white)
-                    .background { OriginalSurface(tone: value == selected ? .accent : .pine) }
-                    .contentShape(.interaction, Rectangle())
-                    .buttonStyle(PressStyle()).accessibilityAddTraits(value == selected ? .isSelected : [])
-            }
-        }
+        CourtFilter(values: values, selected: selected, select: action)
     }
 }
 struct SharedFile: Identifiable { let id = UUID(); let url: URL }

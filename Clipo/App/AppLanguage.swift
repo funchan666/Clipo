@@ -43,6 +43,8 @@ enum L10n {
     // at display time so a language switch also updates a visible error or quota message.
     private static let messagePatterns: [(String, NSRegularExpression)] = [
         "Error: %@",
+        "Downloading · %@%",
+        "%@ downloads left today",
         "%@ short reads · Available offline",
         "Access through %@.",
         "Continue with %@",

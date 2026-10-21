@@ -8,7 +8,7 @@ final class FeedStore: ObservableObject {
     @Published var error: String?
     private var feedID: String?
     private var cursor: String?
-    private var query = ""
+    private(set) var query = ""
     private var generation = UUID()
     func load(api: APIClient, search: String? = nil) async {
         if let search {
@@ -38,6 +38,9 @@ final class FeedStore: ObservableObject {
     }
 }
 struct DiscoverView: View {
+    @Environment(\.dismiss) private var dismiss
+    private let canDismiss: Bool
+    private let onSearchResult: ((String, Clip) -> Void)?
     @EnvironmentObject private var offline: OfflineStore
     private var displayClips: [Clip] { feed.clips.map { offline.playable($0) } }
     @EnvironmentObject private var api: APIClient
@@ -47,6 +50,13 @@ struct DiscoverView: View {
     @State private var search = ""
     @State private var searchOpen = false
     @State private var activeID: String?
+    @State private var recordedQuery: String?
+    init(initialSearch: String = "", canDismiss: Bool = false,
+         onSearchResult: ((String, Clip) -> Void)? = nil) {
+        self.canDismiss = canDismiss
+        self.onSearchResult = onSearchResult
+        _search = State(initialValue: initialSearch)
+    }
     var body: some View {
         ZStack(alignment: .top) {
             if api.session == nil {
@@ -116,7 +126,11 @@ struct DiscoverView: View {
             }
             .onChange(of: feed.clips) { _, clips in
                 if !clips.contains(where: { $0.id == activeID }) { activeID = clips.first?.id }
-                players.update(clips: clips, selectedID: activeID)
+                players.update(clips: clips.map { offline.playable($0) }, selectedID: activeID)
+                if let first = clips.first, recordedQuery != feed.query {
+                    recordedQuery = feed.query
+                    onSearchResult?(feed.query, first)
+                }
             }
             .onDisappear { players.releaseAll() }
             .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
@@ -125,19 +139,19 @@ struct DiscoverView: View {
     private var feedHeader: some View {
         VStack(spacing: 10) {
             HStack {
+                if canDismiss {
+                    IconButton(symbol: .back, label: "Back") { dismiss() }
+                }
                 IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
                 Spacer()
                 Button(LocalizedStringKey(feed.loading ? "Loading…" : "Refresh")) { Task { await refreshFeed() } }
-                    .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 12).frame(minHeight: 44)
-                    .background(Color.black.opacity(0.4), in: Capsule())
-                    .buttonStyle(PressStyle()).disabled(feed.loading)
+                    .buttonStyle(CompactActionStyle()).disabled(feed.loading)
             }
             if searchOpen {
                 HStack {
                     TextField("Search videos", text: $search).clipoField().submitLabel(.search)
                         .onSubmit { runSearch() }
-                    Button("Go") { runSearch() }.frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle()).foregroundStyle(ClipoStyle.accent)
+                    Button("Go") { runSearch() }.buttonStyle(CompactActionStyle())
                 }
             }
         }.padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 10)
@@ -289,10 +303,17 @@ struct ClipPage: View {
                 VStack(alignment: .leading, spacing: 24) {
                     SheetHeading(title: "Playback") { options = false }
                     LocalizedText("Speed").font(.title3.bold())
-                    HStack {
-                        ForEach([Float(0.5), 1, 1.5, 2], id: \.self) { speed in
-                            Button("\(speed, specifier: "%g")×") { playback.setSpeed(speed) }
-                                .padding(14).background(playback.speed == speed ? ClipoStyle.raised : ClipoStyle.surface, in: Capsule())
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach([Float(0.5), 1, 1.5, 2], id: \.self) { speed in
+                                Button("\(speed, specifier: "%g")×") { playback.setSpeed(speed) }
+                                    .font(.subheadline.weight(.semibold))
+                                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                                    .padding(.horizontal, 22).frame(minHeight: 48)
+                                    .foregroundStyle(playback.speed == speed ? ClipoStyle.ink : ClipoStyle.paper)
+                                    .background { OriginalSurface(tone: playback.speed == speed ? .accent : .pine) }
+                                    .accessibilityAddTraits(playback.speed == speed ? .isSelected : [])
+                            }
                         }
                     }.buttonStyle(PressStyle())
                     LocalizedText("Supported streams adjust quality to your connection.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)

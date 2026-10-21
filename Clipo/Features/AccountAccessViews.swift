@@ -32,7 +32,7 @@ struct AccountLoadingIndicator: View {
             LocalizedText(title).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
         }.padding(28).frame(maxWidth: 280)
             .foregroundStyle(.white)
-            .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+            .background { OriginalSurface(tone: .pine) }
             .accessibilityElement(children: .combine)
     }
 }
@@ -75,15 +75,16 @@ struct AccountDecisionDialog: View {
                     VStack(spacing: 10) {
                         Button(action: confirm) {
                             LocalizedText(confirmTitle).font(.body.weight(.semibold))
+                                .lineLimit(1).minimumScaleFactor(0.75)
                                 .multilineTextAlignment(.center).padding(16)
                                 .frame(maxWidth: .infinity, minHeight: 54)
-                                .foregroundStyle(ClipoStyle.ink)
-                                .background(destructive ? ClipoStyle.danger : ClipoStyle.accent, in: RoundedRectangle(cornerRadius: 16))
+                                .foregroundStyle(destructive ? ClipoStyle.danger : ClipoStyle.ink)
+                                .background { OriginalSurface(tone: destructive ? .pine : .accent) }
                         }.buttonStyle(PressStyle())
                         if let cancel { ActionButton(title: "Cancel", primary: false, action: cancel) }
                     }
                 }.padding(26).frame(maxWidth: 420)
-                    .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 28))
+                    .background { OriginalSurface(tone: .pine) }
                     .padding(24).frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
         }.background(Color.black.opacity(0.68).ignoresSafeArea())
@@ -104,10 +105,10 @@ struct PolicyLinks: View {
     @State private var document: PolicyDocument?
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 20) { links }
-            VStack(alignment: .leading, spacing: 2) { links }
+            HStack(spacing: 10) { links }
+            VStack(alignment: .leading, spacing: 10) { links }
         }.font(.footnote.weight(.medium)).foregroundStyle(ClipoStyle.accent)
-            .buttonStyle(PressStyle())
+            .buttonStyle(CompactActionStyle())
             .sheet(item: $document) { PolicyBrowser(document: $0) }
     }
     @ViewBuilder private var links: some View {

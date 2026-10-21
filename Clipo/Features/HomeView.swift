@@ -9,14 +9,11 @@ struct HomeView: View {
     var discover: () -> Void
     var openTools: () -> Void
     @State private var link = ""
-    @State private var password = ""
-    @State private var usePassword = false
-    @State private var loading = false
     @State private var error: String?
     @State private var linkFailure = ""
     @State private var showingLinkFailure = false
     @State private var channel: ChannelRoute?
-    @State private var player: PlayerRoute?
+    @State private var searchRequest: LessonSearch?
     @State private var paywall = false
     @State private var channels: [LandingInfo] = []
     @State private var showingLinkGuide = false
@@ -30,9 +27,7 @@ struct HomeView: View {
                         .tracking(2).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
                     Button(LocalizedStringKey(commerce.premium ? "PLUS" : "Get Plus")) { paywall = true }
-                        .font(.caption.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
-                        .padding(.horizontal, 16).frame(minHeight: 44)
-                        .background { OriginalSurface(tone: .pine) }.buttonStyle(PressStyle())
+                        .buttonStyle(MatteActionStyle())
                     IconButton(symbol: .settings, label: "Open Me and account settings", action: openAccount)
                 }
                 TennisCourtBanner()
@@ -75,7 +70,11 @@ struct HomeView: View {
             }.clipoPage()
         }.clipoScreenBackground().scrollDismissesKeyboard(.interactively)
             .sheet(item: $channel) { ChannelView(route: $0) }
-            .fullScreenCover(item: $player) { PlayerScreen(route: $0) }
+            .fullScreenCover(item: $searchRequest) { request in
+                DiscoverView(initialSearch: request.query, canDismiss: true) { query, clip in
+                    library.record(link: query, title: clip.title)
+                }
+            }
             .fullScreenCover(isPresented: $showingLinkFailure) {
                 AccountDecisionDialog(title: "Couldn’t open this link", message: linkFailure,
                                       confirmTitle: "Back to link", confirm: { showingLinkFailure = false })
@@ -107,40 +106,42 @@ struct HomeView: View {
                 .environment(\.colorScheme, .light)
                 .accessibilityLabel("Lesson or collection link")
             ViewThatFits(in: .horizontal) {
-                HStack {
+                HStack(spacing: 12) {
+                    allowanceLabel.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 8)
                     pasteButton
-                    Spacer(minLength: 12)
-                    passwordButton
                 }
-                VStack(alignment: .leading, spacing: 0) { pasteButton; passwordButton }
-            }
-            if usePassword {
-                SecureField("Access password", text: $password)
-                    .font(.body).foregroundStyle(ClipoStyle.ink).tint(ClipoStyle.ink).padding(16)
-                    .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
-                    .environment(\.colorScheme, .light).accessibilityLabel("Access password")
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack { Spacer(minLength: 0); pasteButton }
+                    allowanceLabel
+                }
             }
             Button(action: resolve) {
-                LocalizedText(loading ? "Opening link…" : "Open link")
-                    .font(.body.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 16)
+                LocalizedText("Open link")
+                    .font(.body.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
+                    .padding(.horizontal, 16).padding(.vertical, 16)
                     .frame(maxWidth: .infinity, minHeight: 54)
-                    .foregroundStyle(ClipoStyle.accent)
-                    .background { OriginalSurface(tone: .pine) }
-            }.buttonStyle(PressStyle()).disabled(loading || link.nilIfBlank == nil)
-            if api.session != nil {
-                LocalizedText(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
-                    .font(.caption).foregroundStyle(ClipoStyle.paperSecondary)
-            }
+                    .foregroundStyle(canOpenLink ? ClipoStyle.paper : ClipoStyle.ink)
+                    .background { MatteSurface(tone: canOpenLink ? .pineOnPaper : .sageOnPaper) }
+                    .contentShape(Rectangle())
+            }.buttonStyle(ComposerPressStyle()).disabled(!canOpenLink)
         }.padding(22).background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
+    }
+    private var canOpenLink: Bool { searchRequest == nil && link.nilIfBlank != nil }
+    @ViewBuilder private var allowanceLabel: some View {
+        if api.session != nil {
+            LocalizedText(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
+                .font(.caption).foregroundStyle(ClipoStyle.paperSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
     private var pasteButton: some View {
         Button("Paste link") {
             pasteCopiedLink()
-        }.font(.subheadline.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
-            .frame(minHeight: 44).buttonStyle(PressStyle())
+        }.buttonStyle(MatteActionStyle(onPaper: true))
     }
     private func pasteCopiedLink() {
-        guard let text = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+        guard let text = UIPasteboard.general.string, text.nilIfBlank != nil else {
             showLinkFailure("Copy a video link or short code first, then tap Paste link.")
             return
         }
@@ -154,8 +155,7 @@ struct HomeView: View {
                     .font(.caption).foregroundStyle(ClipoStyle.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Button("How to") { showingLinkGuide = true }
-                .font(.subheadline.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
-                .frame(minWidth: 44, minHeight: 44).buttonStyle(PressStyle())
+                .buttonStyle(MatteActionStyle())
         }
     }
     @ViewBuilder private var recentLinks: some View {
@@ -165,8 +165,7 @@ struct HomeView: View {
                     LocalizedText("Recently opened").font(.headline)
                     Spacer()
                     Button("Clear") { library.clearHistory() }
-                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
-                        .frame(minHeight: 44).buttonStyle(PressStyle())
+                        .buttonStyle(MatteActionStyle())
                 }
                 ForEach(library.history.prefix(5)) { visit in
                     HStack {
@@ -176,17 +175,12 @@ struct HomeView: View {
                                 Text(verbatim: visit.link).font(.caption).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
                             }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                                 .contentShape(Rectangle())
-                        }.buttonStyle(PressStyle()).disabled(loading)
+                        }.buttonStyle(PressStyle()).disabled(searchRequest != nil)
                         IconButton(symbol: .close, label: "Remove history item") { library.removeVisit(visit) }
                     }
                 }
             }
         }
-    }
-    private var passwordButton: some View {
-        Button(LocalizedStringKey(usePassword ? "Hide password" : "Has a password?")) { usePassword.toggle() }
-            .font(.subheadline).foregroundStyle(ClipoStyle.paperSecondary)
-            .frame(minHeight: 44).buttonStyle(PressStyle())
     }
     private func quickAction(artwork: TennisArtwork.Kind, title: String, detail: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -202,30 +196,31 @@ struct HomeView: View {
         }.buttonStyle(PressStyle())
     }
     private func resolve() {
-        guard let text = link.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank, !loading else { return }
+        guard let text = link.nilIfBlank, searchRequest == nil else { return }
         focused = false
         guard api.session != nil else { showLinkFailure("Your connection is not ready yet. Please try again."); return }
-        loading = true
         error = nil
-        let accessPassword = usePassword ? password : ""
-        Task {
-            defer { loading = false }
-            do {
-                let info = try await api.resolve(text, password: accessPassword)
-                if let clip = info.netDiskInfo?.clip(channel: info.extraInfo?.channelName ?? "From your link") {
-                    library.record(link: text, title: clip.title)
-                    player = PlayerRoute(clips: [clip], startID: clip.id)
-                } else if let title = info.extraInfo?.channelName?.nilIfBlank, let external = info.extraInfo?.externalLinks?.nilIfBlank {
-                    library.record(link: text, title: title)
-                    channel = ChannelRoute(link: external, title: title)
-                } else { throw ClipoError.service("This link did not return a playable video or channel.") }
-            } catch { showLinkFailure(error.localizedDescription) }
-        }
+        // Preserve exactly what was entered. Search owns loading, errors and cursor
+        // pagination; do not fall back to the old landing-page resolver.
+        searchRequest = LessonSearch(query: text)
     }
     private func showLinkFailure(_ message: String) {
         linkFailure = message
         showingLinkFailure = true
     }
+}
+
+// Disabled artwork already has its own legible palette; do not fade the entire
+// button into the paper surface as the shared legacy PressStyle does.
+private struct ComposerPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.8 : 1)
+    }
+}
+
+private struct LessonSearch: Identifiable {
+    let id = UUID()
+    let query: String
 }
 
 struct ChannelView: View {
@@ -301,8 +296,8 @@ struct LinkGuideSheet: View {
                     TennisArtwork(kind: .lesson, height: 150)
                     FeatureRow(symbol: .link, title: "1. Copy your shared link", detail: "Use a tennis lesson link or short code shared with you.")
                     FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste link or enter the code exactly as received. Uppercase and lowercase letters matter.")
-                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to watch the lesson or browse its collection. Add the access password if one was provided.")
-                    LocalizedText("A link not opening? Check the code and password, or ask the sender for a new link.")
+                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to find matching lessons, then swipe to watch.")
+                    LocalizedText("No results? Check your input, or ask the sender for a new link.")
                         .font(.footnote).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Got it") { dismiss() }
                 }.clipoPage()
