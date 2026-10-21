@@ -245,8 +245,12 @@ struct PlayerScreen: View {
                 .scrollIndicators(.hidden)
                 .task { proxy.scrollTo(route.startID, anchor: .top) }
             }.ignoresSafeArea(.container, edges: .all)
-        }.clipoScreenBackground(.black).overlay(alignment: .topTrailing) {
-            PlayerExitButton { players.releaseAll(); dismiss() }.padding(.horizontal, 12).padding(.top, 8)
+        }.clipoScreenBackground(.black).overlay(alignment: .top) {
+            HStack {
+                Spacer(minLength: 0)
+                PlayerExitButton { players.releaseAll(); dismiss() }
+            }.environment(\.layoutDirection, .leftToRight)
+                .padding(.horizontal, 12).padding(.top, 8)
         }.preferredColorScheme(.dark)
             .onAppear {
                 visible = true
@@ -669,13 +673,12 @@ struct ClipoScrubber: View {
 }
 
 private enum PlayerArtwork: CaseIterable, Hashable {
-    case save, saved, share, more
+    case save, saved, more
     // Optical crop regions measured from the generated 1254px atlas.
     var region: CGRect {
         switch self {
         case .save: CGRect(x: 162.5, y: 179, width: 368, height: 368)
         case .saved: CGRect(x: 725.5, y: 177, width: 368, height: 368)
-        case .share: CGRect(x: 145, y: 688, width: 400, height: 400)
         case .more: CGRect(x: 717.5, y: 698.5, width: 400, height: 400)
         }
     }
