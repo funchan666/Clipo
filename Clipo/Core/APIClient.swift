@@ -154,7 +154,9 @@ final class APIClient: ObservableObject {
         ], authenticated: false)
     }
     func channels(links: [String]) async throws -> [LandingInfo] {
-        let body = try JSONSerialization.data(withJSONObject: links.filter { $0.nilIfBlank != nil }.map {
+        let codes = links.compactMap { WebAddress.landingCode($0) }
+        guard !codes.isEmpty else { return [] }
+        let body = try JSONSerialization.data(withJSONObject: codes.map {
             ["externalLinks": $0, "packageName": configuration.bundleID]
         })
         return try await perform("/app-api/flow/land-page/info_by_links_list", method: "POST", body: body, authenticated: false)

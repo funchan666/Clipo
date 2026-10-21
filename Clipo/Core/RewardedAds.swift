@@ -54,16 +54,20 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             unitID = configuredUnitID
         }
         busy = true
+        defer { busy = false }
         error = nil
         message = nil
+        luckyReward = nil
         rewardGranted = false
         let attemptID = UUID()
         var loadingRewarded = false
         do {
             try await prepareSDK(demoMode: demoMode, mayPresentConsent: true)
+            try Task.checkCancellation()
             loadingRewarded = true
             let ad = try await RewardedAd.load(with: unitID, request: Request())
             loadingRewarded = false
+            try Task.checkCancellation()
             guard commerce.api.session?.userId.value == owner, !commerce.premium else { throw ClipoError.unauthorized }
             rewarded = ad
             ad.fullScreenContentDelegate = self
@@ -80,10 +84,15 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         } catch {
             isPresenting = false
             let failure = error as NSError
-            // Do not treat offline, configuration, consent, or presentation errors as no-fill.
-            if loadingRewarded, failure.domain == GADErrorDomain, failure.code == 1 {
+            // A cancelled request is not an unavailable-ad result. Once an actual
+            // SDK load fails without an ad (including network/timeout/mediation),
+            // apply the documented lucky gift, not only Google's no-fill code.
+            if Task.isCancelled || error is CancellationError ||
+                (failure.domain == NSURLErrorDomain && failure.code == NSURLErrorCancelled) { return }
+            if loadingRewarded {
                 do {
                     guard commerce.api.session?.userId.value == owner else { throw ClipoError.unauthorized }
+                    guard !commerce.premium else { return }
                     if let gift = try quota.rewardNoFill(attemptID, owner: owner, kind: kind) {
                         luckyReward = LuckyRewardNotice(message: gift)
                     }
@@ -92,7 +101,6 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
                 self.error = "An ad could not be loaded. Please try again later. \(error.localizedDescription)"
             }
         }
-        busy = false
     }
     private func prepareSDK(demoMode: Bool, mayPresentConsent: Bool) async throws {
         if !demoMode {

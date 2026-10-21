@@ -254,19 +254,19 @@ struct ClipPage: View {
             }
             Color.clear.contentShape(Rectangle()).onTapGesture {
                 guard active, phase == .active, !ads.isPresenting else { return }
-                if allowed { playback.toggle() } else { gate = true }
+                if allowed { playback.toggle() }
             }
             // Original raster scrim: a soft fade, never a hard panel across the video.
             Color.clear.overlay {
                 Image("ClipoPlayerScrim").resizable().scaledToFill()
             }.clipped().allowsHitTesting(false).accessibilityHidden(true)
-            if let error = playback.error {
-                MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
-            } else if !allowed, active {
+            if !allowed, active {
                 VStack(spacing: 16) {
                     LocalizedText("Keep watching").font(.title.bold())
                     ActionButton(title: "Get more views") { gate = true }
                 }.padding(32).background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
+            } else if let error = playback.error {
+                MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
             } else if active, allowed, !playback.isPlaying, !playback.isLoading, !scrubbing {
                 IconButton(symbol: .play, label: "Play video") { playback.play() }
                     .background(Color.black.opacity(0.4), in: Circle())
@@ -282,13 +282,13 @@ struct ClipPage: View {
             .onChange(of: playback.isPlaying) { _, playing in
                 if playing, active, visible, !recorded {
                     recorded = clip.playbackURL.isFileURL || quota.recordWatch(clip.id, premium: commerce.premium)
-                    if !recorded { playback.pause(); allowed = false; gate = true }
+                    if !recorded { playback.pause(); allowed = false }
                 }
                 if playing, active, recorded { didStartPlaying() }
             }
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
                 guard active, visible, playback.isPlaying, !clip.playbackURL.isFileURL else { return }
-                if !quota.recordWatch(clip.id, premium: commerce.premium) { playback.pause(); allowed = false; gate = true }
+                if !quota.recordWatch(clip.id, premium: commerce.premium) { playback.pause(); allowed = false }
             }
             .onChange(of: phase) { _, state in
                 if state != .active { interruptPlayback() } else { resumeIfNeeded() }
@@ -297,6 +297,7 @@ struct ClipPage: View {
                 if presenting { interruptPlayback() } else { resumeIfNeeded() }
             }
             .onDisappear { visible = false; resumeAfterInterruption = false; playback.pause() }
+            .onChange(of: gate) { _, presented in if presented { playback.pause() } }
             .sheet(isPresented: $gate, onDismiss: { if active { activate() } }) { MembershipView(rewardKind: .watch) }
             .sheet(isPresented: $options) {
                 ScrollView {
@@ -400,10 +401,12 @@ struct ClipPage: View {
     }
     private func activate(reload: Bool = false) {
         guard active, visible, phase == .active, !ads.isPresenting,
-              !options, !editor, !share else { return }
+              !gate, !options, !editor, !share else { return }
         recorded = false
         allowed = clip.playbackURL.isFileURL || quota.mayWatch(clip.id, premium: commerce.premium)
-        if !allowed { playback.pause(); gate = true; return }
+        // Lifecycle checks only update the inline gate. Present Plus exclusively
+        // from the explicit "Get more views" action, never on dismissal/re-entry.
+        if !allowed { playback.pause(); return }
         if playback.loadedURL != clip.playbackURL || reload { playback.load(clip.playbackURL, autoplay: true) }
         else { playback.play() }
     }

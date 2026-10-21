@@ -164,6 +164,21 @@ struct PlayerRoute: Identifiable {
     let startID: String
 }
 enum WebAddress {
+    // Collection lookup accepts a code, whereas search-check accepts raw input.
+    // Parse URLs structurally so query strings, fragments and trailing slashes
+    // cannot leak into the collection's externalLinks field.
+    static func landingCode(_ raw: String) -> String? {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return nil }
+        if let url = media(value) {
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                  let component = components.percentEncodedPath.split(separator: "/").last else { return nil }
+            return String(component).removingPercentEncoding?.nilIfBlank
+        }
+        guard !value.contains(":"), !value.contains("/"),
+              !value.contains("?"), !value.contains("#") else { return nil }
+        return value
+    }
     static func media(_ raw: String?) -> URL? {
         guard let raw, let url = URL(string: raw),
               ["https", "http"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { return nil }

@@ -6,6 +6,16 @@ import Foundation
 enum ModelContractChecks {
     static func main() throws {
         let decoder = JSONDecoder()
+        let landingLinks = [
+            "http://192.168.101.96:3050/2DhdI8",
+            "https://example.com/lessons/2DhdI8/?campaign=test#preview",
+            "  2DhdI8  ",
+            "https://example.com/%32DhdI8"
+        ]
+        precondition(landingLinks.compactMap { WebAddress.landingCode($0) } == Array(repeating: "2DhdI8", count: 4))
+        for invalid in ["", "   ", "https://example.com/", "file:///private/code"] {
+            precondition(WebAddress.landingCode(invalid) == nil)
+        }
         func disk(_ json: String) throws -> DiskItem {
             try decoder.decode(DiskItem.self, from: Data(json.utf8))
         }
