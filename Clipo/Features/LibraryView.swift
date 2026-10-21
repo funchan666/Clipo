@@ -165,6 +165,7 @@ struct LibraryView: View {
 // Uses the existing original bitmap action surfaces; no new system artwork.
 struct OfflineDownloadButton: View {
     let clip: LessonClip
+    var starting = false
     @EnvironmentObject private var offline: OfflineStore
     @EnvironmentObject private var quota: QuotaStore
     @EnvironmentObject private var commerce: CommerceStore
@@ -174,7 +175,7 @@ struct OfflineDownloadButton: View {
             DownloadAllowanceSummary()
             if offline.cached(clip.id) != nil || clip.playbackURL.isFileURL {
                 LocalizedText("Available offline").font(.court(.subheadline)).foregroundStyle(ClipoStyle.accent)
-            } else if offline.preparingID == clip.id {
+            } else if starting || offline.preparingID == clip.id {
                 ActionButton(title: "Preparing download…", primary: false, busy: true) { }
                 LocalizedText("Preparing download…").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
             } else if offline.downloadingID == clip.id {

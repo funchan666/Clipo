@@ -299,6 +299,7 @@ struct ClipPage: View {
     @State private var options = false
     @State private var editor = false
     @State private var downloadPanel = false
+    @State private var downloadStarting = false
     @State private var downloadReward = false
     @State private var recorded = false
     @State private var allowed = false
@@ -395,7 +396,8 @@ struct ClipPage: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         SheetHeading(title: "Downloads") { downloadPanel = false }
-                        OfflineDownloadButton(clip: clip)
+                        Text(verbatim: clip.title).font(.court(.subheadline)).lineLimit(2)
+                        OfflineDownloadButton(clip: clip, starting: downloadStarting)
                     }.padding(22)
                 }.clipoScreenBackground().presentationDetents([.medium, .large])
             }
@@ -473,19 +475,24 @@ struct ClipPage: View {
         activate()
     }
     private func cacheVideo() {
-        if offline.cached(clip.id) != nil || offline.busy || clip.playbackURL.isFileURL {
+        // Acknowledge every tap before starting asynchronous preparation. The
+        // presented panel observes the store through completion and late errors.
+        if downloadStarting || offline.cached(clip.id) != nil || offline.busy || clip.playbackURL.isFileURL {
             showDownloadPanel()
         } else if !quota.mayDownload(clip.id, premium: commerce.premium) {
             resumeAfterSheet = playback.intendsPlayback
             playback.pause(); downloadReward = true
         } else {
-            Task {
+            downloadStarting = true
+            showDownloadPanel()
+            Task { @MainActor in
+                defer { downloadStarting = false }
                 await offline.download(clip)
-                if offline.error != nil, active, visible { showDownloadPanel() }
             }
         }
     }
     private func showDownloadPanel() {
+        guard !downloadPanel else { return }
         resumeAfterSheet = playback.intendsPlayback
         playback.pause(); downloadPanel = true
     }
