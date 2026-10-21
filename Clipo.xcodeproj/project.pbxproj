@@ -34,6 +34,10 @@
 		C7F5D928DE552FB7782E6664 /* Clipo/Core/Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/Models.swift */; };
 		D0DFDA960A87B68556723DA1 /* Clipo/Features/DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */; };
 		FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */; };
+		C71000000000000000000001 /* Clipo/App/CourtTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000002 /* Clipo/App/CourtTypography.swift */; };
+		C71000000000000000000003 /* Clipo/Core/ServePracticeJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000004 /* Clipo/Core/ServePracticeJournal.swift */; };
+		C71000000000000000000005 /* Clipo/Features/ServePracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000006 /* Clipo/Features/ServePracticeView.swift */; };
+		C71000000000000000000007 /* Clipo/Resources/Fonts in Resources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000008 /* Clipo/Resources/Fonts */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -77,6 +81,10 @@
 		EC62DF084BD6179B0CD0BFAA /* Clipo/Features/MembershipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/MembershipView.swift; sourceTree = SOURCE_ROOT; };
 		EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/CommerceStore.swift; sourceTree = SOURCE_ROOT; };
 		F2CDBB4A80FB9A168C05E16E /* Clipo/Core/PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/PlaybackController.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000002 /* Clipo/App/CourtTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/App/CourtTypography.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000004 /* Clipo/Core/ServePracticeJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/ServePracticeJournal.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000006 /* Clipo/Features/ServePracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/ServePracticeView.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000008 /* Clipo/Resources/Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Clipo/Resources/Fonts; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +111,10 @@
 		0D6E4079E36703EBD37C0072 = {
 			isa = PBXGroup;
 			children = (
+				C71000000000000000000008 /* Clipo/Resources/Fonts */,
+				C71000000000000000000006 /* Clipo/Features/ServePracticeView.swift */,
+				C71000000000000000000004 /* Clipo/Core/ServePracticeJournal.swift */,
+				C71000000000000000000002 /* Clipo/App/CourtTypography.swift */,
 				1AC010000000000000000001 /* Clipo/App/AppLanguage.swift */,
 				1AC0100000000000000000C8 /* InfoPlist.strings */,
 				1AC010000000000000000064 /* Localizable.strings */,
@@ -205,6 +217,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C71000000000000000000007 /* Clipo/Resources/Fonts in Resources */,
 				1AC0100000000000000000C9 /* InfoPlist.strings in Resources */,
 				1AC010000000000000000065 /* Localizable.strings in Resources */,
 				0A80A0B8549C3D5AB3BBC1FC /* Clipo/Resources/Assets.xcassets in Resources */,
@@ -221,6 +234,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C71000000000000000000005 /* Clipo/Features/ServePracticeView.swift in Sources */,
+				C71000000000000000000003 /* Clipo/Core/ServePracticeJournal.swift in Sources */,
+				C71000000000000000000001 /* Clipo/App/CourtTypography.swift in Sources */,
 				1AC010000000000000000002 /* Clipo/App/AppLanguage.swift in Sources */,
 				4059FBA1D75B10A9F68ABDC0 /* Clipo/App/ClipoApp.swift in Sources */,
 				81F1CA728D14A09FCC01D07F /* Clipo/App/DesignSystem.swift in Sources */,

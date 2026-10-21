@@ -23,7 +23,7 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HStack(spacing: 10) {
-                    LocalizedText("YOUR DAILY PRACTICE").font(.caption2.weight(.bold))
+                    LocalizedText("YOUR DAILY PRACTICE").font(.court(.caption2, weight: .bold))
                         .tracking(2).foregroundStyle(ClipoStyle.secondary)
                     Spacer()
                     Button(LocalizedStringKey(commerce.premium ? "PLUS" : "Get Plus")) { paywall = true }
@@ -47,8 +47,8 @@ struct HomeView: View {
                 if !channels.isEmpty {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
-                            LocalizedText("Lesson collections").font(.headline)
-                            LocalizedText("Keep learning, one session at a time.").font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            LocalizedText("Lesson collections").font(.court(.headline))
+                            LocalizedText("Keep learning, one session at a time.").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                         }.frame(maxWidth: .infinity, alignment: .leading)
                         TennisArtwork(kind: .notebook, height: 76).frame(width: 114)
                     }
@@ -58,8 +58,8 @@ struct HomeView: View {
                                 HStack(spacing: 14) {
                                     MediaCover(url: WebAddress.media(item.shortCover), folder: false).frame(width: 62, height: 72).clipShape(RoundedRectangle(cornerRadius: 12))
                                     VStack(alignment: .leading, spacing: 5) {
-                                        Text(verbatim: title).font(.headline).lineLimit(2)
-                                        if let count = info.videoFileCount { LocalizedText("\(count) videos").font(.caption).foregroundStyle(ClipoStyle.secondary) }
+                                        Text(verbatim: title).font(.court(.headline)).lineLimit(2)
+                                        if let count = info.videoFileCount { LocalizedText("\(count) videos").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary) }
                                     }
                                     Spacer()
                                 }
@@ -95,12 +95,12 @@ struct HomeView: View {
                 Glyph(symbol: .link, size: 20)
                     .frame(width: 40, height: 40)
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
-                LocalizedText("Open a lesson").font(.headline).foregroundStyle(ClipoStyle.ink)
+                LocalizedText("Open a lesson").font(.court(.headline)).foregroundStyle(ClipoStyle.ink)
             }
             TextField("Lesson link or short code", text: $link, axis: .vertical)
                 .environment(\.layoutDirection, .leftToRight)
                 .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                .focused($focused).font(.subheadline).foregroundStyle(ClipoStyle.ink)
+                .focused($focused).font(.court(.subheadline)).foregroundStyle(ClipoStyle.ink)
                 .tint(ClipoStyle.ink).padding(14)
                 .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
                 .environment(\.colorScheme, .light)
@@ -118,7 +118,7 @@ struct HomeView: View {
             }
             Button(action: resolve) {
                 LocalizedText("Open link")
-                    .font(.subheadline.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
+                    .font(.court(.subheadline, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.75)
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(canOpenLink ? ClipoStyle.paper : ClipoStyle.ink)
@@ -131,7 +131,7 @@ struct HomeView: View {
     @ViewBuilder private var allowanceLabel: some View {
         if api.session != nil {
             LocalizedText(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
-                .font(.caption).foregroundStyle(ClipoStyle.paperSecondary)
+                .font(.court(.caption)).foregroundStyle(ClipoStyle.paperSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -150,9 +150,9 @@ struct HomeView: View {
     private var linkGuide: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-                LocalizedText("Have a lesson link?").font(.subheadline.weight(.semibold))
+                LocalizedText("Have a lesson link?").font(.court(.subheadline, weight: .semibold))
                 LocalizedText("Paste the link or code shared with you.")
-                    .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                    .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Button("How to") { showingLinkGuide = true }
                 .buttonStyle(MatteActionStyle())
@@ -162,7 +162,7 @@ struct HomeView: View {
         if !library.history.isEmpty {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    LocalizedText("Recently opened").font(.headline)
+                    LocalizedText("Recently opened").font(.court(.headline))
                     Spacer()
                     Button("Clear") { library.clearHistory() }
                         .buttonStyle(MatteActionStyle())
@@ -171,8 +171,8 @@ struct HomeView: View {
                     HStack {
                         Button { link = visit.link; resolve() } label: {
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(verbatim: visit.title).font(.headline).lineLimit(1)
-                                Text(verbatim: visit.link).font(.caption).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
+                                Text(verbatim: visit.title).font(.court(.headline)).lineLimit(1)
+                                Text(verbatim: visit.link).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary).lineLimit(1)
                             }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                                 .contentShape(Rectangle())
                         }.buttonStyle(PressStyle()).disabled(searchRequest != nil)
@@ -187,8 +187,8 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 18) {
                 TennisArtwork(kind: artwork, height: 116)
                 VStack(alignment: .leading, spacing: 6) {
-                    LocalizedText(title).font(.headline).foregroundStyle(.white)
-                    LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(title).font(.court(.headline)).foregroundStyle(.white)
+                    LocalizedText(detail).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -247,7 +247,7 @@ struct ChannelView: View {
                                 MediaCover(url: WebAddress.media(item.coverImage), folder: item.isFolder == true)
                                     .frame(width: 80, height: 94).clipShape(RoundedRectangle(cornerRadius: 14))
                                 VStack(alignment: .leading, spacing: 7) {
-                                    Text(verbatim: item.name ?? L10n.text("Untitled")).font(.headline).lineLimit(3)
+                                    Text(verbatim: item.name ?? L10n.text("Untitled")).font(.court(.headline)).lineLimit(3)
                                     LocalizedText(item.isFolder == true ? "\(item.childrenFileNum ?? 0) videos" : durationLabel(item.length ?? 0))
                                         .font(.caption.monospacedDigit()).foregroundStyle(ClipoStyle.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
@@ -298,7 +298,7 @@ struct LinkGuideSheet: View {
                     FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste link or enter the code exactly as received. Uppercase and lowercase letters matter.")
                     FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to find matching lessons, then swipe to watch.")
                     LocalizedText("No results? Check your input, or ask the sender for a new link.")
-                        .font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                        .font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Got it") { dismiss() }
                 }.clipoPage()
             }

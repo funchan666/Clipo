@@ -29,7 +29,7 @@ struct AccountLoadingIndicator: View {
                     reduceMotion || scenePhase != .active ? nil : .easeInOut(duration: 0.6)
                 }
                 .accessibilityHidden(true)
-            LocalizedText(title).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
+            LocalizedText(title).font(.court(.subheadline, weight: .semibold)).multilineTextAlignment(.center)
         }.padding(22).frame(maxWidth: 250)
             .foregroundStyle(.white)
             .background { OriginalSurface(tone: .pine) }
@@ -67,14 +67,14 @@ struct AccountDecisionDialog: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    LocalizedText(title).font(.headline).foregroundStyle(.white)
+                    LocalizedText(title).font(.court(.headline)).foregroundStyle(.white)
                         .accessibilityAddTraits(.isHeader).accessibilityFocused($titleFocused)
-                    LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(message).font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if showsPolicies { PolicyLinks() }
                     VStack(spacing: 10) {
                         Button(action: confirm) {
-                            LocalizedText(confirmTitle).font(.subheadline.weight(.semibold))
+                            LocalizedText(confirmTitle).font(.court(.subheadline, weight: .semibold))
                                 .lineLimit(1).minimumScaleFactor(0.75)
                                 .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 12)
                                 .frame(maxWidth: .infinity, minHeight: 48)
@@ -107,7 +107,7 @@ struct PolicyLinks: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) { links }
             VStack(alignment: .leading, spacing: 10) { links }
-        }.font(.footnote.weight(.medium)).foregroundStyle(ClipoStyle.accent)
+        }.font(.court(.footnote, weight: .medium)).foregroundStyle(ClipoStyle.accent)
             .buttonStyle(CompactActionStyle())
             .sheet(item: $document) { PolicyBrowser(document: $0) }
     }
@@ -242,7 +242,7 @@ struct AccountSettingsSection: View {
                 .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                 .accessibilityIdentifier("account.language")
             VStack(alignment: .leading, spacing: 12) {
-                LocalizedText("Privacy & terms").font(.headline)
+                LocalizedText("Privacy & terms").font(.court(.headline))
                 VStack(spacing: 0) {
                     if let url = api.configuration.privacyURL {
                         Button { document = PolicyDocument(title: "Privacy Policy", url: url) } label: {
@@ -284,10 +284,10 @@ private struct AccountMenuRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                LocalizedText(title).font(.subheadline.weight(.medium))
+                LocalizedText(title).font(.court(.subheadline, weight: .medium))
                     .foregroundStyle(destructive ? ClipoStyle.danger : ClipoStyle.paper)
                 if let detail {
-                    LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(detail).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                 }
             }.fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)

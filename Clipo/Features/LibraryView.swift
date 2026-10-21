@@ -30,7 +30,7 @@ struct LibraryView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         SheetHeading(title: "Delete this local copy?") { removing = nil }
-                        Text(verbatim: movie.title).font(.headline)
+                        Text(verbatim: movie.title).font(.court(.headline))
                         LocalizedText("The copy in Clipo will be removed. The original in Photos or Files will stay untouched.").foregroundStyle(ClipoStyle.secondary)
                         ActionButton(title: "Delete local copy") { library.delete(movie); removing = nil }
                         ActionButton(title: "Keep it", primary: false) { removing = nil }
@@ -43,8 +43,8 @@ struct LibraryView: View {
             libraryFilters
             SectionLabel(title: filter, detail: "\(itemCount) \(itemCount == 1 ? "item" : "items") · On this device")
             if offline.downloadingID != nil {
-                if let title = offline.currentTitle { Text(verbatim: title).font(.subheadline).lineLimit(2) }
-                LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.caption)
+                if let title = offline.currentTitle { Text(verbatim: title).font(.court(.subheadline)).lineLimit(2) }
+                LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.court(.caption))
                 ActionButton(title: "Cancel download", primary: false) { Task { await offline.cancel() } }
             }
             if let error = offline.error {
@@ -61,8 +61,8 @@ struct LibraryView: View {
                             HStack(spacing: 14) {
                                 MediaCover(url: clip.coverURL).frame(width: 76, height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text(verbatim: clip.title).font(.headline).lineLimit(3)
-                                    Text(verbatim: clip.channel).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                                    Text(verbatim: clip.title).font(.court(.headline)).lineLimit(3)
+                                    Text(verbatim: clip.channel).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }.buttonStyle(PressStyle())
@@ -86,7 +86,7 @@ struct LibraryView: View {
                         } label: {
                             HStack(spacing: 14) {
                                 Glyph(symbol: .download, size: 28).frame(width: 60, height: 72)
-                                Text(verbatim: video.clip.title).font(.headline).lineLimit(3)
+                                Text(verbatim: video.clip.title).font(.court(.headline)).lineLimit(3)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }.contentShape(Rectangle())
                         }.buttonStyle(PressStyle())
@@ -105,8 +105,8 @@ struct LibraryView: View {
                             .frame(width: 60, height: 76)
                             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 16))
                         VStack(alignment: .leading, spacing: 7) {
-                            Text(verbatim: movie.title).font(.headline).lineLimit(2)
-                            LocalizedDateText(date: movie.date).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            Text(verbatim: movie.title).font(.court(.headline)).lineLimit(2)
+                            LocalizedDateText(date: movie.date).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     if movie.filename.hasSuffix("m4a") == false {
@@ -149,7 +149,7 @@ struct LibraryView: View {
 
     private func filterButton(_ value: String) -> some View {
         Button { filter = value } label: {
-            LocalizedText(value).font(.footnote.weight(.semibold))
+            LocalizedText(value).font(.court(.footnote, weight: .semibold))
                 .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 10).padding(.vertical, 12)
                 .frame(maxWidth: .infinity, minHeight: 46)
@@ -171,9 +171,9 @@ struct OfflineDownloadButton: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if offline.cached(clip.id) != nil {
-                LocalizedText("Available offline").font(.subheadline).foregroundStyle(ClipoStyle.accent)
+                LocalizedText("Available offline").font(.court(.subheadline)).foregroundStyle(ClipoStyle.accent)
             } else if offline.downloadingID == clip.id {
-                LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.caption)
+                LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.court(.caption))
                 ActionButton(title: "Cancel download", primary: false) { Task { await offline.cancel() } }
             } else {
                 ActionButton(title: "Download for offline", primary: false) {
@@ -197,8 +197,8 @@ private struct LibraryEmptyState: View {
     let message: String
     var body: some View {
         VStack(spacing: 10) {
-            LocalizedText(title).font(.headline)
-            LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+            LocalizedText(title).font(.court(.headline))
+            LocalizedText(message).font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                 .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }.multilineTextAlignment(.center).padding(.horizontal, 12).padding(.vertical, 24)
             .frame(maxWidth: .infinity)

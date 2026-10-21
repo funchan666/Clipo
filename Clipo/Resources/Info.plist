@@ -66,5 +66,11 @@
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/Barlow-Regular.ttf</string>
+		<string>Fonts/Barlow-SemiBold.ttf</string>
+		<string>Fonts/Lora-Variable.ttf</string>
+	</array>
 </dict>
 </plist>

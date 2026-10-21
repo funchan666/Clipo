@@ -30,18 +30,18 @@ struct MembershipView: View {
                     TennisArtwork(kind: .bag, height: 136)
                         .accessibilityHidden(true)
                     LocalizedText(commerce.premium ? "More court time." : "Keep your game growing.")
-                        .font(.system(.title, design: .serif, weight: .medium))
+                        .font(.court(.title, editorial: true))
                         .foregroundStyle(ClipoStyle.paper)
                     LocalizedText("Unlimited views. Unlimited downloads.")
-                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                        .font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                 }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
 
                 if commerce.premium {
                     VStack(alignment: .leading, spacing: 10) {
-                        LocalizedText("Your membership is active").font(.headline)
+                        LocalizedText("Your membership is active").font(.court(.headline))
                         if let expiration = commerce.expiration {
                             LocalizedText("Access through \(expiration.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale))).")
-                                .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                                .font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                         }
                     }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                         .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
@@ -67,7 +67,7 @@ struct MembershipView: View {
                                 .accessibilityHidden(true)
                         }
                         LocalizedText("USD reference prices. Apple confirms your local price before payment.")
-                            .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                             .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -75,7 +75,7 @@ struct MembershipView: View {
                 if attemptedPurchaseAction {
                     if let error = commerce.error { ErrorNote(message: error) }
                     if let message = commerce.message {
-                        LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.accent)
+                        LocalizedText(message).font(.court(.subheadline)).foregroundStyle(ClipoStyle.accent)
                     }
                 }
 
@@ -87,14 +87,14 @@ struct MembershipView: View {
                         VStack(alignment: .leading, spacing: 10) { recoveryLinks }
                     }
                     LocalizedText("Auto-renewing subscription. Cancel in your Apple account at least 24 hours before renewal. Payment is charged after Apple confirmation.")
-                        .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                        .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     PolicyLinks()
                     Button("Purchase help") { purchaseHelp.toggle() }
                         .buttonStyle(CompactActionStyle())
                     if purchaseHelp {
                         LocalizedText("If a payment is waiting to be confirmed, retry without purchasing again.")
-                            .font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                            .font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
                         ActionButton(title: "Retry purchase confirmation", primary: false) {
                             attemptedPurchaseAction = true
                             commerce.retryPending()
@@ -156,16 +156,16 @@ struct MembershipView: View {
 
     private func planName(_ plan: CommerceConfiguration.Product, selected: Bool, foreground: Color, secondary: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            LocalizedText(plan.label).font(.headline).foregroundStyle(foreground)
+            LocalizedText(plan.label).font(.court(.headline)).foregroundStyle(foreground)
             LocalizedText(selected ? "Selected" : (plan.period == .year ? "A full year of Plus" : "One month of Plus"))
-                .font(.caption).foregroundStyle(secondary)
+                .font(.court(.caption)).foregroundStyle(secondary)
         }.fixedSize(horizontal: false, vertical: true)
     }
 
     private func planPrice(_ price: String, plan: CommerceConfiguration.Product, foreground: Color, secondary: Color) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text(verbatim: price).environment(\.layoutDirection, .leftToRight).font(.title2.weight(.bold)).foregroundStyle(foreground).fixedSize()
-            LocalizedText("per \(plan.period.rawValue)").font(.caption).foregroundStyle(secondary)
+            Text(verbatim: price).environment(\.layoutDirection, .leftToRight).font(.court(.title2, weight: .bold)).foregroundStyle(foreground).fixedSize()
+            LocalizedText("per \(plan.period.rawValue)").font(.court(.caption)).foregroundStyle(secondary)
         }
     }
 
@@ -180,10 +180,10 @@ struct MembershipView: View {
 
     private var rewardOption: some View {
         VStack(alignment: .leading, spacing: 12) {
-            LocalizedText("Or, keep it free").font(.headline)
+            LocalizedText("Or, keep it free").font(.court(.headline))
             ForEach(rewardKind.map { [$0] } ?? AllowanceKind.allCases) { kind in
                 if quota.canRequestReward(for: kind, premium: commerce.premium) {
-                    LocalizedText(quota.rewardSummary(for: kind)).font(.footnote).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(quota.rewardSummary(for: kind)).font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: kind == .watch ? "Get more views" : "Get more downloads",
                                  primary: false, busy: ads.busy || ads.isPresenting) {
                         Task { await ads.watch(commerce: commerce, quota: quota, kind: kind) }
@@ -193,11 +193,11 @@ struct MembershipView: View {
             LocalizedText(quota.unlimited ? "Unlimited views until 05:00 UTC" : "\(quota.watchesLeft) views left today")
             LocalizedText(quota.downloadsUnlimited ? "Unlimited downloads until 05:00 UTC" : "\(quota.downloadsLeft) downloads left today")
             LocalizedText("Ad rewards unlock when the corresponding allowance runs out.")
-                .font(.caption).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
+                .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
             if let error = ads.error { ErrorNote(message: error) }
             if let error = quota.error { ErrorNote(message: error) }
             if let message = ads.message {
-                LocalizedText(message).font(.footnote).foregroundStyle(ClipoStyle.accent)
+                LocalizedText(message).font(.court(.footnote)).foregroundStyle(ClipoStyle.accent)
             }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
@@ -245,7 +245,7 @@ struct AccountView: View {
                     AccountSettingsSection()
                 } else { ConnectionPanel() }
                 LocalizedText("Version \(api.configuration.version)")
-                    .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                    .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 4)
             }
             .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 24)
@@ -256,7 +256,7 @@ struct AccountView: View {
 
     private func accountIdentity(_ id: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            LocalizedText("Your practice space").font(.headline).foregroundStyle(ClipoStyle.paper)
+            LocalizedText("Your practice space").font(.court(.headline)).foregroundStyle(ClipoStyle.paper)
             LocalizedText("ID · \(id)").font(.caption.monospaced()).foregroundStyle(ClipoStyle.secondary)
                 .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
         }
@@ -264,7 +264,7 @@ struct AccountView: View {
 
     private var accountStatus: some View {
         LocalizedText(commerce.premium ? "Plus active" : "Free plan")
-            .font(.caption.weight(.semibold))
+            .font(.court(.caption, weight: .semibold))
             .foregroundStyle(commerce.premium ? ClipoStyle.accent : ClipoStyle.secondary)
     }
 
@@ -290,12 +290,12 @@ struct AccountView: View {
     private var membershipCopy: some View {
         VStack(alignment: .leading, spacing: 8) {
             LocalizedText(commerce.premium ? "Your court pass." : "Go further with Plus.")
-                .font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+                .font(.court(.title3, weight: .semibold)).foregroundStyle(ClipoStyle.ink)
             LocalizedText("Unlimited views. Unlimited downloads.")
-                .font(.footnote).foregroundStyle(ClipoStyle.paperSecondary)
+                .font(.court(.footnote)).foregroundStyle(ClipoStyle.paperSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             LocalizedText(commerce.premium ? "Manage membership" : "Explore plans")
-                .font(.footnote.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+                .font(.court(.footnote, weight: .semibold)).foregroundStyle(ClipoStyle.ink)
                 .padding(.top, 8)
         }.fixedSize(horizontal: false, vertical: true)
     }
@@ -303,11 +303,11 @@ struct AccountView: View {
     private var allowance: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
-                LocalizedText("Today").font(.headline)
+                LocalizedText("Today").font(.court(.headline))
                 Spacer()
                 if !commerce.premium {
                     Button("Get more") { paywall = true }
-                        .font(.footnote.weight(.semibold)).foregroundStyle(ClipoStyle.accent)
+                        .font(.court(.footnote, weight: .semibold)).foregroundStyle(ClipoStyle.accent)
                         .frame(minHeight: 44).buttonStyle(PressStyle()).disabled(unavailable)
                         .accessibilityLabel("Get more daily views and downloads")
                 }
@@ -317,7 +317,7 @@ struct AccountView: View {
                 balance(value: commerce.premium || quota.downloadsUnlimited ? "Unlimited" : "\(quota.downloadsLeft)", label: "Downloads left")
             }
             LocalizedText(commerce.premium ? "Included with your membership" : "Daily allowance resets at 05:00 UTC")
-                .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
         }
     }
 
@@ -326,7 +326,7 @@ struct AccountView: View {
             LocalizedText(value).font(value == "Unlimited" ? .headline : .title.weight(.semibold))
                 .monospacedDigit().foregroundStyle(ClipoStyle.paper)
                 .fixedSize(horizontal: false, vertical: true)
-            LocalizedText(label).font(.footnote).foregroundStyle(ClipoStyle.secondary)
+            LocalizedText(label).font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -343,9 +343,9 @@ struct LuckyRewardView: View {
                     TennisArtwork(kind: .bag, height: 108)
                         .scaleEffect(appeared || reduceMotion ? 1 : 0.88)
                         .accessibilityHidden(true)
-                    LocalizedText("A little luck, on us").font(.headline).foregroundStyle(.white)
+                    LocalizedText("A little luck, on us").font(.court(.headline)).foregroundStyle(.white)
                     LocalizedText("No ad is available right now. \(message)")
-                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                        .font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                         .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     ActionButton(title: "Keep exploring", action: dismiss)
                 }.padding(20).frame(maxWidth: 360)

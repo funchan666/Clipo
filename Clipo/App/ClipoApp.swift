@@ -184,7 +184,7 @@ struct ClipoRootView: View {
             .overlay(alignment: .top) {
                 if let message = library.error {
                     HStack {
-                        LocalizedText(message).font(.subheadline)
+                        LocalizedText(message).font(.court(.subheadline))
                         IconButton(symbol: .close, label: "Dismiss message") { library.error = nil }
                     }.padding(14).background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 18)).padding()
                 }

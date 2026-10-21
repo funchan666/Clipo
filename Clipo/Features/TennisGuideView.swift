@@ -129,10 +129,10 @@ struct TennisGuideEntry: View {
             HStack(spacing: 18) {
                 CourtArtwork(subject: .serve).frame(width: compact ? 72 : 94, height: compact ? 88 : 116)
                 VStack(alignment: .leading, spacing: 8) {
-                    LocalizedText("Tennis field notes").font(.headline)
+                    LocalizedText("Tennis field notes").font(.court(.headline))
                         .foregroundStyle(ClipoStyle.paper)
                     LocalizedText("\(TennisNote.all.count) short reads · Available offline")
-                        .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                        .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                 }.fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Glyph(symbol: .back, size: 12, tint: ClipoStyle.accent)
@@ -165,7 +165,7 @@ struct TennisGuideView: View {
                                     HStack(spacing: 20) {
                                         CourtArtwork(subject: first.cover).frame(width: 148, height: 148)
                                         VStack(alignment: .leading, spacing: 14) {
-                                            LocalizedText(first.shortTitle).font(.title2.weight(.semibold))
+                                            LocalizedText(first.shortTitle).font(.court(.title2, weight: .semibold))
                                                 .fixedSize(horizontal: false, vertical: true)
                                             Glyph(symbol: .back, size: 16, tint: ClipoStyle.ink)
                                                 .rotationEffect(.degrees(180))
@@ -173,7 +173,7 @@ struct TennisGuideView: View {
                                     }
                                     VStack(alignment: .leading, spacing: 14) {
                                         CourtArtwork(subject: first.cover).aspectRatio(1.4, contentMode: .fit)
-                                        LocalizedText(first.shortTitle).font(.title2.weight(.semibold))
+                                        LocalizedText(first.shortTitle).font(.court(.title2, weight: .semibold))
                                     }
                                 }.padding(14).foregroundStyle(ClipoStyle.ink)
                                     .background { OriginalSurface(tone: .ivory) }
@@ -186,7 +186,7 @@ struct TennisGuideView: View {
                                     VStack(alignment: .leading, spacing: 12) {
                                         CourtArtwork(subject: note.cover).aspectRatio(1, contentMode: .fit)
                                         HStack(alignment: .top, spacing: 8) {
-                                            LocalizedText(note.shortTitle).font(.headline)
+                                            LocalizedText(note.shortTitle).font(.court(.headline))
                                                 .fixedSize(horizontal: false, vertical: true)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
                                             Glyph(symbol: .back, size: 10, tint: ClipoStyle.accent)
@@ -217,7 +217,7 @@ private struct TennisNoteReader: View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 IconButton(symbol: .back, label: "Back to field notes") { dismiss() }
-                LocalizedText(note.category).font(.subheadline.weight(.semibold))
+                LocalizedText(note.category).font(.court(.subheadline, weight: .semibold))
                     .foregroundStyle(ClipoStyle.secondary)
                 Spacer(minLength: 0)
             }.padding(.horizontal, 16).padding(.top, 8)
@@ -226,34 +226,34 @@ private struct TennisNoteReader: View {
                     CourtArtwork(subject: note.cover).aspectRatio(1, contentMode: .fit).frame(maxWidth: 360)
                     VStack(alignment: .leading, spacing: 14) {
                         LocalizedText(note.title)
-                            .font(.title2.weight(.semibold))
+                            .font(.court(.title2, weight: .semibold))
                             .foregroundStyle(ClipoStyle.paper).accessibilityAddTraits(.isHeader)
                     }
                     ForEach(note.sections.indices, id: \.self) { index in
                         VStack(alignment: .leading, spacing: 10) {
-                            LocalizedText(note.sections[index].title).font(.headline)
+                            LocalizedText(note.sections[index].title).font(.court(.headline))
                                 .accessibilityAddTraits(.isHeader)
-                            LocalizedText(note.sections[index].body).font(.body).lineSpacing(5)
+                            LocalizedText(note.sections[index].body).font(.court(.body)).lineSpacing(5)
                                 .foregroundStyle(ClipoStyle.paper.opacity(0.9))
                                 .textSelection(.enabled)
                         }.fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: 10) {
-                        LocalizedText("ONE THING TO REMEMBER").font(.caption2.weight(.bold)).tracking(1.5)
-                        LocalizedText(note.takeaway).font(.body.weight(.medium)).lineSpacing(3)
+                        LocalizedText("ONE THING TO REMEMBER").font(.court(.caption2, weight: .bold)).tracking(1.5)
+                        LocalizedText(note.takeaway).font(.court(.body, weight: .medium)).lineSpacing(3)
                     }.foregroundStyle(ClipoStyle.ink)
                         .padding(22).frame(maxWidth: .infinity, alignment: .leading)
                         .background { OriginalSurface(tone: .ivory) }
                     VStack(alignment: .leading, spacing: 6) {
-                        LocalizedText("Further reading").font(.headline)
+                        LocalizedText("Further reading").font(.court(.headline))
                         LocalizedText("Official sources · Opens online")
-                            .font(.caption).foregroundStyle(ClipoStyle.secondary)
+                            .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                         ForEach(note.sources, id: \.address) { reference in
                             if let url = URL(string: reference.address) {
                                 Button {
                                     source = PolicyDocument(title: reference.title, url: url)
                                 } label: {
-                                    LocalizedText(reference.title).font(.subheadline.weight(.medium))
+                                    LocalizedText(reference.title).font(.court(.subheadline, weight: .medium))
                                         .multilineTextAlignment(.leading)
                                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                                         .contentShape(Rectangle())

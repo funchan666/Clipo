@@ -54,14 +54,14 @@ struct TennisCourtBanner: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             LocalizedText("ON COURT · ON REPEAT")
-                .font(.caption2.weight(.bold)).tracking(2)
+                .font(.court(.caption2, weight: .bold)).tracking(2)
                 .foregroundStyle(ClipoStyle.accent)
             LocalizedText("A better game\nstarts here.")
-                .font(.system(.title, design: .serif, weight: .medium))
+                .font(.court(.title, editorial: true))
                 .foregroundStyle(ClipoStyle.paper)
                 .fixedSize(horizontal: false, vertical: true)
             LocalizedText("Watch. Practise. Repeat.")
-                .font(.subheadline).foregroundStyle(ClipoStyle.paper)
+                .font(.court(.subheadline)).foregroundStyle(ClipoStyle.paper)
         }
         .padding(24).frame(maxWidth: .infinity, minHeight: 240, alignment: .leading)
         .background {
@@ -137,7 +137,7 @@ struct CompactActionStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.footnote.weight(.semibold))
+            .font(.court(.footnote, weight: .semibold))
             .lineLimit(1).fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 16).frame(minHeight: 44)
             .foregroundStyle(ClipoStyle.paper)
@@ -153,7 +153,7 @@ struct ActionButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            LocalizedText(busy ? "Please wait…" : title).font(.subheadline.weight(.semibold))
+            LocalizedText(busy ? "Please wait…" : title).font(.court(.subheadline, weight: .semibold))
                 .lineLimit(1).minimumScaleFactor(0.75)
                 .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 12)
                 .foregroundStyle(primary ? ClipoStyle.ink : Color.white)
@@ -170,8 +170,8 @@ struct MessagePanel: View {
     var action: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            LocalizedText(title).font(.headline).foregroundStyle(.white)
-            LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
+            LocalizedText(title).font(.court(.headline)).foregroundStyle(.white)
+            LocalizedText(message).font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
             if let actionTitle, let action { ActionButton(title: actionTitle, primary: false, action: action) }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
@@ -181,14 +181,14 @@ struct ErrorNote: View {
     @Environment(\.locale) private var locale
     let message: String
     var body: some View {
-        LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.danger)
+        LocalizedText(message).font(.court(.subheadline)).foregroundStyle(ClipoStyle.danger)
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
             .accessibilityLabel(Text(verbatim: L10n.display("Error: \(message)", language: AppLanguage.from(locale))))
     }
 }
 struct FieldStyle: ViewModifier {
     func body(content: Content) -> some View {
-        content.font(.subheadline).foregroundStyle(.white).padding(14)
+        content.font(.court(.subheadline)).foregroundStyle(.white).padding(14)
             .background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 14))
             .tint(ClipoStyle.accent)
     }
@@ -231,7 +231,7 @@ struct SheetHeading: View {
     var close: () -> Void
     var body: some View {
         HStack {
-            LocalizedText(title).font(.headline).lineLimit(2)
+            LocalizedText(title).font(.court(.headline)).lineLimit(2)
             Spacer()
             IconButton(symbol: .close, label: "Close", action: close)
         }.padding(.horizontal, 20).padding(.top, 8)
@@ -244,13 +244,13 @@ struct SectionLabel: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline) {
-                LocalizedText(title).font(.headline)
+                LocalizedText(title).font(.court(.headline))
                 Spacer(minLength: 12)
-                if let detail { LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary) }
+                if let detail { LocalizedText(detail).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary) }
             }
             VStack(alignment: .leading, spacing: 6) {
-                LocalizedText(title).font(.headline)
-                if let detail { LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary) }
+                LocalizedText(title).font(.court(.headline))
+                if let detail { LocalizedText(detail).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary) }
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -282,8 +282,8 @@ struct FeatureRow: View {
                 .frame(width: 48, height: 48)
                 .background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 14))
             VStack(alignment: .leading, spacing: 4) {
-                LocalizedText(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                LocalizedText(detail).font(.caption).foregroundStyle(ClipoStyle.secondary)
+                LocalizedText(title).font(.court(.subheadline, weight: .semibold)).foregroundStyle(.white)
+                LocalizedText(detail).font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -378,7 +378,7 @@ struct MatteActionStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.footnote.weight(.semibold))
+            .font(.court(.footnote, weight: .semibold))
             .lineLimit(1).fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: 44)
             .foregroundStyle(onPaper ? ClipoStyle.ink : ClipoStyle.paper)
@@ -397,7 +397,7 @@ struct CourtFilter: View {
             HStack(spacing: 8) {
                 ForEach(values, id: \.self) { value in
                     Button { select(value) } label: {
-                        LocalizedText(value).font(.footnote.weight(.semibold))
+                        LocalizedText(value).font(.court(.footnote, weight: .semibold))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                             .padding(.horizontal, 16).padding(.vertical, 10)

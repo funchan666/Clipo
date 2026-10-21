@@ -137,7 +137,7 @@ struct LanguagePicker: View {
             SheetHeading(title: "App language") { dismiss() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    LocalizedText("Choose your language").font(.title2.weight(.semibold))
+                    LocalizedText("Choose your language").font(.court(.title2, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     VStack(spacing: 0) {
                         ForEach(AppLanguage.allCases) { language in
@@ -145,11 +145,11 @@ struct LanguagePicker: View {
                                 languageCode = language.rawValue
                             } label: {
                                 HStack(spacing: 16) {
-                                    Text(verbatim: language.nativeName).font(.body.weight(.medium))
+                                    Text(verbatim: language.nativeName).font(.court(.body, weight: .medium))
                                         .environment(\.layoutDirection, language.direction)
                                     Spacer(minLength: 8)
                                     if languageCode == language.rawValue {
-                                        LocalizedText("Selected").font(.caption.weight(.semibold))
+                                        LocalizedText("Selected").font(.court(.caption, weight: .semibold))
                                             .foregroundStyle(ClipoStyle.accent)
                                     }
                                 }.padding(20).frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)

@@ -64,7 +64,7 @@ struct DiscoverView: View {
                     VStack(alignment: .leading, spacing: 24) {
                         TennisArtwork(kind: .lesson, height: 208)
                         LocalizedText("Connecting your lesson feed…")
-                            .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                            .font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                         ConnectionPanel()
                     }.clipoPage()
                 }
@@ -262,7 +262,7 @@ struct ClipPage: View {
             }.clipped().allowsHitTesting(false).accessibilityHidden(true)
             if !allowed, active {
                 VStack(spacing: 16) {
-                    LocalizedText("Keep watching").font(.title3.weight(.semibold))
+                    LocalizedText("Keep watching").font(.court(.title3, weight: .semibold))
                     ActionButton(title: "Get more views") { gate = true }
                 }.padding(20).frame(maxWidth: 360)
                     .background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
@@ -273,7 +273,7 @@ struct ClipPage: View {
                     .background(Color.black.opacity(0.4), in: Circle())
             }
             playerControls
-            if active, playback.isLoading { LocalizedText("Loading…").font(.caption).padding(12).background(.black.opacity(0.6), in: Capsule()) }
+            if active, playback.isLoading { LocalizedText("Loading…").font(.court(.caption)).padding(12).background(.black.opacity(0.6), in: Capsule()) }
         }.foregroundStyle(.white).clipped()
             .onAppear { visible = true; if active { activate() } }
             .onChange(of: active) { _, active in
@@ -304,12 +304,12 @@ struct ClipPage: View {
                 ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SheetHeading(title: "Playback") { options = false }
-                    LocalizedText("Speed").font(.headline)
+                    LocalizedText("Speed").font(.court(.headline))
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach([Float(0.5), 1, 1.5, 2], id: \.self) { speed in
                                 Button("\(speed, specifier: "%g")×") { playback.setSpeed(speed) }
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.court(.subheadline, weight: .semibold))
                                     .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                                     .padding(.horizontal, 16).frame(minHeight: 44)
                                     .foregroundStyle(playback.speed == speed ? ClipoStyle.ink : ClipoStyle.paper)
@@ -318,7 +318,7 @@ struct ClipPage: View {
                             }
                         }
                     }.buttonStyle(PressStyle())
-                    LocalizedText("Supported streams adjust quality to your connection.").font(.subheadline).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText("Supported streams adjust quality to your connection.").font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Edit a local video", primary: false) { options = false; editor = true }
                     OfflineDownloadButton(clip: clip)
                     Spacer()
@@ -341,9 +341,9 @@ struct ClipPage: View {
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(alignment: .leading, spacing: 7) {
                     if !clip.channel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(verbatim: clip.channel).font(.subheadline.weight(.bold)).lineLimit(2)
+                        Text(verbatim: clip.channel).font(.court(.subheadline, weight: .bold)).lineLimit(2)
                     }
-                    Text(verbatim: clip.title).font(.subheadline).lineLimit(2)
+                    Text(verbatim: clip.title).font(.court(.subheadline)).lineLimit(2)
                         .accessibilityLabel(clip.title)
                 }
                 .shadow(color: .black.opacity(0.7), radius: 3, y: 1)
@@ -499,7 +499,7 @@ private struct PlayerRailButton: View {
                                 y: -rect.minY * geometry.size.height / rect.height)
                 }.frame(width: 36, height: 36).clipped().blendMode(.screen)
                     .allowsHitTesting(false)
-                LocalizedText(title).font(.caption2.weight(.medium)).foregroundStyle(.white)
+                LocalizedText(title).font(.court(.caption2, weight: .medium)).foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
             }.frame(minWidth: 48, minHeight: 54)
                 .contentShape(.interaction, Rectangle())
