@@ -172,7 +172,7 @@ struct OfflineDownloadButton: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             DownloadAllowanceSummary()
-            if offline.cached(clip.id) != nil {
+            if offline.cached(clip.id) != nil || clip.playbackURL.isFileURL {
                 LocalizedText("Available offline").font(.court(.subheadline)).foregroundStyle(ClipoStyle.accent)
             } else if offline.preparingID == clip.id {
                 ActionButton(title: "Preparing download…", primary: false, busy: true) { }
