@@ -240,8 +240,10 @@ Content-Type: application/json
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
-| `externalLinks` | `string` | 外部链接或短链标识，客户端会过滤空值 |
+| `externalLinks` | `string` | 只传短码；完整 HTTP(S) 地址提取最后一个非空路径段，去掉查询参数与片段；裸短码直接使用，空值或无短码地址过滤 |
 | `packageName` | `string` | 当前平台的 `touristSource` |
+
+2026-10-21 确认：例如 `http://192.168.101.96:3050/2DhdI8` 在此数组内传 `"externalLinks": "2DhdI8"`，每条独立处理，保留顺序及重复项。这一规则仅用于集合批量查询；`search-check` 的用户输入 `query` 仍原样传递。
 
 响应示例：
 
