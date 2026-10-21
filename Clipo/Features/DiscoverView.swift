@@ -415,7 +415,7 @@ struct ClipPage: View {
                 .shadow(color: .black.opacity(0.7), radius: 3, y: 1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, 8)
-                VStack(spacing: 10) {
+                VStack(spacing: 8) {
                     PlayerRailButton(artwork: library.isSaved(clip) ? .saved : .save,
                                      title: library.isSaved(clip) ? "Saved" : "Save",
                                      accessibilityTitle: library.isSaved(clip) ? "Remove saved video" : "Save video",
@@ -526,19 +526,12 @@ private struct PlayerCacheButton: View {
     private var cached: Bool { offline.cached(clip.id) != nil || clip.playbackURL.isFileURL }
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
-                Glyph(symbol: .download, size: 17, tint: cached ? ClipoStyle.accent : .white)
-                    .frame(width: 28, height: 28)
-                Group {
-                    if cached { LocalizedText("Cached") }
-                    else if offline.preparingID == clip.id { LocalizedText("Loading…") }
-                    else if offline.downloadingID == clip.id { Text(verbatim: "\(Int(offline.progress * 100))%") }
-                    else { LocalizedText("Cache") }
-                }.font(.court(.caption2, weight: .medium))
-                    .foregroundStyle(cached ? ClipoStyle.accent : .white)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                    .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
-            }.frame(width: 44).frame(minHeight: 48).contentShape(Rectangle())
+            PlayerRailLabel(artwork: .download, selected: cached) {
+                if cached { LocalizedText("Cached") }
+                else if offline.preparingID == clip.id { LocalizedText("Loading…") }
+                else if offline.downloadingID == clip.id { Text(verbatim: "\(Int(offline.progress * 100))%") }
+                else { LocalizedText("Cache") }
+            }
         }.buttonStyle(PressStyle())
             .accessibilityLabel(LocalizedStringKey(cached ? "Available offline" : "Download for offline"))
             .accessibilityIdentifier("player.cacheVideo")
@@ -673,19 +666,21 @@ struct ClipoScrubber: View {
 }
 
 private enum PlayerArtwork: CaseIterable, Hashable {
-    case save, saved, more
-    // Optical crop regions measured from the generated 1254px atlas.
+    case save, saved, download, more
+    // Tight optical bounds keep original glyphs centered despite unequal atlas padding.
     var region: CGRect {
         switch self {
-        case .save: CGRect(x: 162.5, y: 179, width: 368, height: 368)
-        case .saved: CGRect(x: 725.5, y: 177, width: 368, height: 368)
-        case .more: CGRect(x: 717.5, y: 698.5, width: 400, height: 400)
+        case .save: CGRect(x: 204, y: 196, width: 284, height: 334)
+        case .saved: CGRect(x: 768, y: 194, width: 283, height: 333)
+        case .download: CGRect(x: 972, y: 399, width: 200, height: 195)
+        case .more: CGRect(x: 738, y: 846, width: 358, height: 105)
         }
     }
     private static let tiles: [PlayerArtwork: UIImage] = {
-        guard let source = UIImage(named: "ClipoPlayerActions")?.cgImage else { return [:] }
-        let scale = CGFloat(source.width) / 1254
         return Dictionary(uniqueKeysWithValues: allCases.compactMap { artwork -> (PlayerArtwork, UIImage)? in
+            let name = artwork == .download ? "ClipoGlyphAtlas" : "ClipoPlayerActions"
+            guard let source = UIImage(named: name)?.cgImage else { return nil }
+            let scale = CGFloat(source.width) / 1254
             let rect = artwork.region.applying(CGAffineTransform(scaleX: scale, y: scale)).integral
             guard let tile = source.cropping(to: rect) else { return nil }
             return (artwork, UIImage(cgImage: tile))
@@ -693,6 +688,32 @@ private enum PlayerArtwork: CaseIterable, Hashable {
     }()
     var image: UIImage? { Self.tiles[self] }
 
+}
+
+// Shared geometry for every rail action, including the changing cache status.
+private struct PlayerRailLabel<Label: View>: View {
+    let artwork: PlayerArtwork
+    let selected: Bool
+    private let label: Label
+    @ScaledMetric(relativeTo: .caption2) private var labelHeight: CGFloat = 16
+    init(artwork: PlayerArtwork, selected: Bool, @ViewBuilder label: () -> Label) {
+        self.artwork = artwork
+        self.selected = selected
+        self.label = label()
+    }
+    var body: some View {
+        VStack(spacing: 4) {
+            OriginalSymbolMask(image: artwork.image, tint: selected ? ClipoStyle.accent : .white)
+                .frame(width: 24, height: 24)
+                .frame(width: 28, height: 28)
+            label.font(.court(.caption2, weight: .medium))
+                .foregroundStyle(selected ? ClipoStyle.accent : .white)
+                .lineLimit(1).minimumScaleFactor(0.65).multilineTextAlignment(.center)
+                .frame(width: 48, height: labelHeight)
+                .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
+        }.frame(width: 48, height: max(52, 32 + labelHeight))
+            .contentShape(.interaction, Rectangle())
+    }
 }
 
 private struct PlayerRailButton: View {
@@ -703,15 +724,9 @@ private struct PlayerRailButton: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
-                OriginalSymbolMask(image: artwork.image, tint: selected ? ClipoStyle.accent : .white)
-                    .frame(width: 28, height: 28)
-                LocalizedText(title).font(.court(.caption2, weight: .medium))
-                    .foregroundStyle(selected ? ClipoStyle.accent : .white)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-                    .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
-            }.frame(width: 44).frame(minHeight: 48)
-                .contentShape(.interaction, Rectangle())
+            PlayerRailLabel(artwork: artwork, selected: selected) {
+                LocalizedText(title)
+            }
         }.buttonStyle(PressStyle())
             .accessibilityLabel(LocalizedStringKey(accessibilityTitle))
             .accessibilityAddTraits(selected ? .isSelected : [])
