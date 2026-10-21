@@ -443,3 +443,29 @@
 "Practice records could not be opened. Existing records are preserved." = "Não foi possível abrir os registros. Os registros existentes foram preservados.";
 "The practice export could not be created. Please try again." = "Não foi possível exportar. Tente novamente.";
 "This change could not be saved. Please try again." = "Não foi possível salvar a alteração. Tente novamente.";
+
+"Follow system" = "Seguir o sistema";
+
+"No more lessons are available right now. Try again." = "Não há mais aulas disponíveis agora. Tente novamente.";
+
+"Another download is being prepared." = "Outro download está sendo preparado.";
+
+"Another download is in progress." = "Outro download está em andamento.";
+
+"Connect to your account before downloading." = "Conecte sua conta antes de baixar.";
+
+"This video is already stored on this device." = "Este vídeo já está salvo neste dispositivo.";
+
+"Preparing download…" = "Preparando download…";
+
+"Restoring downloads…" = "Restaurando downloads…";
+
+"Renews automatically. Cancel in your Apple account at least 24 hours before renewal." = "Renova automaticamente. Cancele na Conta Apple pelo menos 24 horas antes da renovação.";
+
+"Buffering…" = "Carregando vídeo…";
+
+"Exit" = "Sair";
+
+"Cache" = "Baixar";
+
+"Cached" = "Salvo";

@@ -162,7 +162,7 @@ struct ClipoRootView: View {
                 Group {
                     switch tab {
                     case .home: HomeView(openAccount: { tab = .me }, discover: { tab = .discover }, openTools: { tab = .tools })
-                    case .discover: DiscoverView()
+                    case .discover: DiscoverView(onExit: { tab = .home })
                     case .tools: ToolsView()
                     case .library: LibraryView { movie in editing = movie }
                     case .me: AccountView()

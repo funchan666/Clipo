@@ -56,6 +56,12 @@
 			<string>cstr6suwn9.skadnetwork</string>
 		</dict>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/Barlow-Regular.ttf</string>
+		<string>Fonts/Barlow-SemiBold.ttf</string>
+		<string>Fonts/Lora-Variable.ttf</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -66,11 +72,5 @@
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Fonts/Barlow-Regular.ttf</string>
-		<string>Fonts/Barlow-SemiBold.ttf</string>
-		<string>Fonts/Lora-Variable.ttf</string>
-	</array>
 </dict>
 </plist>

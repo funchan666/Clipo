@@ -443,3 +443,29 @@
 "Practice records could not be opened. Existing records are preserved." = "練習記録を開けませんでした。既存の記録は保持されています。";
 "The practice export could not be created. Please try again." = "記録を書き出せませんでした。もう一度お試しください。";
 "This change could not be saved. Please try again." = "変更を保存できませんでした。もう一度お試しください。";
+
+"Follow system" = "システム設定に従う";
+
+"No more lessons are available right now. Try again." = "現在、追加のレッスンはありません。もう一度お試しください。";
+
+"Another download is being prepared." = "別のダウンロードを準備中です。";
+
+"Another download is in progress." = "別のダウンロードが進行中です。";
+
+"Connect to your account before downloading." = "アカウントへの接続後にダウンロードしてください。";
+
+"This video is already stored on this device." = "この動画はすでにこのデバイスに保存されています。";
+
+"Preparing download…" = "ダウンロードを準備中…";
+
+"Restoring downloads…" = "ダウンロードを復元中…";
+
+"Renews automatically. Cancel in your Apple account at least 24 hours before renewal." = "自動更新されます。更新の24時間前までにApple Accountで解約してください。";
+
+"Buffering…" = "バッファリング中…";
+
+"Exit" = "終了";
+
+"Cache" = "保存";
+
+"Cached" = "保存済み";

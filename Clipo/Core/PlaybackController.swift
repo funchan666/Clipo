@@ -1,14 +1,20 @@
 import AVFoundation
 import SwiftUI
 
+// Progress ticks belong to the scrubber, not the entire video/control hierarchy.
+@MainActor
+final class PlaybackTimeline: ObservableObject {
+    @Published var elapsed: Double = 0
+    @Published var duration: Double = 0
+}
+
 @MainActor
 final class PlaybackController: ObservableObject {
     let player = AVPlayer()
     @Published var isPlaying = false
     @Published var isLoading = true
     @Published var error: String?
-    @Published var elapsed: Double = 0
-    @Published var duration: Double = 0
+    let timeline = PlaybackTimeline()
     @Published var muted = false
     @Published var speed: Float = 1
     private(set) var loadedURL: URL?
@@ -19,7 +25,7 @@ final class PlaybackController: ObservableObject {
     private var endObserver: NSObjectProtocol?
     private var failureObserver: NSObjectProtocol?
     private var timer: Any?
-    private var wantsPlayback = false
+    @Published private var wantsPlayback = false
     private var warming = false
     private var generation = UUID()
     private var pendingSeek: Double?
@@ -36,8 +42,8 @@ final class PlaybackController: ObservableObject {
                 let length = item.duration.seconds
                 let elapsed = seconds.isFinite ? max(0, seconds) : 0
                 let duration = length.isFinite ? max(0, length) : 0
-                if !self.seeking, self.elapsed != elapsed { self.elapsed = elapsed }
-                if self.duration != duration { self.duration = duration }
+                if !self.seeking, self.timeline.elapsed != elapsed { self.timeline.elapsed = elapsed }
+                if self.timeline.duration != duration { self.timeline.duration = duration }
             }
         }
         timeStatus = player.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in
@@ -56,7 +62,7 @@ final class PlaybackController: ObservableObject {
         release()
         error = nil
         isLoading = true
-        wantsPlayback = autoplay
+        if wantsPlayback != autoplay { wantsPlayback = autoplay }
         // Zero leaves buffering/variant selection to AVFoundation for the active video.
         item.preferredForwardBufferDuration = 0
         player.replaceCurrentItem(with: item)
@@ -104,7 +110,7 @@ final class PlaybackController: ObservableObject {
     }
     func play() {
         guard error == nil, player.currentItem != nil else { return }
-        wantsPlayback = true
+        if !wantsPlayback { wantsPlayback = true }
         warming = false
         player.cancelPendingPrerolls()
         player.currentItem?.preferredForwardBufferDuration = 0
@@ -124,7 +130,7 @@ final class PlaybackController: ObservableObject {
         updatePlaybackState()
     }
     func pause() {
-        wantsPlayback = false
+        if wantsPlayback { wantsPlayback = false }
         warming = false
         player.cancelPendingPrerolls()
         player.pause()
@@ -158,7 +164,7 @@ final class PlaybackController: ObservableObject {
                 self.seeking = false
                 if self.pendingSeek != nil { self.performPendingSeek() }
                 else {
-                    if finished { self.elapsed = target }
+                    if finished { self.timeline.elapsed = target }
                     if self.wantsPlayback { self.play() }
                 }
             }
@@ -200,8 +206,8 @@ final class PlaybackController: ObservableObject {
         player.currentItem?.cancelPendingSeeks()
         player.replaceCurrentItem(with: nil)
         loadedURL = nil
-        elapsed = 0
-        duration = 0
+        timeline.elapsed = 0
+        timeline.duration = 0
         isLoading = false
     }
     deinit {
@@ -218,6 +224,8 @@ final class PlaybackPool: ObservableObject {
     @Published private(set) var controllers: [String: PlaybackController] = [:]
     private var selectedID: String?
     private var nextEntry: PlaybackQueueEntry?
+    private var warmupTask: Task<Void, Never>?
+    private var warmupID: String?
 
     func update(clips: [LessonClip], selectedID: String?) {
         update(entries: clips.map { PlaybackQueueEntry(id: $0.id, clip: $0) }, selectedID: selectedID)
@@ -227,13 +235,14 @@ final class PlaybackPool: ObservableObject {
             releaseAll()
             return
         }
+        if self.selectedID != selectedID { cancelWarmup() }
         self.selectedID = selectedID
         nextEntry = entries.indices.contains(index + 1) ? entries[index + 1] : nil
         let nearby = entries[max(0, index - 1)...min(entries.count - 1, index + 1)]
         let ids = Set(nearby.map(\.id))
         for (id, controller) in controllers {
             if !ids.contains(id) { controller.release() }
-            else if id != selectedID { controller.pause() }
+            else if id != selectedID, controller.intendsPlayback { controller.pause() }
         }
         var retained: [String: PlaybackController] = [:]
         for entry in nearby {
@@ -243,28 +252,67 @@ final class PlaybackPool: ObservableObject {
         }
         guard let current = retained[selectedID] else { return }
         if current.loadedURL == nil { current.load(entries[index].clip.playbackURL, autoplay: false) }
-        controllers = retained
+        // Appending a feed batch should not invalidate every visible video page.
+        if controllers.count != retained.count || retained.contains(where: { controllers[$0.key] !== $0.value }) {
+            controllers = retained
+        }
         if current.isPlaying { prepareNext(after: selectedID) }
     }
     func prepareNext(after id: String) {
-        // Do not compete with the current video's initial load.
-        guard id == selectedID, controllers[id]?.isPlaying == true, let nextEntry else { return }
-        controllers[nextEntry.id]?.prepare(nextEntry.clip.playbackURL)
+        guard id == selectedID, controllers[id]?.isPlaying == true,
+              let nextEntry, let upcoming = controllers[nextEntry.id],
+              upcoming.loadedURL != nextEntry.clip.playbackURL else { return }
+        guard warmupID != nextEntry.id else { return }
+        cancelWarmup()
+        warmupID = nextEntry.id
+        warmupTask = Task { [weak self] in
+            // Let the current stream establish its buffer before competing for bandwidth.
+            // These thresholds are app policy, not guarantees from AVFoundation.
+            for _ in 0..<24 {
+                do { try await Task.sleep(for: .milliseconds(500)) } catch { return }
+                guard let self, self.selectedID == id, self.nextEntry?.id == nextEntry.id,
+                      let current = self.controllers[id], current.isPlaying else { return }
+                guard let item = current.player.currentItem else { return }
+                let position = current.player.currentTime().seconds
+                let duration = item.duration.seconds
+                let ahead = item.loadedTimeRanges.reduce(0.0) { longest, value in
+                    let range = value.timeRangeValue
+                    let start = range.start.seconds
+                    let end = CMTimeRangeGetEnd(range).seconds
+                    guard start.isFinite, end.isFinite, position >= start, position <= end else { return longest }
+                    return max(longest, end - position)
+                }
+                let remaining = duration.isFinite ? max(0, duration - position) : 4
+                guard position.isFinite, item.isPlaybackLikelyToKeepUp,
+                      ahead >= min(4, remaining) else { continue }
+                self.controllers[nextEntry.id]?.prepare(nextEntry.clip.playbackURL)
+                return
+            }
+        }
+    }
+    private func cancelWarmup() {
+        warmupTask?.cancel()
+        warmupTask = nil
+        warmupID = nil
     }
     func suspend() {
+        cancelWarmup()
         // The active page records its resume intent before pausing itself.
         for (id, controller) in controllers where id != selectedID { controller.pause() }
     }
     func trimMemory() {
+        cancelWarmup()
         for (id, controller) in controllers where id != selectedID { controller.release() }
         controllers = controllers.filter { $0.key == selectedID }
     }
     func releaseAll() {
+        cancelWarmup()
         controllers.values.forEach { $0.release() }
         controllers = [:]
         selectedID = nil
         nextEntry = nil
     }
+    deinit { warmupTask?.cancel() }
 }
 
 struct VideoSurface: UIViewRepresentable {

@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0FF11E000000000000000001 /* OfflineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF11E000000000000000002 /* OfflineStore.swift */; };
 		0A80A0B8549C3D5AB3BBC1FC /* Clipo/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47A27C0CD55779B5085CB27B /* Clipo/Resources/Assets.xcassets */; };
+		0FF11E000000000000000001 /* Clipo/Core/OfflineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF11E000000000000000002 /* Clipo/Core/OfflineStore.swift */; };
 		16EB816FD26D57C86FA63242 /* Clipo/Resources/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B01A9BEACE5275588553E5AD /* Clipo/Resources/PrivacyInfo.xcprivacy */; };
 		1AC010000000000000000002 /* Clipo/App/AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC010000000000000000001 /* Clipo/App/AppLanguage.swift */; };
 		1AC010000000000000000065 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1AC010000000000000000064 /* Localizable.strings */; };
@@ -31,17 +31,17 @@
 		A44A83298DFF881F87AA0F94 /* Clipo/Core/VideoEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A756C8C59952EE6C3FB7A7E /* Clipo/Core/VideoEditor.swift */; };
 		ACCE55100000000000000001 /* Clipo/Features/AccountAccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCE55100000000000000002 /* Clipo/Features/AccountAccessViews.swift */; };
 		C68F5643B660D6177C54038C /* Clipo/Core/LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */; };
-		C7F5D928DE552FB7782E6664 /* Clipo/Core/LessonContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */; };
-		D0DFDA960A87B68556723DA1 /* Clipo/Features/DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */; };
-		FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */; };
 		C71000000000000000000001 /* Clipo/App/CourtTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000002 /* Clipo/App/CourtTypography.swift */; };
 		C71000000000000000000003 /* Clipo/Core/ServePracticeJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000004 /* Clipo/Core/ServePracticeJournal.swift */; };
 		C71000000000000000000005 /* Clipo/Features/ServePracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000006 /* Clipo/Features/ServePracticeView.swift */; };
 		C71000000000000000000007 /* Clipo/Resources/Fonts in Resources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000008 /* Clipo/Resources/Fonts */; };
+		C7F5D928DE552FB7782E6664 /* Clipo/Core/LessonContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */; };
+		D0DFDA960A87B68556723DA1 /* Clipo/Features/DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */; };
+		FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0FF11E000000000000000002 /* OfflineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/OfflineStore.swift; sourceTree = SOURCE_ROOT; };
+		0FF11E000000000000000002 /* Clipo/Core/OfflineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/OfflineStore.swift; sourceTree = SOURCE_ROOT; };
 		17682BB59D393EEB797E5420 /* Clipo/Features/PracticeVideoWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/PracticeVideoWorkspace.swift; sourceTree = SOURCE_ROOT; };
 		1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LibraryStore.swift; sourceTree = SOURCE_ROOT; };
 		198C628051C30B581DC8DE92 /* Clipo/Features/HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/HomeView.swift; sourceTree = SOURCE_ROOT; };
@@ -76,15 +76,15 @@
 		ACCE55100000000000000002 /* Clipo/Features/AccountAccessViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/AccountAccessViews.swift; sourceTree = SOURCE_ROOT; };
 		B01A9BEACE5275588553E5AD /* Clipo/Resources/PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Clipo/Resources/PrivacyInfo.xcprivacy; sourceTree = SOURCE_ROOT; };
 		B2E822DCE2A437F4FCB346A9 /* Clipo/Core/QuotaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/QuotaStore.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000002 /* Clipo/App/CourtTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/App/CourtTypography.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000004 /* Clipo/Core/ServePracticeJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/ServePracticeJournal.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000006 /* Clipo/Features/ServePracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/ServePracticeView.swift; sourceTree = SOURCE_ROOT; };
+		C71000000000000000000008 /* Clipo/Resources/Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Clipo/Resources/Fonts; sourceTree = SOURCE_ROOT; };
 		E3B808EADBFC1086054EA47A /* Clipo/Core/APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/APIClient.swift; sourceTree = SOURCE_ROOT; };
 		E4BD89A549F49134CAB0C817 /* Clipo/App/DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/App/DesignSystem.swift; sourceTree = SOURCE_ROOT; };
 		EC62DF084BD6179B0CD0BFAA /* Clipo/Features/MembershipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/MembershipView.swift; sourceTree = SOURCE_ROOT; };
 		EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/CommerceStore.swift; sourceTree = SOURCE_ROOT; };
 		F2CDBB4A80FB9A168C05E16E /* Clipo/Core/PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/PlaybackController.swift; sourceTree = SOURCE_ROOT; };
-		C71000000000000000000002 /* Clipo/App/CourtTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/App/CourtTypography.swift; sourceTree = SOURCE_ROOT; };
-		C71000000000000000000004 /* Clipo/Core/ServePracticeJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/ServePracticeJournal.swift; sourceTree = SOURCE_ROOT; };
-		C71000000000000000000006 /* Clipo/Features/ServePracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/ServePracticeView.swift; sourceTree = SOURCE_ROOT; };
-		C71000000000000000000008 /* Clipo/Resources/Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Clipo/Resources/Fonts; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,7 +123,7 @@
 				E3B808EADBFC1086054EA47A /* Clipo/Core/APIClient.swift */,
 				EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */,
 				1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */,
-				0FF11E000000000000000002 /* OfflineStore.swift */,
+				0FF11E000000000000000002 /* Clipo/Core/OfflineStore.swift */,
 				4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */,
 				F2CDBB4A80FB9A168C05E16E /* Clipo/Core/PlaybackController.swift */,
 				B2E822DCE2A437F4FCB346A9 /* Clipo/Core/QuotaStore.swift */,
@@ -243,7 +243,7 @@
 				79CDD73938BF2D09D9492954 /* Clipo/Core/APIClient.swift in Sources */,
 				260CF880F17F5608D6824066 /* Clipo/Core/CommerceStore.swift in Sources */,
 				C68F5643B660D6177C54038C /* Clipo/Core/LibraryStore.swift in Sources */,
-				0FF11E000000000000000001 /* OfflineStore.swift in Sources */,
+				0FF11E000000000000000001 /* Clipo/Core/OfflineStore.swift in Sources */,
 				C7F5D928DE552FB7782E6664 /* Clipo/Core/LessonContracts.swift in Sources */,
 				327A09A6877BA42DD80120D2 /* Clipo/Core/PlaybackController.swift in Sources */,
 				6AF10A27CB2DD141266F1710 /* Clipo/Core/QuotaStore.swift in Sources */,
@@ -383,15 +383,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = JPTS6M4T5B;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clipo/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = im.seex.lobo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cliporows.toolskeep;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -409,15 +409,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = JPTS6M4T5B;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clipo/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = im.seex.lobo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cliporows.toolskeep;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

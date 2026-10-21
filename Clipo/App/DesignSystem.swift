@@ -73,7 +73,7 @@ struct TennisCourtBanner: View {
         .accessibilityElement(children: .combine)
     }
 }
-enum ClipoGlyph: Int {
+enum ClipoGlyph: Int, CaseIterable {
     case home, feed, edit, library, link, search, bookmark, download
     case play, pause, close, back, sound, mute, folder, settings
 }
@@ -82,33 +82,43 @@ struct Glyph: View {
     let symbol: ClipoGlyph
     var size: CGFloat = 25
     var tint: Color = .white
-    private var cellOrigin: CGPoint {
-        if symbol == .link {
-            // In the 1254px atlas, the link's visible bounds are (82, 400)–(288, 601).
-            // Center that artwork in its viewport instead of assuming an even grid.
-            let cellSide: CGFloat = 313.5
-            return CGPoint(x: 185 / cellSide - 0.5, y: 500.5 / cellSide - 0.5)
-        }
-        return CGPoint(x: CGFloat(symbol.rawValue % 4), y: CGFloat(symbol.rawValue / 4))
-    }
+    private static let tiles: [ClipoGlyph: UIImage] = {
+        guard let source = UIImage(named: "ClipoGlyphAtlas")?.cgImage else { return [:] }
+        let side = CGFloat(source.width) / 4
+        return Dictionary(uniqueKeysWithValues: ClipoGlyph.allCases.compactMap { symbol -> (ClipoGlyph, UIImage)? in
+            let origin = symbol == .link
+                ? CGPoint(x: 185.0 / 1254 * CGFloat(source.width) - side / 2,
+                          y: 500.5 / 1254 * CGFloat(source.height) - side / 2)
+                : CGPoint(x: CGFloat(symbol.rawValue % 4) * side, y: CGFloat(symbol.rawValue / 4) * side)
+            guard let tile = source.cropping(to: CGRect(origin: origin, size: CGSize(width: side, height: side)).integral) else { return nil }
+            return (symbol, UIImage(cgImage: tile))
+        })
+    }()
     var body: some View {
-        // Cell extraction is display-only: the source artwork is never redrawn in code.
-        GeometryReader { geometry in
-            Image("ClipoGlyphAtlas").resizable().interpolation(.high).colorMultiply(tint)
-                .frame(width: geometry.size.width * 4, height: geometry.size.height * 4)
-                .offset(x: -cellOrigin.x * geometry.size.width,
-                        y: -cellOrigin.y * geometry.size.height)
-                // The enlarged atlas is artwork, never an independent touch target.
-                .allowsHitTesting(false)
-        }
-        .environment(\.layoutDirection, .leftToRight)
-        .frame(width: size * 1.65, height: size * 1.65)
-        .clipped().contentShape(.interaction, Rectangle())
-        .blendMode(.screen)
-        .scaleEffect(x: symbol == .back && direction == .rightToLeft ? -1 : 1, y: 1)
-        .accessibilityHidden(true)
+        OriginalSymbolMask(image: Self.tiles[symbol], tint: tint)
+            .frame(width: size * 1.65, height: size * 1.65)
+            .scaleEffect(x: symbol == .back && direction == .rightToLeft ? -1 : 1, y: 1)
+            .accessibilityHidden(true)
     }
 }
+
+// Display the existing white-on-black artwork as an isolated opacity mask.
+// Unlike screen blending, its black pixels never depend on the video beneath it.
+// This is raster display/tinting only; no replacement artwork is drawn.
+struct OriginalSymbolMask: View {
+    let image: UIImage?
+    var tint: Color = .white
+    var body: some View {
+        if let image {
+            tint.mask {
+                Image(uiImage: image).resizable().interpolation(.high)
+                    .scaledToFit().luminanceToAlpha()
+            }.environment(\.layoutDirection, .leftToRight)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
 struct IconButton: View {
     let symbol: ClipoGlyph
     let label: String
@@ -193,7 +203,42 @@ struct FieldStyle: ViewModifier {
             .tint(ClipoStyle.accent)
     }
 }
+// Measure in the owning screen, so scrolling, keyboard avoidance and resizing
+// keep the input exclusion region aligned. No global window or focus broadcast.
+private struct KeyboardInputBounds: PreferenceKey {
+    static var defaultValue: [String: CGRect] { [:] }
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $0.union($1) })
+    }
+}
+private struct OutsideInputTap: ViewModifier {
+    let focus: FocusState<Bool>.Binding
+    let scope: String
+    @State private var inputBounds: CGRect?
+    func body(content: Content) -> some View {
+        content
+            .contentShape(Rectangle()) // Hit area only, no visible artwork.
+            .simultaneousGesture(SpatialTapGesture(coordinateSpace: .named(scope)).onEnded { tap in
+                guard focus.wrappedValue, let inputBounds, !inputBounds.contains(tap.location) else { return }
+                focus.wrappedValue = false
+            })
+            .onPreferenceChange(KeyboardInputBounds.self) { inputBounds = $0[scope] }
+            .coordinateSpace(name: scope)
+    }
+}
+
 extension View {
+    func keyboardInputRegion(_ scope: String) -> some View {
+        background {
+            GeometryReader { geometry in
+                Color.clear.preference(key: KeyboardInputBounds.self,
+                                       value: [scope: geometry.frame(in: .named(scope))])
+            }.allowsHitTesting(false)
+        }
+    }
+    func dismissKeyboardOnOutsideTap(_ focus: FocusState<Bool>.Binding, scope: String) -> some View {
+        modifier(OutsideInputTap(focus: focus, scope: scope))
+    }
     func clipoField() -> some View { modifier(FieldStyle()) }
     // Extend visual surfaces to every container edge, while preserving keyboard avoidance
     // and the foreground's safe area for interactive controls.

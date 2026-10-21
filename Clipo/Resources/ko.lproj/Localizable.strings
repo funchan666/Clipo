@@ -443,3 +443,29 @@
 "Practice records could not be opened. Existing records are preserved." = "연습 기록을 열 수 없습니다. 기존 기록은 유지됩니다.";
 "The practice export could not be created. Please try again." = "기록을 내보낼 수 없습니다. 다시 시도해 주세요.";
 "This change could not be saved. Please try again." = "변경 사항을 저장할 수 없습니다. 다시 시도해 주세요.";
+
+"Follow system" = "시스템 설정 따르기";
+
+"No more lessons are available right now. Try again." = "지금은 더 볼 수 있는 레슨이 없습니다. 다시 시도해 주세요.";
+
+"Another download is being prepared." = "다른 다운로드를 준비하고 있습니다.";
+
+"Another download is in progress." = "다른 다운로드가 진행 중입니다.";
+
+"Connect to your account before downloading." = "계정 연결 후 다운로드해 주세요.";
+
+"This video is already stored on this device." = "이 영상은 이미 기기에 저장되어 있습니다.";
+
+"Preparing download…" = "다운로드 준비 중…";
+
+"Restoring downloads…" = "다운로드 복원 중…";
+
+"Renews automatically. Cancel in your Apple account at least 24 hours before renewal." = "자동 갱신됩니다. 갱신 최소 24시간 전에 Apple 계정에서 취소하세요.";
+
+"Buffering…" = "버퍼링 중…";
+
+"Exit" = "나가기";
+
+"Cache" = "저장";
+
+"Cached" = "저장됨";

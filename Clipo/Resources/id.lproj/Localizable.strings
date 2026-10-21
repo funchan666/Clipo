@@ -443,3 +443,29 @@
 "Practice records could not be opened. Existing records are preserved." = "Catatan latihan tidak dapat dibuka. Catatan lama tetap tersimpan.";
 "The practice export could not be created. Please try again." = "Ekspor latihan gagal dibuat. Coba lagi.";
 "This change could not be saved. Please try again." = "Perubahan tidak dapat disimpan. Coba lagi.";
+
+"Follow system" = "Ikuti sistem";
+
+"No more lessons are available right now. Try again." = "Belum ada pelajaran tambahan. Coba lagi.";
+
+"Another download is being prepared." = "Unduhan lain sedang disiapkan.";
+
+"Another download is in progress." = "Unduhan lain sedang berlangsung.";
+
+"Connect to your account before downloading." = "Hubungkan akun sebelum mengunduh.";
+
+"This video is already stored on this device." = "Video ini sudah tersimpan di perangkat ini.";
+
+"Preparing download…" = "Menyiapkan unduhan…";
+
+"Restoring downloads…" = "Memulihkan unduhan…";
+
+"Renews automatically. Cancel in your Apple account at least 24 hours before renewal." = "Diperpanjang otomatis. Batalkan di akun Apple setidaknya 24 jam sebelum perpanjangan.";
+
+"Buffering…" = "Menyangga…";
+
+"Exit" = "Keluar";
+
+"Cache" = "Unduh";
+
+"Cached" = "Tersimpan";

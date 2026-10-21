@@ -13,7 +13,6 @@ struct MembershipView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedID: String?
     @State private var attemptedPurchaseAction = false
-    @State private var purchaseHelp = false
     @State private var purchaseTask: Task<Void, Never>?
 
     private var plans: [CommerceConfiguration.Product] { commerce.policy?.products ?? [] }
@@ -66,9 +65,6 @@ struct MembershipView: View {
                                 }
                                 .accessibilityHidden(true)
                         }
-                        LocalizedText("USD reference prices. Apple confirms your local price before payment.")
-                            .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
-                            .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -81,26 +77,22 @@ struct MembershipView: View {
 
                 if !commerce.premium, api.session != nil { rewardOption }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 10) { recoveryLinks }
-                        VStack(alignment: .leading, spacing: 10) { recoveryLinks }
-                    }
-                    LocalizedText("Auto-renewing subscription. Cancel in your Apple account at least 24 hours before renewal. Payment is charged after Apple confirmation.")
+                VStack(alignment: .leading, spacing: 4) {
+                    LocalizedText("Renews automatically. Cancel in your Apple account at least 24 hours before renewal.")
                         .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    PolicyLinks()
-                    Button("Purchase help") { purchaseHelp.toggle() }
-                        .buttonStyle(CompactActionStyle())
-                    if purchaseHelp {
-                        LocalizedText("If a payment is waiting to be confirmed, retry without purchasing again.")
-                            .font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
-                        ActionButton(title: "Retry purchase confirmation", primary: false) {
-                            attemptedPurchaseAction = true
-                            commerce.retryPending()
-                        }.disabled(interactionLocked)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 16) {
+                            restoreLink
+                            PolicyLinks(compact: true)
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            restoreLink
+                            PolicyLinks(compact: true)
+                        }
                     }
                 }
+
             }.padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 20)
                 .frame(maxWidth: 560).frame(maxWidth: .infinity)
         }
@@ -203,15 +195,20 @@ struct MembershipView: View {
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
     }
 
-    @ViewBuilder private var recoveryLinks: some View {
-        Button("Restore purchases") {
+    private var restoreLink: some View {
+        Button {
             attemptedPurchaseAction = true
             commerce.restore()
-        }.disabled(interactionLocked).buttonStyle(CompactActionStyle())
-        Link("Manage subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
-            .buttonStyle(CompactActionStyle())
-            .disabled(interactionLocked)
+        } label: {
+            LocalizedText("Restore purchases")
+                .font(.court(.footnote, weight: .medium))
+                .foregroundStyle(ClipoStyle.accent)
+                .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }.disabled(interactionLocked).buttonStyle(PressStyle())
     }
+
 }
 
 struct AccountView: View {

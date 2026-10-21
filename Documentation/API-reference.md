@@ -434,7 +434,9 @@ GET /app-api/flow/search-check
 1. 首次请求不传 `feedId` 和 `cursor`；
 2. 保存响应中的 `feedId` 和 `nextCursor`；
 3. 下一次请求传入上一次的 `feedId` 和 `nextCursor`；
-4. `hasMore == false` 时停止请求。
+4. 原接口约定：`hasMore == false` 表示本轮结束。
+
+2026-10-21 用户补充的播放器续接规则：接近当前列表末尾时预取下一批；本轮结束后，通过新的 `search-check` 请求开始下一轮，不传 `feedId` 和 `cursor`。搜索关键词在搜索轮内原样保留；搜索结果结束后进入无关键词的推荐轮。跨轮允许再次出现同一视频，滚动条目 ID 与业务视频 ID 分离；额度仍按原业务 ID 去重。空结果／失败显示重试入口，不循环空请求。资料库中的本地离线播放不启用推荐续接。
 
 ## 4.7 创建 iOS 权益订单
 

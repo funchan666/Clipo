@@ -144,7 +144,6 @@ final class QuotaStore: ObservableObject {
         try commit(next)
     }
     func canRequestReward(for kind: AllowanceKind, premium: Bool) -> Bool {
-        resetIfNeeded()
         return !premium && storageOK && userID != nil && policy != nil && !isUnlimited(kind) && remaining(kind) == 0
     }
     func claimWatchLimitPrompt(premium: Bool) -> Bool {

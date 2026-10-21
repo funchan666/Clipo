@@ -69,6 +69,7 @@ struct HomeView: View {
                 }
             }.clipoPage()
         }.clipoScreenBackground().scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnOutsideTap($focused, scope: "home-link-input")
             .sheet(item: $channel) { ChannelView(route: $0) }
             .fullScreenCover(item: $searchRequest) { request in
                 DiscoverView(initialSearch: request.query, canDismiss: true) { query, clip in
@@ -105,6 +106,7 @@ struct HomeView: View {
                 .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
                 .environment(\.colorScheme, .light)
                 .accessibilityLabel("Lesson or collection link")
+                .keyboardInputRegion("home-link-input")
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     allowanceLabel.fixedSize(horizontal: true, vertical: false)

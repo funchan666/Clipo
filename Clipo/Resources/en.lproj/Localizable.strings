@@ -443,3 +443,29 @@
 "Practice records could not be opened. Existing records are preserved." = "Practice records could not be opened. Existing records are preserved.";
 "The practice export could not be created. Please try again." = "The practice export could not be created. Please try again.";
 "This change could not be saved. Please try again." = "This change could not be saved. Please try again.";
+
+"Follow system" = "Follow system";
+
+"No more lessons are available right now. Try again." = "No more lessons are available right now. Try again.";
+
+"Another download is being prepared." = "Another download is being prepared.";
+
+"Another download is in progress." = "Another download is in progress.";
+
+"Connect to your account before downloading." = "Connect to your account before downloading.";
+
+"This video is already stored on this device." = "This video is already stored on this device.";
+
+"Preparing download…" = "Preparing download…";
+
+"Restoring downloads…" = "Restoring downloads…";
+
+"Renews automatically. Cancel in your Apple account at least 24 hours before renewal." = "Renews automatically. Cancel in your Apple account at least 24 hours before renewal.";
+
+"Buffering…" = "Buffering…";
+
+"Exit" = "Exit";
+
+"Cache" = "Cache";
+
+"Cached" = "Cached";

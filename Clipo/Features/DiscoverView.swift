@@ -19,6 +19,11 @@ final class FeedStore: ObservableObject {
         hasMore = seed.isEmpty
     }
 
+    func invalidatePendingLoad() {
+        generation = UUID()
+        loading = false
+    }
+
     func isNearEnd(_ id: String?) -> Bool {
         guard let id, let index = entries.firstIndex(where: { $0.id == id }) else { return false }
         return index >= entries.count - 3
@@ -66,6 +71,7 @@ final class FeedStore: ObservableObject {
 struct DiscoverView: View {
     @Environment(\.dismiss) private var dismiss
     private let canDismiss: Bool
+    private let onExit: (() -> Void)?
     private let onSearchResult: ((String, LessonClip) -> Void)?
     @EnvironmentObject private var offline: OfflineStore
     private var displayEntries: [PlaybackQueueEntry] {
@@ -77,12 +83,13 @@ struct DiscoverView: View {
     @StateObject private var players = PlaybackPool()
     @Environment(\.scenePhase) private var scenePhase
     @State private var search = ""
-    @State private var searchOpen = false
+    @State private var visible = false
     @State private var activeID: String?
     @State private var recordedQuery: String?
-    init(initialSearch: String = "", canDismiss: Bool = false,
+    init(initialSearch: String = "", canDismiss: Bool = false, onExit: (() -> Void)? = nil,
          onSearchResult: ((String, LessonClip) -> Void)? = nil) {
         self.canDismiss = canDismiss
+        self.onExit = onExit
         self.onSearchResult = onSearchResult
         _search = State(initialValue: initialSearch)
     }
@@ -118,11 +125,12 @@ struct DiscoverView: View {
                                     let clip = entry.clip
                                     Group {
                                         if let playback = players.controllers[entry.id] {
-                                            ClipPage(clip: clip, active: activeID == entry.id && !searchOpen,
+                                            ClipPage(clip: clip, active: activeID == entry.id,
                                                      controlInsets: container.safeAreaInsets, playback: playback,
-                                                     didStartPlaying: { players.prepareNext(after: entry.id) })
+                                                     didStartPlaying: { players.prepareNext(after: entry.id) },
+                                                     didStopPlaying: { if activeID == entry.id { players.suspend() } })
                                         } else {
-                                            MediaCover(url: clip.coverURL)
+                                            PlayerPoster(url: clip.coverURL)
                                         }
                                     }.frame(width: geometry.size.width, height: geometry.size.height).clipped().id(entry.id)
                                 }
@@ -145,6 +153,7 @@ struct DiscoverView: View {
                 feedHeader
             }
         }.clipoScreenBackground(.black)
+            .onAppear { visible = true; players.update(entries: displayEntries, selectedID: activeID) }
             .task(id: api.session?.userId.value) {
                 guard api.session != nil else { return }
                 await feed.load(api: api, search: search)
@@ -152,11 +161,12 @@ struct DiscoverView: View {
                 activeID = feed.entries.first?.id
             }
             .onChange(of: activeID) { _, id in
-                guard !searchOpen, api.session != nil,
+                guard visible, api.session != nil,
                       id == morePageID || feed.isNearEnd(id) else { return }
-                Task { await feed.load(api: api) }
+                Task { guard visible else { return }; await feed.load(api: api) }
             }
             .onChange(of: feed.entries) { previous, entries in
+                guard visible else { return }
                 if activeID == morePageID, entries.count > previous.count {
                     activeID = entries[previous.count].id
                 } else if !entries.contains(where: { $0.id == activeID }) { activeID = entries.first?.id }
@@ -166,43 +176,23 @@ struct DiscoverView: View {
                     onSearchResult?(feed.query, first)
                 }
             }
-            .onDisappear { players.releaseAll() }
+            .onDisappear { visible = false; feed.invalidatePendingLoad(); players.releaseAll() }
             .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
     }
     private var feedHeader: some View {
-        VStack(spacing: 10) {
-            HStack {
-                if canDismiss {
-                    IconButton(symbol: .back, label: "Back") { dismiss() }
-                }
-                IconButton(symbol: .search, label: "Search videos", selected: searchOpen) { searchOpen.toggle() }
-                Spacer()
-                Button(LocalizedStringKey(feed.loading ? "Loading…" : "Refresh")) { Task { await refreshFeed() } }
-                    .buttonStyle(CompactActionStyle()).disabled(feed.loading)
-            }
-            if searchOpen {
-                HStack {
-                    TextField("Search videos", text: $search).clipoField().submitLabel(.search)
-                        .onSubmit { runSearch() }
-                    Button("Go") { runSearch() }.buttonStyle(CompactActionStyle())
+        HStack {
+            Spacer(minLength: 0)
+            if canDismiss || onExit != nil {
+                PlayerExitButton {
+                    players.releaseAll()
+                    if let onExit { onExit() } else { dismiss() }
                 }
             }
-        }.padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 10)
-            .background(searchOpen ? Color.black.opacity(0.75) : Color.clear)
+        }.environment(\.layoutDirection, .leftToRight)
+            .padding(.horizontal, 12).padding(.top, 8)
     }
-    private func runSearch() {
-        searchOpen = false
-        activeID = nil
-        Task { await feed.load(api: api, search: search); activeID = feed.entries.first?.id }
-    }
-    private func refreshFeed() async {
-        players.releaseAll()
-        activeID = nil
-        await feed.load(api: api, search: search)
-        guard !Task.isCancelled else { return }
-        activeID = feed.entries.first?.id
-    }
+
 }
 
 struct PlayerScreen: View {
@@ -210,6 +200,7 @@ struct PlayerScreen: View {
     @EnvironmentObject private var api: APIClient
     @Environment(\.dismiss) private var dismiss
     let route: PlayerRoute
+    @State private var visible = false
     @State private var activeID: String?
     @StateObject private var feed: FeedStore
     @StateObject private var players = PlaybackPool()
@@ -234,8 +225,9 @@ struct PlayerScreen: View {
                                 if let playback = players.controllers[entry.id] {
                                     ClipPage(clip: clip, active: activeID == entry.id,
                                              controlInsets: container.safeAreaInsets, playback: playback,
-                                             didStartPlaying: { players.prepareNext(after: entry.id) })
-                                } else { MediaCover(url: clip.coverURL) }
+                                             didStartPlaying: { players.prepareNext(after: entry.id) },
+                                                     didStopPlaying: { if activeID == entry.id { players.suspend() } })
+                                } else { PlayerPoster(url: clip.coverURL) }
                             }.containerRelativeFrame([.horizontal, .vertical]).clipped().id(entry.id)
                         }
                         if route.continuesRecommendations {
@@ -253,10 +245,11 @@ struct PlayerScreen: View {
                 .scrollIndicators(.hidden)
                 .task { proxy.scrollTo(route.startID, anchor: .top) }
             }.ignoresSafeArea(.container, edges: .all)
-        }.clipoScreenBackground(.black).overlay(alignment: .topLeading) {
-            IconButton(symbol: .back, label: "Back") { dismiss() }.padding(12)
+        }.clipoScreenBackground(.black).overlay(alignment: .topTrailing) {
+            PlayerExitButton { players.releaseAll(); dismiss() }.padding(.horizontal, 12).padding(.top, 8)
         }.preferredColorScheme(.dark)
             .onAppear {
+                visible = true
                 players.update(entries: displayEntries, selectedID: activeID)
                 continueFeedIfNeeded(activeID)
             }
@@ -265,16 +258,17 @@ struct PlayerScreen: View {
                 continueFeedIfNeeded(id)
             }
             .onChange(of: feed.entries) { previous, entries in
+                guard visible else { return }
                 if activeID == morePageID, entries.count > previous.count { activeID = entries[previous.count].id }
                 players.update(entries: displayEntries, selectedID: activeID)
             }
-            .onDisappear { players.releaseAll() }
+            .onDisappear { visible = false; feed.invalidatePendingLoad(); players.releaseAll() }
             .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
     }
     private func continueFeedIfNeeded(_ id: String?) {
-        guard route.continuesRecommendations, id == morePageID || feed.isNearEnd(id) else { return }
-        Task { await feed.load(api: api) }
+        guard visible, route.continuesRecommendations, id == morePageID || feed.isNearEnd(id) else { return }
+        Task { guard visible else { return }; await feed.load(api: api) }
     }
 }
 
@@ -291,54 +285,60 @@ struct ClipPage: View {
     var controlInsets = EdgeInsets()
     @ObservedObject var playback: PlaybackController
     var didStartPlaying: () -> Void = {}
+    var didStopPlaying: () -> Void = {}
     @State private var visible = false
     @State private var firstFrameReady = false
+    @State private var accessChecked = false
+    @State private var resumeAfterSheet = false
     @State private var resumeAfterInterruption = false
     @State private var gate = false
     @State private var options = false
     @State private var editor = false
-    @State private var share = false
+    @State private var downloadPanel = false
+    @State private var downloadReward = false
     @State private var recorded = false
     @State private var allowed = false
     @State private var scrubbing = false
-    @State private var scrubPosition: Double = 0
-    @State private var resumeAfterScrub = false
     var body: some View {
         ZStack {
             Color.black
             VideoSurface(player: playback.player, onReadyForDisplay: { firstFrameReady = $0 })
                 .clipped().allowsHitTesting(false)
             if !firstFrameReady {
-                MediaCover(url: clip.coverURL)
+                PlayerPoster(url: clip.coverURL)
                     .allowsHitTesting(false)
             }
             Color.clear.contentShape(Rectangle()).onTapGesture {
                 guard active, phase == .active, !ads.isPresenting else { return }
-                if allowed { playback.toggle() }
+                if allowed, firstFrameReady { playback.toggle() }
             }
             // Original raster scrim: a soft fade, never a hard panel across the video.
             Color.clear.overlay {
                 Image("ClipoPlayerScrim").resizable().scaledToFill()
             }.clipped().allowsHitTesting(false).accessibilityHidden(true)
-            if !allowed, active {
-                VStack(spacing: 16) {
-                    LocalizedText("Keep watching").font(.court(.title3, weight: .semibold))
-                    ActionButton(title: "Get more views") { gate = true }
-                }.padding(20).frame(maxWidth: 360)
-                    .background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
-            } else if let error = playback.error {
-                MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
-            } else if active, allowed, !playback.isPlaying, !playback.isLoading, !scrubbing {
-                IconButton(symbol: .play, label: "Play video") { playback.play() }
-                    .background(Color.black.opacity(0.4), in: Circle())
-            }
             playerControls
-            if active, playback.isLoading { LocalizedText("Loading…").font(.court(.caption)).padding(12).background(.black.opacity(0.6), in: Capsule()) }
+            if active, visible, !gate, !options, !editor, !downloadPanel, !downloadReward {
+                if accessChecked, !allowed {
+                    VStack(spacing: 16) {
+                        LocalizedText("Keep watching").font(.court(.title3, weight: .semibold))
+                        ActionButton(title: "Get more views") { gate = true }
+                    }.padding(20).frame(maxWidth: 320)
+                        .background { OriginalSurface(tone: .pine) }.padding(24)
+                } else if let error = playback.error {
+                    MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
+                } else if allowed, playback.isLoading || (!firstFrameReady && playback.intendsPlayback) {
+                    PlayerLoadingFeedback(buffering: firstFrameReady)
+                        .allowsHitTesting(false)
+                } else if allowed, firstFrameReady, !playback.intendsPlayback, !scrubbing {
+                    IconButton(symbol: .play, label: "Play video") { playback.play() }
+                        .shadow(color: .black.opacity(0.65), radius: 3, y: 1)
+                }
+            }
         }.foregroundStyle(.white).clipped()
             .onAppear { visible = true; if active { activate() } }
             .onChange(of: active) { _, active in
                 resumeAfterInterruption = false
-                if active { activate() } else { playback.pause() }
+                if active { activate() } else { resumeAfterSheet = false; playback.pause() }
             }
             .onChange(of: playback.isPlaying) { _, playing in
                 if playing, active, visible, !recorded {
@@ -346,6 +346,7 @@ struct ClipPage: View {
                     if !recorded { playback.pause(); allowed = false }
                 }
                 if playing, active, recorded { didStartPlaying() }
+                if !playing, active { didStopPlaying() }
             }
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
                 guard active, visible, playback.isPlaying, !clip.playbackURL.isFileURL else { return }
@@ -360,7 +361,7 @@ struct ClipPage: View {
             .onDisappear { visible = false; resumeAfterInterruption = false; playback.pause() }
             .onChange(of: gate) { _, presented in if presented { playback.pause() } }
             .sheet(isPresented: $gate, onDismiss: { if active { activate() } }) { MembershipView(rewardKind: .watch) }
-            .sheet(isPresented: $options) {
+            .sheet(isPresented: $options, onDismiss: resumeAfterControls) {
                 ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SheetHeading(title: "Playback") { options = false }
@@ -385,18 +386,19 @@ struct ClipPage: View {
                 }.padding(22)
                 }.clipoScreenBackground().presentationDetents([.medium, .large])
             }
-            .sheet(isPresented: $editor) { EditorSheet() }
-            .sheet(isPresented: $share) { ShareSheet(items: [WebAddress.media(clip.shortLink) ?? clip.playbackURL]) }
+            .sheet(isPresented: $editor, onDismiss: resumeAfterControls) { EditorSheet() }
+            .sheet(isPresented: $downloadPanel, onDismiss: resumeAfterControls) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        SheetHeading(title: "Downloads") { downloadPanel = false }
+                        OfflineDownloadButton(clip: clip)
+                    }.padding(22)
+                }.clipoScreenBackground().presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $downloadReward, onDismiss: resumeAfterControls) { MembershipView(rewardKind: .download) }
     }
     private var playerControls: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                IconButton(symbol: playback.muted ? .mute : .sound,
-                           label: playback.muted ? "Unmute" : "Mute") {
-                    playback.setMuted(!playback.muted)
-                }
-            }.padding(.top, 12)
             Spacer(minLength: 16)
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(alignment: .leading, spacing: 7) {
@@ -409,52 +411,22 @@ struct ClipPage: View {
                 .shadow(color: .black.opacity(0.7), radius: 3, y: 1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, 8)
-                VStack(spacing: 16) {
+                VStack(spacing: 10) {
                     PlayerRailButton(artwork: library.isSaved(clip) ? .saved : .save,
                                      title: library.isSaved(clip) ? "Saved" : "Save",
                                      accessibilityTitle: library.isSaved(clip) ? "Remove saved video" : "Save video",
                                      selected: library.isSaved(clip), action: save)
-                    PlayerRailButton(artwork: .share, title: "Share", accessibilityTitle: "Share video link") {
-                        playback.pause(); share = true
-                    }
+                    PlayerCacheButton(clip: clip, action: cacheVideo)
                     PlayerRailButton(artwork: .more, title: "More", accessibilityTitle: "Playback options") {
+                        resumeAfterSheet = playback.intendsPlayback
                         playback.pause(); options = true
                     }
                 }.padding(.bottom, 8)
             }.padding(.leading, 4)
-            ClipoScrubber(value: Binding(
-                get: { scrubbing ? scrubPosition : playback.elapsed },
-                set: {
-                    scrubPosition = $0
-                    // During a drag, move the UI only. Seek once on release.
-                    if !scrubbing { playback.seek($0) }
-                }
-            ), range: 0...max(1, playback.duration), label: "Playback position",
-                         tint: .white, trackHeight: scrubbing ? 5 : 2,
-                         onEditingChanged: { editing in
-                if editing {
-                    scrubPosition = playback.elapsed
-                    resumeAfterScrub = playback.isPlaying
-                    scrubbing = true
-                    playback.pause()
-                } else {
-                    playback.seek(scrubPosition)
-                    scrubbing = false
-                    if resumeAfterScrub && active && allowed && phase == .active && !ads.isPresenting {
-                        playback.play()
-                    }
-                    resumeAfterScrub = false
-                }
-            })
-            .disabled(!allowed || playback.duration <= 0 || playback.error != nil)
-            .overlay(alignment: .top) {
-                if scrubbing {
-                    Text(verbatim: "\(durationLabel(scrubPosition)) / \(durationLabel(playback.duration))")
-                        .environment(\.layoutDirection, .leftToRight)
-                        .font(.caption.monospacedDigit()).offset(y: -8)
-                        .allowsHitTesting(false)
-                }
-            }
+            PlayerProgressControl(playback: playback, timeline: playback.timeline,
+                                  enabled: allowed && firstFrameReady,
+                                  canResume: active && allowed && phase == .active && !ads.isPresenting,
+                                  scrubbing: $scrubbing)
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 2)
@@ -462,8 +434,9 @@ struct ClipPage: View {
     }
     private func activate(reload: Bool = false) {
         guard active, visible, phase == .active, !ads.isPresenting,
-              !gate, !options, !editor, !share else { return }
+              !gate, !options, !editor, !downloadPanel, !downloadReward else { return }
         recorded = false
+        accessChecked = true
         allowed = clip.playbackURL.isFileURL || quota.mayWatch(clip.id, premium: commerce.premium)
         if !allowed {
             playback.pause()
@@ -472,23 +445,191 @@ struct ClipPage: View {
             if quota.claimWatchLimitPrompt(premium: commerce.premium) { gate = true }
             return
         }
-        if playback.loadedURL != clip.playbackURL || reload { playback.load(clip.playbackURL, autoplay: true) }
+        if playback.loadedURL != clip.playbackURL || reload {
+            firstFrameReady = false
+            playback.load(clip.playbackURL, autoplay: true)
+        }
         else { playback.play() }
+    }
+    private func resumeAfterControls() {
+        guard resumeAfterSheet, active, visible, phase == .active,
+              !ads.isPresenting, !gate, !options, !editor, !downloadPanel, !downloadReward else { return }
+        resumeAfterSheet = false
+        activate()
     }
     private func interruptPlayback() {
         if active, visible, playback.intendsPlayback { resumeAfterInterruption = true }
         playback.pause()
     }
     private func resumeIfNeeded() {
-        guard resumeAfterInterruption, active, visible, phase == .active,
-              !ads.isPresenting, !gate, !options, !editor, !share else { return }
+        guard resumeAfterInterruption || resumeAfterSheet, active, visible, phase == .active,
+              !ads.isPresenting, !gate, !options, !editor, !downloadPanel, !downloadReward else { return }
         resumeAfterInterruption = false
+        resumeAfterSheet = false
         activate()
+    }
+    private func cacheVideo() {
+        if offline.cached(clip.id) != nil || offline.busy || clip.playbackURL.isFileURL {
+            showDownloadPanel()
+        } else if !quota.mayDownload(clip.id, premium: commerce.premium) {
+            resumeAfterSheet = playback.intendsPlayback
+            playback.pause(); downloadReward = true
+        } else {
+            Task {
+                await offline.download(clip)
+                if offline.error != nil, active, visible { showDownloadPanel() }
+            }
+        }
+    }
+    private func showDownloadPanel() {
+        resumeAfterSheet = playback.intendsPlayback
+        playback.pause(); downloadPanel = true
     }
     private func save() {
         library.toggle(offline.cached(clip.id)?.clip ?? clip)
     }
 }
+private struct PlayerExitButton: View {
+    let action: () -> Void
+    private static let artwork: UIImage? = {
+        guard let source = UIImage(named: "CourtExitControl")?.cgImage else { return nil }
+        let scale = CGFloat(source.width) / 2022
+        let bounds = CGRect(x: 89, y: 145, width: 1846, height: 458)
+            .applying(CGAffineTransform(scaleX: scale, y: scale)).integral
+        guard let image = source.cropping(to: bounds) else { return nil }
+        return UIImage(cgImage: image, scale: 4, orientation: .up)
+    }()
+    var body: some View {
+        Button(action: action) {
+            LocalizedText("Exit").font(.court(.caption, weight: .semibold))
+                .foregroundStyle(ClipoStyle.paper).lineLimit(1).minimumScaleFactor(0.75)
+                .padding(.leading, 10).padding(.trailing, 27)
+                .frame(width: 78, height: 30)
+                .background {
+                    if let artwork = Self.artwork {
+                        Image(uiImage: artwork).resizable(capInsets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 32))
+                    }
+                }
+                .frame(minHeight: 44).contentShape(Rectangle())
+        }.buttonStyle(PressStyle()).accessibilityLabel(LocalizedStringKey("Exit"))
+    }
+}
+
+private struct PlayerCacheButton: View {
+    let clip: LessonClip
+    let action: () -> Void
+    @EnvironmentObject private var offline: OfflineStore
+    private var cached: Bool { offline.cached(clip.id) != nil || clip.playbackURL.isFileURL }
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Glyph(symbol: .download, size: 17, tint: cached ? ClipoStyle.accent : .white)
+                    .frame(width: 28, height: 28)
+                Group {
+                    if cached { LocalizedText("Cached") }
+                    else if offline.preparingID == clip.id { LocalizedText("Loading…") }
+                    else if offline.downloadingID == clip.id { Text(verbatim: "\(Int(offline.progress * 100))%") }
+                    else { LocalizedText("Cache") }
+                }.font(.court(.caption2, weight: .medium))
+                    .foregroundStyle(cached ? ClipoStyle.accent : .white)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
+            }.frame(width: 44).frame(minHeight: 48).contentShape(Rectangle())
+        }.buttonStyle(PressStyle())
+            .accessibilityLabel(LocalizedStringKey(cached ? "Available offline" : "Download for offline"))
+            .accessibilityIdentifier("player.cacheVideo")
+    }
+}
+
+private struct PlayerProgressControl: View {
+    @ObservedObject var playback: PlaybackController
+    @ObservedObject var timeline: PlaybackTimeline
+    let enabled: Bool
+    let canResume: Bool
+    @Binding var scrubbing: Bool
+    @State private var scrubPosition: Double = 0
+    @State private var resumeAfterScrub = false
+    var body: some View {
+        ClipoScrubber(value: Binding(
+                get: { scrubbing ? scrubPosition : timeline.elapsed },
+                set: {
+                    scrubPosition = $0
+                    // During a drag, move the UI only. Seek once on release.
+                    if !scrubbing { playback.seek($0) }
+                }
+            ), range: 0...max(1, timeline.duration), label: "Playback position",
+                         tint: .white, trackHeight: scrubbing ? 5 : 2,
+                         onEditingChanged: { editing in
+                if editing {
+                    scrubPosition = timeline.elapsed
+                    resumeAfterScrub = playback.isPlaying
+                    scrubbing = true
+                    playback.pause()
+                } else {
+                    playback.seek(scrubPosition)
+                    scrubbing = false
+                    if resumeAfterScrub && canResume {
+                        playback.play()
+                    }
+                    resumeAfterScrub = false
+                }
+            })
+            .disabled(!enabled || timeline.duration <= 0 || playback.error != nil)
+            .overlay(alignment: .top) {
+                if scrubbing {
+                    Text(verbatim: "\(durationLabel(scrubPosition)) / \(durationLabel(timeline.duration))")
+                        .environment(\.layoutDirection, .leftToRight)
+                        .font(.caption.monospacedDigit()).offset(y: -8)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+}
+
+private struct PlayerPoster: View {
+    let url: URL?
+    var body: some View {
+        Color.black.overlay {
+            GeometryReader { geometry in
+                if let url {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill()
+                                .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                        }
+                    }
+                }
+            }
+        }.clipped().allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
+private struct PlayerLoadingFeedback: View {
+    let buffering: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var phase
+    @State private var revealed = false
+    var body: some View {
+        VStack(spacing: 10) {
+            Image("ClipoLoadingMark").resizable().scaledToFit()
+                .frame(width: 36, height: 5)
+                .phaseAnimator([false, true]) { content, dimmed in
+                    content.opacity(reduceMotion || phase != .active ? 1 : (dimmed ? 0.3 : 1))
+                } animation: { _ in
+                    reduceMotion || phase != .active ? nil : .easeInOut(duration: 0.6)
+                }.accessibilityHidden(true)
+            LocalizedText(buffering ? "Buffering…" : "Loading…")
+                .font(.court(.caption)).foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.8), radius: 3, y: 1)
+        }.opacity(revealed ? 1 : 0).accessibilityHidden(!revealed)
+            .task {
+                do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); revealed = true }
+                catch { }
+            }
+            .onDisappear { revealed = false }
+    }
+}
+
 struct ClipoScrubber: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -527,7 +668,7 @@ struct ClipoScrubber: View {
     }
 }
 
-private enum PlayerArtwork {
+private enum PlayerArtwork: CaseIterable, Hashable {
     case save, saved, share, more
     // Optical crop regions measured from the generated 1254px atlas.
     var region: CGRect {
@@ -538,6 +679,17 @@ private enum PlayerArtwork {
         case .more: CGRect(x: 717.5, y: 698.5, width: 400, height: 400)
         }
     }
+    private static let tiles: [PlayerArtwork: UIImage] = {
+        guard let source = UIImage(named: "ClipoPlayerActions")?.cgImage else { return [:] }
+        let scale = CGFloat(source.width) / 1254
+        return Dictionary(uniqueKeysWithValues: allCases.compactMap { artwork -> (PlayerArtwork, UIImage)? in
+            let rect = artwork.region.applying(CGAffineTransform(scaleX: scale, y: scale)).integral
+            guard let tile = source.cropping(to: rect) else { return nil }
+            return (artwork, UIImage(cgImage: tile))
+        })
+    }()
+    var image: UIImage? { Self.tiles[self] }
+
 }
 
 private struct PlayerRailButton: View {
@@ -549,19 +701,13 @@ private struct PlayerRailButton: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 2) {
-                GeometryReader { geometry in
-                    let rect = artwork.region
-                    Image("ClipoPlayerActions").resizable().interpolation(.high)
-                        .colorMultiply(selected ? ClipoStyle.accent : .white)
-                        .frame(width: 1254 * geometry.size.width / rect.width,
-                               height: 1254 * geometry.size.height / rect.height)
-                        .offset(x: -rect.minX * geometry.size.width / rect.width,
-                                y: -rect.minY * geometry.size.height / rect.height)
-                }.frame(width: 36, height: 36).clipped().blendMode(.screen)
-                    .allowsHitTesting(false)
-                LocalizedText(title).font(.court(.caption2, weight: .medium)).foregroundStyle(.white)
+                OriginalSymbolMask(image: artwork.image, tint: selected ? ClipoStyle.accent : .white)
+                    .frame(width: 28, height: 28)
+                LocalizedText(title).font(.court(.caption2, weight: .medium))
+                    .foregroundStyle(selected ? ClipoStyle.accent : .white)
+                    .lineLimit(1).minimumScaleFactor(0.8)
                     .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
-            }.frame(minWidth: 48, minHeight: 54)
+            }.frame(width: 44).frame(minHeight: 48)
                 .contentShape(.interaction, Rectangle())
         }.buttonStyle(PressStyle())
             .accessibilityLabel(LocalizedStringKey(accessibilityTitle))

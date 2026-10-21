@@ -41,6 +41,7 @@ struct LibraryView: View {
     private var libraryContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             libraryFilters
+            if filter == "Downloads" { DownloadAllowanceSummary() }
             SectionLabel(title: filter, detail: "\(itemCount) \(itemCount == 1 ? "item" : "items") · On this device")
             if offline.downloadingID != nil {
                 if let title = offline.currentTitle { Text(verbatim: title).font(.court(.subheadline)).lineLimit(2) }
@@ -170,8 +171,12 @@ struct OfflineDownloadButton: View {
     @State private var downloadGate = false
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            DownloadAllowanceSummary()
             if offline.cached(clip.id) != nil {
                 LocalizedText("Available offline").font(.court(.subheadline)).foregroundStyle(ClipoStyle.accent)
+            } else if offline.preparingID == clip.id {
+                ActionButton(title: "Preparing download…", primary: false, busy: true) { }
+                LocalizedText("Preparing download…").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
             } else if offline.downloadingID == clip.id {
                 LocalizedText("Downloading · \(Int(offline.progress * 100))%").font(.court(.caption))
                 ActionButton(title: "Cancel download", primary: false) { Task { await offline.cancel() } }
@@ -181,6 +186,12 @@ struct OfflineDownloadButton: View {
                         Task { await offline.download(clip) }
                     } else { downloadGate = true }
                 }.disabled(offline.busy || clip.playbackURL.isFileURL)
+                    .accessibilityIdentifier("player.downloadOffline")
+                if offline.isRestoring {
+                    LocalizedText("Restoring downloads…").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
+                } else if offline.busy {
+                    LocalizedText("Another download is in progress.").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
+                }
             }
             if let error = offline.error {
                 ErrorNote(message: error)
@@ -189,6 +200,29 @@ struct OfflineDownloadButton: View {
                 }
             }
         }.sheet(isPresented: $downloadGate) { MembershipView(rewardKind: .download) }
+    }
+}
+
+// Shared, live allowance display at the download decision and in the offline library.
+struct DownloadAllowanceSummary: View {
+    @EnvironmentObject private var quota: QuotaStore
+    @EnvironmentObject private var commerce: CommerceStore
+    @State private var showingReward = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LocalizedText("Downloads left").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
+            LocalizedText(commerce.premium || quota.downloadsUnlimited ? "Unlimited" :
+                            quota.usage == nil ? "Loading…" : "\(quota.downloadsLeft) downloads left today")
+                .font(.court(.subheadline, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+            if quota.canRequestReward(for: .download, premium: commerce.premium) {
+                ActionButton(title: "Get more downloads", primary: false) { showingReward = true }
+            }
+        }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            .background { OriginalSurface(tone: .pine) }
+            .accessibilityElement(children: .contain)
+            .onAppear { quota.resetIfNeeded() }
+            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in quota.resetIfNeeded() }
+            .sheet(isPresented: $showingReward) { MembershipView(rewardKind: .download) }
     }
 }
 

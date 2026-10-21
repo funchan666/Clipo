@@ -101,23 +101,30 @@ struct PolicyDocument: Identifiable {
 }
 
 struct PolicyLinks: View {
+    var compact = false
     @EnvironmentObject private var api: APIClient
     @State private var document: PolicyDocument?
     var body: some View {
+        Group {
+            if compact { linkLayout.buttonStyle(PressStyle()) }
+            else { linkLayout.buttonStyle(CompactActionStyle()) }
+        }.sheet(item: $document) { PolicyBrowser(document: $0) }
+    }
+    private var linkLayout: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) { links }
-            VStack(alignment: .leading, spacing: 10) { links }
+            HStack(spacing: compact ? 16 : 10) { links }
+            VStack(alignment: .leading, spacing: compact ? 0 : 10) { links }
         }.font(.court(.footnote, weight: .medium)).foregroundStyle(ClipoStyle.accent)
-            .buttonStyle(CompactActionStyle())
-            .sheet(item: $document) { PolicyBrowser(document: $0) }
     }
     @ViewBuilder private var links: some View {
         if let url = api.configuration.termsURL {
             Button("Terms of Use") { document = PolicyDocument(title: "Terms of Use", url: url) }
+                .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                 .frame(minHeight: 44)
         }
         if let url = api.configuration.privacyURL {
             Button("Privacy Policy") { document = PolicyDocument(title: "Privacy Policy", url: url) }
+                .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                 .frame(minHeight: 44)
         }
     }

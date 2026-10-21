@@ -96,6 +96,42 @@ import Foundation
         let fallback = store("fallback", remote: zero)
         try fallback.reward(UUID(), owner: "fallback", kind: .download)
         precondition(fallback.downloadsLeft == 5)
+        // A live configuration changes ad rewards now, but cannot refill a spent base.
+        let oldAllowance = try JSONDecoder().decode(QuotaConfiguration.self, from:
+            Data(#"{"dailyWatchLimit":5,"unlimitedAfterAdCount":5,"firstAdRewardWatchCount":3,"favoriteBaseLimit":2}"#.utf8))
+        let newAllowance = try JSONDecoder().decode(QuotaConfiguration.self, from:
+            Data(#"{"dailyWatchLimit":20,"unlimitedAfterAdCount":10,"firstAdRewardWatchCount":7,"favoriteBaseLimit":4}"#.utf8))
+        let daily = store("daily", remote: oldAllowance)
+        precondition(daily.recordWatch("daily-view", premium: false))
+        try daily.recordDownload("daily-download", owner: "daily", premium: false)
+        daily.configure(userID: "daily", policy: policy, remote: newAllowance)
+        precondition(daily.watchesLeft == 4 && daily.downloadsLeft == 4)
+        // Both the freeze and pending values survive process recreation / a missing refresh.
+        let reloaded = store("daily")
+        precondition(reloaded.watchesLeft == 4 && reloaded.downloadsLeft == 4)
+        reloaded.configure(userID: "daily", policy: policy, remote: newAllowance)
+        try reloaded.reward(UUID(), owner: "daily", kind: .watch)
+        try reloaded.reward(UUID(), owner: "daily", kind: .download)
+        precondition(reloaded.watchesLeft == 11 && reloaded.downloadsLeft == 8)
+        var priorDay = reloaded.usage!
+        priorDay.day = Date().addingTimeInterval(-2 * 86_400)
+        try SecureStorage.write(JSONEncoder().encode(priorDay), key: "quota.daily")
+        let nextDay = store("daily")
+        precondition(nextDay.watchesLeft == 20 && nextDay.downloadsLeft == 10)
+        precondition(nextDay.completedAds(.watch) == 0 && nextDay.completedAds(.download) == 0)
+        try nextDay.recordDownload("daily-download", owner: "daily", premium: false)
+        precondition(nextDay.downloadsLeft == 10)
+        // Untouched bases may refresh today; watch/download locks are independent.
+        let separate = store("separate", remote: oldAllowance)
+        precondition(separate.recordWatch("used-watch", premium: false))
+        separate.configure(userID: "separate", policy: policy, remote: newAllowance)
+        precondition(separate.watchesLeft == 4 && separate.downloadsLeft == 10)
+        let noBase = try JSONDecoder().decode(QuotaConfiguration.self, from:
+            Data(#"{"dailyWatchLimit":0,"unlimitedAfterAdCount":0,"firstAdRewardWatchCount":0,"favoriteBaseLimit":0}"#.utf8))
+        separate.configure(userID: "separate", policy: policy, remote: noBase)
+        precondition(separate.watchesLeft == 4 && separate.downloadsLeft == 0)
+        try separate.reward(UUID(), owner: "separate", kind: .watch)
+        precondition(separate.watchesLeft == 4) // Explicit zero reward is not replaced by a fallback.
         // Old favorite spend is not a download; existing watch history survives migration.
         var legacy = DailyUsage(day: Date())
         legacy.watched = ["already-watched"]; legacy.favoritesUsed = 4; legacy.extraFavorites = 10
