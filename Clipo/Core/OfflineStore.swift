@@ -42,8 +42,9 @@ final class OfflineStore: NSObject, ObservableObject {
     private var readable = true
     private var restored = false
     private var finalizing = false
-    @Published private var preparing = false
+    @Published private(set) var preparingID: String?
     @Published private var restoring = false
+    private var progressObservation: NSKeyValueObservation?
     private lazy var hlsSession: AVAssetDownloadURLSession = {
         let config = URLSessionConfiguration.background(withIdentifier: api.configuration.bundleID + ".offline.hls")
         config.isDiscretionary = false
@@ -56,7 +57,8 @@ final class OfflineStore: NSObject, ObservableObject {
         config.sessionSendsLaunchEvents = false
         return URLSession(configuration: config, delegate: self, delegateQueue: .main)
     }()
-    var busy: Bool { restoring || preparing || downloadingID != nil }
+    var busy: Bool { restoring || preparingID != nil || downloadingID != nil }
+    var isRestoring: Bool { restoring }
     var currentTitle: String? { index.transfer?.clip.title }
 
     init(api: APIClient, quota: QuotaStore, commerce: CommerceStore) {
@@ -89,6 +91,7 @@ final class OfflineStore: NSObject, ObservableObject {
         restored = true
         restoring = true
         defer { restoring = false }
+        publish() // The index was initially read before guest authentication finished.
         let hlsTasks = await hlsSession.allTasks
         let fileTasks = await fileSession.allTasks
         let tasks = hlsTasks + fileTasks
@@ -104,31 +107,31 @@ final class OfflineStore: NSObject, ObservableObject {
             } else { await finishIfReady() }
         }
         else if matching.isEmpty { fail(transfer.id, message: "Download interrupted. Please try again.") }
-        else { matching.forEach { $0.resume() } }
+        else {
+            matching.forEach { observeProgress(of: $0, transferID: transfer.id); $0.resume() }
+        }
     }
     func download(_ clip: LessonClip) async {
+        guard preparingID == nil else { error = "Another download is being prepared."; return }
+        preparingID = clip.id
+        defer { preparingID = nil }
+        error = nil
         await resumePending()
-        guard readable, !busy, cached(clip.id) == nil,
-              let owner = api.session?.userId.value, !clip.playbackURL.isFileURL else { return }
+        guard readable else { error = "Offline downloads could not be read. Existing files have been preserved."; return }
+        guard !restoring, downloadingID == nil else { error = "Another download is in progress."; return }
+        if cached(clip.id) != nil { return }
+        guard let owner = api.session?.userId.value else { error = "Connect to your account before downloading."; return }
+        guard !clip.playbackURL.isFileURL else { error = "This video is already stored on this device."; return }
         guard quota.mayDownload(clip.id, premium: commerce.premium) else {
             error = "Your download allowance is used up."; return
         }
-        preparing = true
-        defer { preparing = false }
-        error = nil
         // Expired/missing local files may be re-downloaded. QuotaStore remembers paid IDs.
         let isHLS: Bool
-        if clip.playbackURL.pathExtension.lowercased() == "m3u8" { isHLS = true }
-        else {
-            do {
-                var request = URLRequest(url: clip.playbackURL, timeoutInterval: 15)
-                request.httpMethod = "HEAD"
-                let (_, response) = try await URLSession.shared.data(for: request)
-                let mime = response.mimeType?.lowercased() ?? ""
-                isHLS = mime.contains("mpegurl") || response.url?.pathExtension.lowercased() == "m3u8"
-            } catch { self.error = "Download could not start. Please check your connection."; return }
-        }
-        guard owner == api.session?.userId.value, quota.mayDownload(clip.id, premium: commerce.premium) else { return }
+        do { isHLS = try await isHLSMedia(at: clip.playbackURL) }
+        catch is CancellationError { return }
+        catch { self.error = "Download could not start. Please check your connection."; return }
+        guard owner == api.session?.userId.value else { error = "Connect to your account before downloading."; return }
+        guard quota.mayDownload(clip.id, premium: commerce.premium) else { error = "Your download allowance is used up."; return }
         let transfer = OfflineTransfer(id: UUID(), clip: clip, owner: owner, premium: commerce.premium, isHLS: isHLS)
         do {
             var next = index; next.transfer = transfer
@@ -142,8 +145,37 @@ final class OfflineStore: NSObject, ObservableObject {
                 task = fileSession.downloadTask(with: clip.playbackURL)
             }
             task.taskDescription = transfer.id.uuidString
+            observeProgress(of: task, transferID: transfer.id)
             task.resume()
         } catch { self.error = error.localizedDescription }
+    }
+    private func isHLSMedia(at url: URL) async throws -> Bool {
+        let extensionName = url.pathExtension.lowercased()
+        if extensionName == "m3u8" { return true }
+        if ["mp4", "mov", "m4v"].contains(extensionName) { return false }
+        // Signed/extensionless sources may reject HEAD. Probe only a small GET
+        // prefix, then cancel the session even when the server ignores Range.
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        var request = URLRequest(url: url, timeoutInterval: 15)
+        request.setValue("bytes=0-511", forHTTPHeaderField: "Range")
+        let (bytes, response) = try await session.bytes(for: request)
+        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+            throw ClipoError.invalidResponse
+        }
+        if response.mimeType?.lowercased().contains("mpegurl") == true || response.url?.pathExtension.lowercased() == "m3u8" { return true }
+        var prefix = Data()
+        for try await byte in bytes {
+            prefix.append(byte)
+            if prefix.count >= 512 { break }
+        }
+        return String(decoding: prefix, as: UTF8.self).contains("#EXTM3U")
+    }
+    private func observeProgress(of task: URLSessionTask, transferID: UUID) {
+        progressObservation = task.progress.observe(\.fractionCompleted, options: [.initial, .new]) { [weak self] progress, _ in
+            let value = progress.fractionCompleted
+            Task { @MainActor [weak self] in self?.updateProgress(id: transferID, value: value) }
+        }
     }
     func cancel() async {
         guard let transfer = index.transfer, !finalizing else { return }
@@ -226,6 +258,7 @@ final class OfflineStore: NSObject, ObservableObject {
             next.videos.insert(video, at: 0)
             next.transfer = nil
             try persist(next)
+            progressObservation = nil
             progress = 1
         } catch {
             // Keep completed file + journal; retry can finish the quota/index commit
@@ -245,6 +278,7 @@ final class OfflineStore: NSObject, ObservableObject {
         do {
             var next = index; next.transfer = nil
             try persist(next)
+            progressObservation = nil
             if let path = transfer.relativePath {
                 try? FileManager.default.removeItem(at: URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(path))
             }
