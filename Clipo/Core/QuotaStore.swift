@@ -22,6 +22,11 @@ struct DailyUsage: Codable {
     var downloadsUsed: Int?
     var completedDownloadRewardIDs: Set<UUID>?
     var extraDownloads: Int?
+    // Today's admitted base is independent of live per-ad reward configuration.
+    var watchBaseForDay: Int?
+    var downloadBaseForDay: Int?
+    var nextWatchBase: Int?
+    var nextDownloadBase: Int?
 }
 
 @MainActor
@@ -37,8 +42,8 @@ final class QuotaStore: ObservableObject {
     private var watchLimitPromptClaimed = false
     var unlimited: Bool { isUnlimited(.watch) }
     var downloadsUnlimited: Bool { isUnlimited(.download) }
-    var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watchSpend ?? usage?.watched.count ?? 0)) }
-    var downloadsLeft: Int { max(0, (remote?.dailyDownloadLimit ?? policy?.dailyFavoriteLimit ?? 0) + (usage?.extraDownloads ?? 0) - (usage?.downloadsUsed ?? 0)) }
+    var watchesLeft: Int { max(0, (usage?.watchBaseForDay ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watchSpend ?? usage?.watched.count ?? 0)) }
+    var downloadsLeft: Int { max(0, (usage?.downloadBaseForDay ?? 0) + (usage?.extraDownloads ?? 0) - (usage?.downloadsUsed ?? 0)) }
     private var downloadReward: Int { max(0, remote?.downloadRewardCount ?? policy?.favoriteReward ?? 0) }
     func isUnlimited(_ kind: AllowanceKind) -> Bool { completedAds(kind) >= 4 }
     func completedAds(_ kind: AllowanceKind) -> Int {
@@ -57,10 +62,14 @@ final class QuotaStore: ObservableObject {
         return max(0, values[index] ?? policy?.watchRewards[safe: index] ?? 0)
     }
     func configure(userID: String?, policy: CommerceConfiguration?, remote: QuotaConfiguration?) {
+        objectWillChange.send()
         self.policy = policy
         self.remote = remote
-        if watchesLeft > 0 || unlimited { watchLimitPromptClaimed = false }
-        guard self.userID != userID || usage == nil else { resetIfNeeded(); return }
+        guard self.userID != userID || usage == nil else {
+            resetIfNeeded()
+            updateDailyBases()
+            return
+        }
         self.userID = userID
         usage = nil
         watchLimitPromptClaimed = false
@@ -84,7 +93,21 @@ final class QuotaStore: ObservableObject {
                 } else { usage = saved }
             } else { try commit(freshDay()) }
             resetIfNeeded()
+            updateDailyBases()
         } catch { storageOK = false; self.error = "Daily allowance could not be read. Please try again later." }
+    }
+    private func updateDailyBases() {
+        guard storageOK, var next = usage else { return }
+        // A startup refresh may temporarily have no remote configuration. Keep the
+        // last persisted next-day values until a real configuration arrives.
+        let watchBase = max(0, remote?.dailyWatchLimit ?? (remote == nil ? next.nextWatchBase : nil) ?? policy?.dailyWatchLimit ?? 0)
+        let downloadBase = max(0, remote?.dailyDownloadLimit ?? (remote == nil ? next.nextDownloadBase : nil) ?? policy?.dailyFavoriteLimit ?? 0)
+        next.nextWatchBase = watchBase
+        next.nextDownloadBase = downloadBase
+        if next.watchBaseForDay == nil || (next.watchSpend ?? next.watched.count) == 0 { next.watchBaseForDay = watchBase }
+        if next.downloadBaseForDay == nil || (next.downloadsUsed ?? 0) == 0 { next.downloadBaseForDay = downloadBase }
+        do { try commit(next) }
+        catch { storageOK = false; self.error = "Daily allowance could not be read. Please try again later." }
     }
     func resetIfNeeded() {
         guard storageOK, userID != nil, let usage else { return }
@@ -121,6 +144,7 @@ final class QuotaStore: ObservableObject {
         try commit(next)
     }
     func canRequestReward(for kind: AllowanceKind, premium: Bool) -> Bool {
+        resetIfNeeded()
         return !premium && storageOK && userID != nil && policy != nil && !isUnlimited(kind) && remaining(kind) == 0
     }
     func claimWatchLimitPrompt(premium: Bool) -> Bool {
@@ -167,6 +191,10 @@ final class QuotaStore: ObservableObject {
         value.downloadsUsed = 0
         value.completedDownloadRewardIDs = []
         value.extraDownloads = 0
+        value.watchBaseForDay = max(0, remote?.dailyWatchLimit ?? usage?.nextWatchBase ?? policy?.dailyWatchLimit ?? 0)
+        value.downloadBaseForDay = max(0, remote?.dailyDownloadLimit ?? usage?.nextDownloadBase ?? policy?.dailyFavoriteLimit ?? 0)
+        value.nextWatchBase = value.watchBaseForDay
+        value.nextDownloadBase = value.downloadBaseForDay
         return value
     }
     private func boundary() -> Date {

@@ -233,7 +233,7 @@ struct PolicyWebView: UIViewRepresentable {
 }
 
 struct AccountSettingsSection: View {
-    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.en.rawValue
+    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.systemSelection
     @State private var languagePicker = false
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var commerce: CommerceStore
@@ -245,7 +245,7 @@ struct AccountSettingsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             Button { languagePicker = true } label: {
-                AccountMenuRow(title: "App language", detail: (AppLanguage(rawValue: languageCode) ?? .en).nativeName)
+                AccountMenuRow(title: "App language", detail: AppLanguage(rawValue: languageCode)?.nativeName ?? "Follow system")
             }.buttonStyle(PressStyle())
                 .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                 .accessibilityIdentifier("account.language")

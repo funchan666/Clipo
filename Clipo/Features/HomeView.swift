@@ -281,7 +281,7 @@ struct ChannelView: View {
         if item.isFolder == true, let link = item.landingPage?.nilIfBlank {
             child = ChannelRoute(link: link, title: item.name ?? "Folder")
         } else if let clip = item.clip(channel: route.title) {
-            player = PlayerRoute(clips: items.compactMap { $0.clip(channel: route.title) }, startID: clip.id)
+            player = PlayerRoute(clips: items.compactMap { $0.clip(channel: route.title) }, startID: clip.id, continuesRecommendations: true)
         } else { error = "This item does not contain a playable video." }
     }
 }

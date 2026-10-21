@@ -158,10 +158,17 @@ struct ChannelRoute: Identifiable, Hashable {
     let title: String
     var id: String { link }
 }
+// Separate scroll occurrence from video identity: a new recommendation round may
+// repeat a lesson without sharing AVPlayer state or charging it again.
+struct PlaybackQueueEntry: Identifiable, Equatable {
+    let id: String
+    let clip: LessonClip
+}
 struct PlayerRoute: Identifiable {
     let id = UUID()
     let clips: [LessonClip]
     let startID: String
+    var continuesRecommendations = false
 }
 enum WebAddress {
     // Collection lookup accepts a code, whereas search-check accepts raw input.

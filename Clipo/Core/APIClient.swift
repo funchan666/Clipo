@@ -173,8 +173,8 @@ final class APIClient: ObservableObject {
     func feed(query: String, feedID: String?, cursor: String?) async throws -> LessonFeedPage {
         guard let session else { throw ClipoError.unauthorized }
         var queryItems = ["userId": session.userId.value, "packageName": configuration.bundleID, "pageSize": "10"]
-        if let feedID { queryItems["feedId"] = feedID }
-        if let cursor { queryItems["cursor"] = cursor }
+        if let feedID = feedID?.nilIfBlank { queryItems["feedId"] = feedID }
+        if let cursor = cursor?.nilIfBlank { queryItems["cursor"] = cursor }
         if let query = query.nilIfBlank { queryItems["query"] = query }
         return try await perform("/app-api/flow/search-check", query: queryItems)
     }

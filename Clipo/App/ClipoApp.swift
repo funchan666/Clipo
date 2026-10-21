@@ -2,8 +2,10 @@ import SwiftUI
 
 @main
 struct ClipoApp: App {
-    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.en.rawValue
-    private var language: AppLanguage { AppLanguage(rawValue: languageCode) ?? .en }
+    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.systemSelection
+    @Environment(\.scenePhase) private var appPhase
+    @State private var systemLanguage = AppLanguage.systemLanguage()
+    private var language: AppLanguage { AppLanguage(rawValue: languageCode) ?? systemLanguage }
     @StateObject private var api: APIClient
     @StateObject private var library: LibraryStore
     @StateObject private var quota: QuotaStore
@@ -29,7 +31,14 @@ struct ClipoApp: App {
                 .environmentObject(accountAccess)
                 .environment(\.locale, language.locale)
                 .environment(\.layoutDirection, language.direction)
+                .font(.court(.body))
                 .preferredColorScheme(.dark).tint(ClipoStyle.accent)
+                .onReceive(NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)) { _ in
+                    systemLanguage = AppLanguage.systemLanguage()
+                }
+                .onChange(of: appPhase) { _, phase in
+                    if phase == .active { systemLanguage = AppLanguage.systemLanguage() }
+                }
         }
     }
 }

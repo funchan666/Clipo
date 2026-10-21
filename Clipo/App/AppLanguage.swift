@@ -1,11 +1,17 @@
 import SwiftUI
 
-/// Independent of device language. Changing this preference never rebuilds the app's stores.
+/// Follows the system by default; explicit overrides never rebuild business stores.
 enum AppLanguage: String, CaseIterable, Identifiable {
     case en, ko, ja, id, pt, ar, es
-    static let preferenceKey = "clipo.language"
+    // A new key migrates the former fixed-English default to Follow system once.
+    static let preferenceKey = "clipo.language.selection"
+    static let systemSelection = "system"
+    static func systemLanguage(preferredLanguages: [String] = Locale.preferredLanguages) -> AppLanguage {
+        guard let first = preferredLanguages.first else { return .en }
+        return from(Locale(identifier: first))
+    }
     static var current: AppLanguage {
-        AppLanguage(rawValue: UserDefaults.standard.string(forKey: preferenceKey) ?? "en") ?? .en
+        AppLanguage(rawValue: UserDefaults.standard.string(forKey: preferenceKey) ?? systemSelection) ?? systemLanguage()
     }
     var id: String { rawValue }
     var nativeName: String {
@@ -130,7 +136,7 @@ struct LocalizedText: View {
 }
 
 struct LanguagePicker: View {
-    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.en.rawValue
+    @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.systemSelection
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(spacing: 0) {
@@ -140,6 +146,19 @@ struct LanguagePicker: View {
                     LocalizedText("Choose your language").font(.court(.title2, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     VStack(spacing: 0) {
+                        Button { languageCode = AppLanguage.systemSelection } label: {
+                            HStack(spacing: 16) {
+                                LocalizedText("Follow system").font(.court(.body, weight: .medium))
+                                Spacer(minLength: 8)
+                                if languageCode == AppLanguage.systemSelection {
+                                    LocalizedText("Selected").font(.court(.caption, weight: .semibold)).foregroundStyle(ClipoStyle.accent)
+                                }
+                            }.padding(20).frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                                .background { OriginalSurface(tone: languageCode == AppLanguage.systemSelection ? .pine : .sage) }
+                                .contentShape(Rectangle())
+                        }.buttonStyle(PressStyle())
+                            .accessibilityAddTraits(languageCode == AppLanguage.systemSelection ? .isSelected : [])
+                            .accessibilityIdentifier("language.system")
                         ForEach(AppLanguage.allCases) { language in
                             Button {
                                 languageCode = language.rawValue

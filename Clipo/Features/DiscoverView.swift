@@ -2,34 +2,60 @@ import SwiftUI
 
 @MainActor
 final class FeedStore: ObservableObject {
-    @Published private(set) var clips: [LessonClip] = []
+    @Published private(set) var entries: [PlaybackQueueEntry]
     @Published private(set) var loading = false
     @Published private(set) var hasMore = true
     @Published var error: String?
+    var clips: [LessonClip] { entries.map(\.clip) }
     private var feedID: String?
     private var cursor: String?
+    private var roundVideoIDs = Set<String>()
+    private var requestQuery = ""
     private(set) var query = ""
     private var generation = UUID()
+
+    init(seed: [LessonClip] = []) {
+        entries = seed.map { PlaybackQueueEntry(id: $0.id, clip: $0) }
+        hasMore = seed.isEmpty
+    }
+
+    func isNearEnd(_ id: String?) -> Bool {
+        guard let id, let index = entries.firstIndex(where: { $0.id == id }) else { return false }
+        return index >= entries.count - 3
+    }
+
     func load(api: APIClient, search: String? = nil) async {
         if let search {
             generation = UUID()
-            clips = []; feedID = nil; cursor = nil; hasMore = true; loading = false; query = search
+            entries = []; feedID = nil; cursor = nil; hasMore = true; loading = false
+            query = search; requestQuery = search; roundVideoIDs = []
         }
-        guard !loading, hasMore else { return }
+        guard !loading else { return }
         let current = generation
         loading = true
         error = nil
         defer { if generation == current { loading = false } }
         do {
-            let response = try await api.feed(query: query, feedID: feedID, cursor: cursor)
-            try Task.checkCancellation()
-            guard current == generation else { return }
-            var seen = Set(clips.map(\.id))
-            clips += response.list.compactMap(\.clip).filter { seen.insert($0.id).inserted }
-            let oldCursor = cursor
-            feedID = response.feedId
-            cursor = response.nextCursor
-            hasMore = response.hasMore && response.nextCursor?.nilIfBlank != nil && response.nextCursor != oldCursor && !response.list.isEmpty
+            // Skip a few duplicate/invalid pages, but never spin on an empty service.
+            for _ in 0..<3 {
+                if !hasMore {
+                    feedID = nil; cursor = nil; roundVideoIDs = []
+                    requestQuery = "" // Finished search/collection -> fresh recommendation round.
+                    hasMore = true
+                }
+                let previousCursor = cursor
+                let response = try await api.feed(query: requestQuery, feedID: feedID, cursor: cursor)
+                try Task.checkCancellation()
+                guard current == generation else { return }
+                let additions = response.list.compactMap(\.clip).filter { roundVideoIDs.insert($0.id).inserted }
+                    .map { PlaybackQueueEntry(id: UUID().uuidString, clip: $0) }
+                feedID = response.feedId?.nilIfBlank
+                cursor = response.nextCursor?.nilIfBlank
+                hasMore = response.hasMore && cursor != nil && cursor != previousCursor
+                if !additions.isEmpty { entries += additions; return }
+                if response.list.isEmpty { hasMore = false; break }
+            }
+            if !entries.isEmpty { error = "No more lessons are available right now. Try again." }
         } catch is CancellationError {
             // Leaving a screen/search is not a service failure.
         } catch {
@@ -42,7 +68,10 @@ struct DiscoverView: View {
     private let canDismiss: Bool
     private let onSearchResult: ((String, LessonClip) -> Void)?
     @EnvironmentObject private var offline: OfflineStore
-    private var displayClips: [LessonClip] { feed.clips.map { offline.playable($0) } }
+    private var displayEntries: [PlaybackQueueEntry] {
+        feed.entries.map { PlaybackQueueEntry(id: $0.id, clip: offline.playable($0.clip)) }
+    }
+    private let morePageID = "recommendation-tail"
     @EnvironmentObject private var api: APIClient
     @StateObject private var feed = FeedStore()
     @StateObject private var players = PlaybackPool()
@@ -85,31 +114,29 @@ struct DiscoverView: View {
                     GeometryReader { geometry in
                         ScrollView(.vertical) {
                             LazyVStack(spacing: 0) {
-                                ForEach(displayClips) { clip in
+                                ForEach(displayEntries) { entry in
+                                    let clip = entry.clip
                                     Group {
-                                        if let playback = players.controllers[clip.id] {
-                                            ClipPage(clip: clip, active: activeID == clip.id && !searchOpen,
+                                        if let playback = players.controllers[entry.id] {
+                                            ClipPage(clip: clip, active: activeID == entry.id && !searchOpen,
                                                      controlInsets: container.safeAreaInsets, playback: playback,
-                                                     didStartPlaying: { players.prepareNext(after: clip.id) })
+                                                     didStartPlaying: { players.prepareNext(after: entry.id) })
                                         } else {
                                             MediaCover(url: clip.coverURL)
                                         }
-                                    }.frame(width: geometry.size.width, height: geometry.size.height).clipped().id(clip.id)
+                                    }.frame(width: geometry.size.width, height: geometry.size.height).clipped().id(entry.id)
                                 }
-                                if feed.error != nil || feed.hasMore {
+                                if !feed.entries.isEmpty {
                                     VStack(spacing: 16) {
                                         LocalizedText(feed.error ?? "Finding more clips…").foregroundStyle(ClipoStyle.secondary)
                                         ActionButton(title: "Load more", primary: false, busy: feed.loading) { Task { await feed.load(api: api) } }
                                     }.padding(28).padding(container.safeAreaInsets)
-                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                        .frame(width: geometry.size.width, height: geometry.size.height).id(morePageID)
                                 }
                             }.scrollTargetLayout()
                         }.scrollTargetBehavior(.paging).scrollPosition(id: $activeID, anchor: .top).scrollIndicators(.hidden)
                             .onChange(of: activeID) { _, id in
-                                players.update(clips: displayClips, selectedID: id)
-                                if let index = feed.clips.firstIndex(where: { $0.id == id }), index >= feed.clips.count - 3 {
-                                    Task { await feed.load(api: api) }
-                                }
+                                players.update(entries: displayEntries, selectedID: id)
                             }
                     }.ignoresSafeArea(.container, edges: .all)
                 }
@@ -122,12 +149,19 @@ struct DiscoverView: View {
                 guard api.session != nil else { return }
                 await feed.load(api: api, search: search)
                 guard !Task.isCancelled else { return }
-                activeID = feed.clips.first?.id
+                activeID = feed.entries.first?.id
             }
-            .onChange(of: feed.clips) { _, clips in
-                if !clips.contains(where: { $0.id == activeID }) { activeID = clips.first?.id }
-                players.update(clips: clips.map { offline.playable($0) }, selectedID: activeID)
-                if let first = clips.first, recordedQuery != feed.query {
+            .onChange(of: activeID) { _, id in
+                guard !searchOpen, api.session != nil,
+                      id == morePageID || feed.isNearEnd(id) else { return }
+                Task { await feed.load(api: api) }
+            }
+            .onChange(of: feed.entries) { previous, entries in
+                if activeID == morePageID, entries.count > previous.count {
+                    activeID = entries[previous.count].id
+                } else if !entries.contains(where: { $0.id == activeID }) { activeID = entries.first?.id }
+                players.update(entries: displayEntries, selectedID: activeID)
+                if let first = entries.first?.clip, recordedQuery != feed.query {
                     recordedQuery = feed.query
                     onSearchResult?(feed.query, first)
                 }
@@ -160,61 +194,87 @@ struct DiscoverView: View {
     private func runSearch() {
         searchOpen = false
         activeID = nil
-        Task { await feed.load(api: api, search: search); activeID = feed.clips.first?.id }
+        Task { await feed.load(api: api, search: search); activeID = feed.entries.first?.id }
     }
     private func refreshFeed() async {
         players.releaseAll()
         activeID = nil
         await feed.load(api: api, search: search)
         guard !Task.isCancelled else { return }
-        activeID = feed.clips.first?.id
+        activeID = feed.entries.first?.id
     }
 }
 
 struct PlayerScreen: View {
     @EnvironmentObject private var offline: OfflineStore
-    private var displayClips: [LessonClip] { route.clips.map { offline.playable($0) } }
+    @EnvironmentObject private var api: APIClient
     @Environment(\.dismiss) private var dismiss
     let route: PlayerRoute
     @State private var activeID: String?
+    @StateObject private var feed: FeedStore
     @StateObject private var players = PlaybackPool()
     @Environment(\.scenePhase) private var scenePhase
+    private let morePageID = "collection-recommendation-tail"
+    private var displayEntries: [PlaybackQueueEntry] {
+        feed.entries.map { PlaybackQueueEntry(id: $0.id, clip: offline.playable($0.clip)) }
+    }
     init(route: PlayerRoute) {
         self.route = route
         _activeID = State(initialValue: route.startID)
+        _feed = StateObject(wrappedValue: FeedStore(seed: route.clips))
     }
     var body: some View {
         GeometryReader { container in
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
-                        ForEach(displayClips) { clip in
+                        ForEach(displayEntries) { entry in
+                            let clip = entry.clip
                             Group {
-                                if let playback = players.controllers[clip.id] {
-                                    ClipPage(clip: clip, active: activeID == clip.id,
+                                if let playback = players.controllers[entry.id] {
+                                    ClipPage(clip: clip, active: activeID == entry.id,
                                              controlInsets: container.safeAreaInsets, playback: playback,
-                                             didStartPlaying: { players.prepareNext(after: clip.id) })
-                                } else {
-                                    MediaCover(url: clip.coverURL)
+                                             didStartPlaying: { players.prepareNext(after: entry.id) })
+                                } else { MediaCover(url: clip.coverURL) }
+                            }.containerRelativeFrame([.horizontal, .vertical]).clipped().id(entry.id)
+                        }
+                        if route.continuesRecommendations {
+                            VStack(spacing: 16) {
+                                LocalizedText(feed.error ?? "Finding more clips…")
+                                ActionButton(title: "Load more", primary: false, busy: feed.loading) {
+                                    Task { await feed.load(api: api) }
                                 }
-                            }.containerRelativeFrame([.horizontal, .vertical])
-                                .clipped().id(clip.id)
+                            }.padding(28).padding(container.safeAreaInsets)
+                                .containerRelativeFrame([.horizontal, .vertical]).id(morePageID)
                         }
                     }.scrollTargetLayout()
                 }
-                .scrollTargetBehavior(.paging)
-                .scrollPosition(id: $activeID, anchor: .top)
+                .scrollTargetBehavior(.paging).scrollPosition(id: $activeID, anchor: .top)
                 .scrollIndicators(.hidden)
                 .task { proxy.scrollTo(route.startID, anchor: .top) }
             }.ignoresSafeArea(.container, edges: .all)
         }.clipoScreenBackground(.black).overlay(alignment: .topLeading) {
             IconButton(symbol: .back, label: "Back") { dismiss() }.padding(12)
         }.preferredColorScheme(.dark)
-            .onAppear { players.update(clips: displayClips, selectedID: activeID) }
-            .onChange(of: activeID) { _, id in players.update(clips: displayClips, selectedID: id) }
+            .onAppear {
+                players.update(entries: displayEntries, selectedID: activeID)
+                continueFeedIfNeeded(activeID)
+            }
+            .onChange(of: activeID) { _, id in
+                players.update(entries: displayEntries, selectedID: id)
+                continueFeedIfNeeded(id)
+            }
+            .onChange(of: feed.entries) { previous, entries in
+                if activeID == morePageID, entries.count > previous.count { activeID = entries[previous.count].id }
+                players.update(entries: displayEntries, selectedID: activeID)
+            }
             .onDisappear { players.releaseAll() }
             .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
+    }
+    private func continueFeedIfNeeded(_ id: String?) {
+        guard route.continuesRecommendations, id == morePageID || feed.isNearEnd(id) else { return }
+        Task { await feed.load(api: api) }
     }
 }
 

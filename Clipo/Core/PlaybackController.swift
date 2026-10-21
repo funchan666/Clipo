@@ -217,36 +217,39 @@ final class PlaybackController: ObservableObject {
 final class PlaybackPool: ObservableObject {
     @Published private(set) var controllers: [String: PlaybackController] = [:]
     private var selectedID: String?
-    private var nextClip: LessonClip?
+    private var nextEntry: PlaybackQueueEntry?
 
     func update(clips: [LessonClip], selectedID: String?) {
-        guard let selectedID, let index = clips.firstIndex(where: { $0.id == selectedID }) else {
+        update(entries: clips.map { PlaybackQueueEntry(id: $0.id, clip: $0) }, selectedID: selectedID)
+    }
+    func update(entries: [PlaybackQueueEntry], selectedID: String?) {
+        guard let selectedID, let index = entries.firstIndex(where: { $0.id == selectedID }) else {
             releaseAll()
             return
         }
         self.selectedID = selectedID
-        nextClip = clips.indices.contains(index + 1) ? clips[index + 1] : nil
-        let nearby = clips[max(0, index - 1)...min(clips.count - 1, index + 1)]
+        nextEntry = entries.indices.contains(index + 1) ? entries[index + 1] : nil
+        let nearby = entries[max(0, index - 1)...min(entries.count - 1, index + 1)]
         let ids = Set(nearby.map(\.id))
         for (id, controller) in controllers {
             if !ids.contains(id) { controller.release() }
             else if id != selectedID { controller.pause() }
         }
         var retained: [String: PlaybackController] = [:]
-        for clip in nearby {
-            let controller = controllers[clip.id] ?? PlaybackController()
-            if let url = controller.loadedURL, url != clip.playbackURL { controller.release() }
-            retained[clip.id] = controller
+        for entry in nearby {
+            let controller = controllers[entry.id] ?? PlaybackController()
+            if let url = controller.loadedURL, url != entry.clip.playbackURL { controller.release() }
+            retained[entry.id] = controller
         }
         guard let current = retained[selectedID] else { return }
-        if current.loadedURL == nil { current.load(clips[index].playbackURL, autoplay: false) }
+        if current.loadedURL == nil { current.load(entries[index].clip.playbackURL, autoplay: false) }
         controllers = retained
         if current.isPlaying { prepareNext(after: selectedID) }
     }
     func prepareNext(after id: String) {
         // Do not compete with the current video's initial load.
-        guard id == selectedID, controllers[id]?.isPlaying == true, let nextClip else { return }
-        controllers[nextClip.id]?.prepare(nextClip.playbackURL)
+        guard id == selectedID, controllers[id]?.isPlaying == true, let nextEntry else { return }
+        controllers[nextEntry.id]?.prepare(nextEntry.clip.playbackURL)
     }
     func suspend() {
         // The active page records its resume intent before pausing itself.
@@ -260,7 +263,7 @@ final class PlaybackPool: ObservableObject {
         controllers.values.forEach { $0.release() }
         controllers = [:]
         selectedID = nil
-        nextClip = nil
+        nextEntry = nil
     }
 }
 

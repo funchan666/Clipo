@@ -7,7 +7,7 @@ Native SwiftUI iPhone app for shared tennis lessons and local practice-video rev
 - [Supplied API reference](Documentation/API-reference.md).
 - English policy drafts remain in `Documentation/Legal/`.
 
-Backend: `https://devapi.io-jp.com`. Target Bundle ID: `com.cliporows.toolskeep` (the target overrides the older xcconfig fallback).
+Backend: `https://devapi.io-jp.com`. Target Bundle ID: `im.seex.lobo` (the target overrides the older xcconfig fallback).
 Configuration: `Config/Clipo.xcconfig` and `Clipo/Resources/Commerce.json`.
 
 Monthly product: `coins_1.99`, USD reference price 9.99.
@@ -28,7 +28,7 @@ App-open ads use server `displayInterval` in minutes on cold start and backgroun
 
 The theme and automatic-entry changes received static inspection only: no build, tests, simulator run, live login, ad, or purchase verification this turn. The linked demo predates these changes. See the handoff for confirmed business rules still awaiting implementation, including backend restore reconciliation and production configuration. Independent download quotas and UTC resets are now implemented in source, with no runtime verification.
 
-Language switching is available in Me → App language: English (default), Korean, Japanese, Indonesian, Portuguese, Arabic and Spanish. Selection is persisted independently of device language and updates owned UI and bundled field notes without resetting session or media stores. Arabic uses RTL layout with directional navigation arrows; artwork, URLs and the playback timeline retain their original orientation. USD reference prices remain USD. Remote/user content, external policy pages and OS-controlled sheets retain their source/system language. The seven catalogs contain 410 matching entries each. Localization resources, placeholders and project references were inspected statically; no build, simulator or multilingual runtime verification was performed.
+Language switching is available in Me → App language: English (default), Korean, Japanese, Indonesian, Portuguese, Arabic and Spanish. Selection is persisted independently of device language and updates owned UI and bundled field notes without resetting session or media stores. Arabic uses RTL layout with directional navigation arrows; artwork, URLs and the playback timeline retain their original orientation. USD reference prices remain USD. Remote/user content, external policy pages and OS-controlled sheets retain their source/system language. The seven catalogs have matching localization keys. Localization resources, placeholders and project references were inspected statically; no build, simulator or multilingual runtime verification was performed.
 
 The illustrated UI refresh replaces the tools landing page and field-notes index with compact image-led navigation. Nine original editorial illustrations and four bitmap control surfaces live in `ClipoCourtEditorial` and `ClipoCourtControls`. Shared action buttons, choice controls, the Home open-link action and membership plan selection now display the original control art; native text stays localized and scalable. Full educational articles and existing functional routes remain available. Prompts are in `ProjectMaterials/UIAssets/Prompts/CourtEditorial/`. Artwork was visually inspected; resource references, catalog parity and source changes were checked statically. The updated native screens have not been built or run.
 
@@ -36,3 +36,7 @@ The illustrated UI refresh replaces the tools landing page and field-notes index
 Confirmed allowance changes now separate free favorites, online viewing and offline downloads. Each allowance has its own four-ad progression; no-fill gifts do not advance it and only appear after the matching allowance is exhausted. The ledger resets at 05:00 UTC, preserves same-day watch identity and remembers successfully downloaded IDs across days. Playback options include offline download; Library → Downloads plays the persisted local media. HLS assets remain at their system-provided location, while ordinary files are stored in Application Support. Download journals make quota/index completion retryable. These paths have received static inspection only.
 
 Clean reinstall now resets the guest session/UUID while preserving historical payment ownership records. Failed and cancelled StoreKit transactions are durably queued for backend status reporting using real available fields; refresh/relaunch retries pending reports. Existing upgrades keep their installation identity. The standalone quota contract checks were updated, but neither they nor builds, media downloads, ads or payments were run for this change.
+
+## Practice journal and local typography
+
+Tools now includes an offline serve journal with court/target selection, undo, session placement statistics and CSV export. Barlow and Lora are bundled under their OFL licenses. See [current review-readiness report](Documentation/Review-readiness.md) for resource optimization, permission changes, actual release limitations and unperformed runtime checks. Membership is unchanged.
