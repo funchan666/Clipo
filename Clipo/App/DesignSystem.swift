@@ -57,7 +57,7 @@ struct TennisCourtBanner: View {
                 .font(.caption2.weight(.bold)).tracking(2)
                 .foregroundStyle(ClipoStyle.accent)
             LocalizedText("A better game\nstarts here.")
-                .font(.system(.largeTitle, design: .serif, weight: .medium))
+                .font(.system(.title, design: .serif, weight: .medium))
                 .foregroundStyle(ClipoStyle.paper)
                 .fixedSize(horizontal: false, vertical: true)
             LocalizedText("Watch. Practise. Repeat.")
@@ -116,7 +116,7 @@ struct IconButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            Glyph(symbol: symbol).allowsHitTesting(false).frame(width: 48, height: 48)
+            Glyph(symbol: symbol, size: 19).allowsHitTesting(false).frame(width: 44, height: 44)
                 .background {
                     if selected { OriginalSurface(tone: .pine) }
                 }
@@ -153,11 +153,11 @@ struct ActionButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            LocalizedText(busy ? "Please wait…" : title).font(.body.weight(.semibold))
+            LocalizedText(busy ? "Please wait…" : title).font(.subheadline.weight(.semibold))
                 .lineLimit(1).minimumScaleFactor(0.75)
-                .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 14)
+                .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 12)
                 .foregroundStyle(primary ? ClipoStyle.ink : Color.white)
-                .frame(maxWidth: .infinity, minHeight: 54)
+                .frame(maxWidth: .infinity, minHeight: 48)
                 .background { OriginalSurface(tone: primary ? .accent : .pine) }
                 .contentShape(.interaction, Rectangle())
         }.buttonStyle(PressStyle()).disabled(busy)
@@ -170,10 +170,10 @@ struct MessagePanel: View {
     var action: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            LocalizedText(title).font(.title3.weight(.semibold)).foregroundStyle(.white)
+            LocalizedText(title).font(.headline).foregroundStyle(.white)
             LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
             if let actionTitle, let action { ActionButton(title: actionTitle, primary: false, action: action) }
-        }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+        }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
     }
 }
@@ -188,7 +188,7 @@ struct ErrorNote: View {
 }
 struct FieldStyle: ViewModifier {
     func body(content: Content) -> some View {
-        content.font(.body).foregroundStyle(.white).padding(16)
+        content.font(.subheadline).foregroundStyle(.white).padding(14)
             .background(ClipoStyle.raised, in: RoundedRectangle(cornerRadius: 14))
             .tint(ClipoStyle.accent)
     }
@@ -202,7 +202,7 @@ extension View {
     }
     // A readable column follows the available container without resetting page state.
     func clipoPage() -> some View {
-        padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 28)
+        padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
             .frame(maxWidth: 680).frame(maxWidth: .infinity, alignment: .top)
     }
 }
@@ -231,10 +231,10 @@ struct SheetHeading: View {
     var close: () -> Void
     var body: some View {
         HStack {
-            LocalizedText(title).font(.title3.weight(.bold)).lineLimit(2)
+            LocalizedText(title).font(.headline).lineLimit(2)
             Spacer()
             IconButton(symbol: .close, label: "Close", action: close)
-        }.padding(.horizontal, 20).padding(.top, 12)
+        }.padding(.horizontal, 20).padding(.top, 8)
     }
 }
 
@@ -322,9 +322,16 @@ struct OriginalSurface: View {
     // Cap insets preserve the artist's corners on both short chips and large panels.
     private static let surfaces: [UIImage] = {
         guard let source = UIImage(named: "ClipoCourtControls")?.cgImage else { return [] }
-        let width = CGFloat(source.width), rowHeight = CGFloat(source.height) / 4
+        // The original is 2172 × 724, but its painted rows are not equal quarters.
+        // Equal-row slicing cut through the accent's lower rim and included the
+        // next row beneath the ivory button. Keep each complete painted border.
+        let boundaries: [CGFloat] = [13, 185, 360, 535, 708]
+        let scaleX = CGFloat(source.width) / 2172
+        let scaleY = CGFloat(source.height) / 724
         return (0..<4).compactMap { row in
-            let rect = CGRect(x: 6, y: CGFloat(row) * rowHeight + 6, width: width - 12, height: rowHeight - 12)
+            let rect = CGRect(x: 12 * scaleX, y: boundaries[row] * scaleY,
+                              width: 2148 * scaleX,
+                              height: (boundaries[row + 1] - boundaries[row]) * scaleY).integral
             guard let tile = source.cropping(to: rect) else { return nil }
             return UIImage(cgImage: tile, scale: 3, orientation: .up)
         }
@@ -332,7 +339,7 @@ struct OriginalSurface: View {
     var body: some View {
         if Self.surfaces.indices.contains(tone.rawValue) {
             Image(uiImage: Self.surfaces[tone.rawValue])
-                .resizable(capInsets: EdgeInsets(top: 14, leading: 22, bottom: 14, trailing: 22), resizingMode: .stretch)
+                .resizable(capInsets: EdgeInsets(top: 20, leading: 22, bottom: 20, trailing: 22), resizingMode: .stretch)
                 .environment(\.layoutDirection, .leftToRight)
                 .allowsHitTesting(false).accessibilityHidden(true)
         }
@@ -390,11 +397,11 @@ struct CourtFilter: View {
             HStack(spacing: 8) {
                 ForEach(values, id: \.self) { value in
                     Button { select(value) } label: {
-                        LocalizedText(value).font(.subheadline.weight(.semibold))
+                        LocalizedText(value).font(.footnote.weight(.semibold))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                            .padding(.horizontal, 22).padding(.vertical, 14)
-                            .frame(minHeight: 48)
+                            .padding(.horizontal, 16).padding(.vertical, 10)
+                            .frame(minHeight: 44)
                             .foregroundStyle(selected == value ? ClipoStyle.ink : ClipoStyle.paper)
                             .background { OriginalSurface(tone: selected == value ? .accent : .pine) }
                             .contentShape(Rectangle())

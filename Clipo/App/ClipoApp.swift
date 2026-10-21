@@ -117,10 +117,10 @@ struct ClipoTabBar: View {
                         Color.clear
                         Image(item.artwork + (selection == item ? "Selected" : "Normal"))
                             .renderingMode(.original).resizable().interpolation(.high).scaledToFit()
-                            .frame(maxWidth: 64, maxHeight: 64)
+                            .frame(maxWidth: 56, maxHeight: 56)
                             .allowsHitTesting(false)
                     }
-                    .frame(maxWidth: .infinity).frame(height: 68)
+                    .frame(maxWidth: .infinity).frame(height: 60)
                     // Hit-test geometry only (not drawn): include transparent image margins.
                     .contentShape(.interaction, Rectangle())
                 }

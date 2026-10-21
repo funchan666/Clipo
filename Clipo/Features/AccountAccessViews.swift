@@ -30,7 +30,7 @@ struct AccountLoadingIndicator: View {
                 }
                 .accessibilityHidden(true)
             LocalizedText(title).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
-        }.padding(28).frame(maxWidth: 280)
+        }.padding(22).frame(maxWidth: 250)
             .foregroundStyle(.white)
             .background { OriginalSurface(tone: .pine) }
             .accessibilityElement(children: .combine)
@@ -66,24 +66,24 @@ struct AccountDecisionDialog: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    LocalizedText(title).font(.title2.weight(.bold)).foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 16) {
+                    LocalizedText(title).font(.headline).foregroundStyle(.white)
                         .accessibilityAddTraits(.isHeader).accessibilityFocused($titleFocused)
-                    LocalizedText(message).font(.body).foregroundStyle(ClipoStyle.secondary)
+                    LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if showsPolicies { PolicyLinks() }
                     VStack(spacing: 10) {
                         Button(action: confirm) {
-                            LocalizedText(confirmTitle).font(.body.weight(.semibold))
+                            LocalizedText(confirmTitle).font(.subheadline.weight(.semibold))
                                 .lineLimit(1).minimumScaleFactor(0.75)
-                                .multilineTextAlignment(.center).padding(16)
-                                .frame(maxWidth: .infinity, minHeight: 54)
+                                .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.vertical, 12)
+                                .frame(maxWidth: .infinity, minHeight: 48)
                                 .foregroundStyle(destructive ? ClipoStyle.danger : ClipoStyle.ink)
                                 .background { OriginalSurface(tone: destructive ? .pine : .accent) }
                         }.buttonStyle(PressStyle())
                         if let cancel { ActionButton(title: "Cancel", primary: false, action: cancel) }
                     }
-                }.padding(26).frame(maxWidth: 420)
+                }.padding(20).frame(maxWidth: 360)
                     .background { OriginalSurface(tone: .pine) }
                     .padding(24).frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
@@ -242,25 +242,21 @@ struct AccountSettingsSection: View {
                 .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                 .accessibilityIdentifier("account.language")
             VStack(alignment: .leading, spacing: 12) {
-                LocalizedText("Privacy & subscriptions").font(.headline)
+                LocalizedText("Privacy & terms").font(.headline)
                 VStack(spacing: 0) {
                     if let url = api.configuration.privacyURL {
                         Button { document = PolicyDocument(title: "Privacy Policy", url: url) } label: {
                             AccountMenuRow(title: "Privacy Policy")
                         }
-                        rowDivider
                     }
                     if let url = api.configuration.termsURL {
+                        if api.configuration.privacyURL != nil { rowDivider }
                         Button { document = PolicyDocument(title: "Terms of Use", url: url) } label: {
                             AccountMenuRow(title: "Terms of Use")
                         }
-                        rowDivider
-                    }
-                    Link(destination: URL(string: "https://apps.apple.com/account/subscriptions")!) {
-                        AccountMenuRow(title: "Manage subscription")
                     }
                     if ads.privacyOptionsRequired {
-                        rowDivider
+                        if api.configuration.privacyURL != nil || api.configuration.termsURL != nil { rowDivider }
                         Button { Task { await ads.privacyOptions() } } label: {
                             AccountMenuRow(title: "Advertising privacy")
                         }
@@ -298,8 +294,8 @@ private struct AccountMenuRow: View {
             Glyph(symbol: .back, size: 12, tint: ClipoStyle.secondary)
                 .rotationEffect(.degrees(180)).frame(width: 20, height: 24)
                 .allowsHitTesting(false)
-        }.padding(.horizontal, 20).padding(.vertical, 14)
-            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+        }.padding(.horizontal, 18).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
             .contentShape(.interaction, Rectangle())
     }
 }

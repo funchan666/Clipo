@@ -25,12 +25,12 @@ struct MembershipView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 VStack(spacing: 12) {
-                    TennisArtwork(kind: .bag, height: 164)
+                    TennisArtwork(kind: .bag, height: 136)
                         .accessibilityHidden(true)
                     LocalizedText(commerce.premium ? "More court time." : "Keep your game growing.")
-                        .font(.system(.largeTitle, design: .serif, weight: .medium))
+                        .font(.system(.title, design: .serif, weight: .medium))
                         .foregroundStyle(ClipoStyle.paper)
                     LocalizedText("Unlimited views. Unlimited downloads.")
                         .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
@@ -101,7 +101,7 @@ struct MembershipView: View {
                         }.disabled(interactionLocked)
                     }
                 }
-            }.padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 24)
+            }.padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 20)
                 .frame(maxWidth: 560).frame(maxWidth: .infinity)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -145,7 +145,7 @@ struct MembershipView: View {
                     planPrice(price, plan: plan, foreground: foreground, secondary: secondary)
                 }
             }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
             .background { OriginalSurface(tone: selected ? .ivory : .pine) }
             .contentShape(.interaction, RoundedRectangle(cornerRadius: 22))
         }.buttonStyle(PressStyle()).disabled(interactionLocked)
@@ -164,7 +164,7 @@ struct MembershipView: View {
 
     private func planPrice(_ price: String, plan: CommerceConfiguration.Product, foreground: Color, secondary: Color) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text(verbatim: price).environment(\.layoutDirection, .leftToRight).font(.title.weight(.bold)).foregroundStyle(foreground).fixedSize()
+            Text(verbatim: price).environment(\.layoutDirection, .leftToRight).font(.title2.weight(.bold)).foregroundStyle(foreground).fixedSize()
             LocalizedText("per \(plan.period.rawValue)").font(.caption).foregroundStyle(secondary)
         }
     }
@@ -227,7 +227,7 @@ struct AccountView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 22) {
                 if let session = api.session {
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .firstTextBaseline) {
@@ -248,7 +248,7 @@ struct AccountView: View {
                     .font(.caption).foregroundStyle(ClipoStyle.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 4)
             }
-            .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 24)
+            .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 24)
             .frame(maxWidth: 600).frame(maxWidth: .infinity)
         }.clipoScreenBackground().foregroundStyle(.white)
             .sheet(isPresented: $paywall) { MembershipView() }
@@ -290,7 +290,7 @@ struct AccountView: View {
     private var membershipCopy: some View {
         VStack(alignment: .leading, spacing: 8) {
             LocalizedText(commerce.premium ? "Your court pass." : "Go further with Plus.")
-                .font(.title2.weight(.bold)).tracking(-0.5).foregroundStyle(ClipoStyle.ink)
+                .font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
             LocalizedText("Unlimited views. Unlimited downloads.")
                 .font(.footnote).foregroundStyle(ClipoStyle.paperSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -323,7 +323,7 @@ struct AccountView: View {
 
     private func balance(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            LocalizedText(value).font(value == "Unlimited" ? .title3.weight(.bold) : .largeTitle.weight(.semibold))
+            LocalizedText(value).font(value == "Unlimited" ? .headline : .title.weight(.semibold))
                 .monospacedDigit().foregroundStyle(ClipoStyle.paper)
                 .fixedSize(horizontal: false, vertical: true)
             LocalizedText(label).font(.footnote).foregroundStyle(ClipoStyle.secondary)
@@ -339,16 +339,16 @@ struct LuckyRewardView: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 20) {
-                    TennisArtwork(kind: .bag, height: 140)
+                VStack(spacing: 16) {
+                    TennisArtwork(kind: .bag, height: 108)
                         .scaleEffect(appeared || reduceMotion ? 1 : 0.88)
                         .accessibilityHidden(true)
-                    LocalizedText("A little luck, on us").font(.title2.bold()).foregroundStyle(.white)
+                    LocalizedText("A little luck, on us").font(.headline).foregroundStyle(.white)
                     LocalizedText("No ad is available right now. \(message)")
-                        .font(.body).foregroundStyle(ClipoStyle.secondary)
+                        .font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                         .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     ActionButton(title: "Keep exploring", action: dismiss)
-                }.padding(26).frame(maxWidth: 420)
+                }.padding(20).frame(maxWidth: 360)
                     .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 28))
                     .padding(24).frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }

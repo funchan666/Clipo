@@ -95,13 +95,13 @@ struct HomeView: View {
                 Glyph(symbol: .link, size: 20)
                     .frame(width: 40, height: 40)
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
-                LocalizedText("Open a lesson").font(.title3.weight(.semibold)).foregroundStyle(ClipoStyle.ink)
+                LocalizedText("Open a lesson").font(.headline).foregroundStyle(ClipoStyle.ink)
             }
             TextField("Lesson link or short code", text: $link, axis: .vertical)
                 .environment(\.layoutDirection, .leftToRight)
                 .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                .focused($focused).font(.body).foregroundStyle(ClipoStyle.ink)
-                .tint(ClipoStyle.ink).padding(16)
+                .focused($focused).font(.subheadline).foregroundStyle(ClipoStyle.ink)
+                .tint(ClipoStyle.ink).padding(14)
                 .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
                 .environment(\.colorScheme, .light)
                 .accessibilityLabel("Lesson or collection link")
@@ -118,14 +118,14 @@ struct HomeView: View {
             }
             Button(action: resolve) {
                 LocalizedText("Open link")
-                    .font(.body.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
-                    .padding(.horizontal, 16).padding(.vertical, 16)
-                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .font(.subheadline.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(canOpenLink ? ClipoStyle.paper : ClipoStyle.ink)
                     .background { MatteSurface(tone: canOpenLink ? .pineOnPaper : .sageOnPaper) }
                     .contentShape(Rectangle())
             }.buttonStyle(ComposerPressStyle()).disabled(!canOpenLink)
-        }.padding(22).background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
+        }.padding(20).background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
     }
     private var canOpenLink: Bool { searchRequest == nil && link.nilIfBlank != nil }
     @ViewBuilder private var allowanceLabel: some View {

@@ -197,7 +197,7 @@ private struct LibraryEmptyState: View {
     let message: String
     var body: some View {
         VStack(spacing: 10) {
-            LocalizedText(title).font(.title3.weight(.semibold))
+            LocalizedText(title).font(.headline)
             LocalizedText(message).font(.subheadline).foregroundStyle(ClipoStyle.secondary)
                 .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }.multilineTextAlignment(.center).padding(.horizontal, 12).padding(.vertical, 24)

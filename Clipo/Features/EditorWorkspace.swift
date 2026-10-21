@@ -51,14 +51,13 @@ struct ToolsView: View {
                     // Artwork alone extends behind the status area; controls stay below it.
                     CourtArtwork(subject: .review)
                         .frame(height: min(geometry.size.width * 0.82, 420) + geometry.safeAreaInsets.top)
-                    VStack(spacing: 22) {
+                    VStack(spacing: 18) {
                         Button { selectedTool = .studio } label: {
-                            HStack(spacing: 12) {
-                                LocalizedText("Review practice").font(.title3.weight(.semibold))
-                                    .lineLimit(1).minimumScaleFactor(0.8)
-                                Spacer(minLength: 4)
-                                Glyph(symbol: .back, size: 14, tint: ClipoStyle.ink).rotationEffect(.degrees(180))
-                            }.padding(.horizontal, 22).frame(minHeight: 60)
+                            LocalizedText("Review practice").font(.subheadline.weight(.semibold))
+                                .lineLimit(1).minimumScaleFactor(0.8)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 18).padding(.vertical, 12)
+                                .frame(maxWidth: .infinity, minHeight: 48)
                                 .foregroundStyle(ClipoStyle.ink)
                                 .background { OriginalSurface(tone: .ivory) }
                                 .contentShape(Rectangle())
@@ -68,9 +67,9 @@ struct ToolsView: View {
                                 Button { selectedTool = tool } label: {
                                     VStack(spacing: 8) {
                                         CourtArtwork(subject: subject(tool)).aspectRatio(1, contentMode: .fit)
-                                        LocalizedText(tool.editorTab).font(.subheadline.weight(.semibold))
+                                        LocalizedText(tool.editorTab).font(.footnote.weight(.semibold))
                                             .lineLimit(1).minimumScaleFactor(0.8)
-                                            .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 48)
+                                            .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 44)
                                             .background { OriginalSurface(tone: .pine) }
                                     }.foregroundStyle(ClipoStyle.paper).contentShape(Rectangle())
                                 }.buttonStyle(PressStyle())
@@ -179,24 +178,25 @@ struct EditorWorkspace: View {
                     }
                     LocalizedText("Your original stays untouched. Exports are saved to your local library.").font(.footnote).foregroundStyle(ClipoStyle.secondary)
                 } else {
-                    VStack(alignment: .leading, spacing: 24) {
-                        TennisArtwork(kind: .lesson, height: 176)
+                    VStack(alignment: .leading, spacing: 18) {
+                        TennisArtwork(kind: .lesson, height: 144)
                         VStack(alignment: .leading, spacing: 10) {
-                            LocalizedText("Start with a video.").font(.title2.weight(.bold)).tracking(-0.5)
+                            LocalizedText("Start with a video.").font(.headline)
                             LocalizedText("Choose a clip from your device. We’ll keep your original untouched.")
                                 .font(.subheadline).foregroundStyle(ClipoStyle.secondary).lineSpacing(3)
                         }
                         VStack(spacing: 10) {
                             PhotosPicker(selection: $picker, matching: .videos, photoLibrary: .shared()) {
-                                LocalizedText(importing ? "Importing…" : "Choose from Photos").font(.body.weight(.semibold))
+                                LocalizedText(importing ? "Importing…" : "Choose from Photos").font(.subheadline.weight(.semibold))
                                     .lineLimit(1).minimumScaleFactor(0.75)
-                                    .padding(.horizontal, 16).padding(.vertical, 16)
-                                    .frame(maxWidth: .infinity, minHeight: 54).foregroundStyle(ClipoStyle.ink)
+                                    .padding(.horizontal, 16).padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity, minHeight: 48).foregroundStyle(ClipoStyle.ink)
                                     .background { OriginalSurface(tone: .accent) }
+                                    .contentShape(Rectangle())
                             }.disabled(importing).buttonStyle(PressStyle())
                             ActionButton(title: "Browse Files", primary: false, busy: importing) { filePicker = true }
                         }
-                    }.padding(24).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+                    }.padding(20).background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 24))
                     if initialTool == .studio {
                         VStack(alignment: .leading, spacing: 18) {
                             SectionLabel(title: "From raw to ready")

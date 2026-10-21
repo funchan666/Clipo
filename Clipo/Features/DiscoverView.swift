@@ -262,9 +262,10 @@ struct ClipPage: View {
             }.clipped().allowsHitTesting(false).accessibilityHidden(true)
             if !allowed, active {
                 VStack(spacing: 16) {
-                    LocalizedText("Keep watching").font(.title.bold())
+                    LocalizedText("Keep watching").font(.title3.weight(.semibold))
                     ActionButton(title: "Get more views") { gate = true }
-                }.padding(32).background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
+                }.padding(20).frame(maxWidth: 360)
+                    .background(ClipoStyle.background.opacity(0.9), in: RoundedRectangle(cornerRadius: 24)).padding(24)
             } else if let error = playback.error {
                 MessagePanel(title: "This clip couldn’t load", message: error, actionTitle: "Retry") { activate(reload: true) }.padding(24)
             } else if active, allowed, !playback.isPlaying, !playback.isLoading, !scrubbing {
@@ -301,16 +302,16 @@ struct ClipPage: View {
             .sheet(isPresented: $gate, onDismiss: { if active { activate() } }) { MembershipView(rewardKind: .watch) }
             .sheet(isPresented: $options) {
                 ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 18) {
                     SheetHeading(title: "Playback") { options = false }
-                    LocalizedText("Speed").font(.title3.bold())
+                    LocalizedText("Speed").font(.headline)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach([Float(0.5), 1, 1.5, 2], id: \.self) { speed in
                                 Button("\(speed, specifier: "%g")×") { playback.setSpeed(speed) }
                                     .font(.subheadline.weight(.semibold))
                                     .lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                                    .padding(.horizontal, 22).frame(minHeight: 48)
+                                    .padding(.horizontal, 16).frame(minHeight: 44)
                                     .foregroundStyle(playback.speed == speed ? ClipoStyle.ink : ClipoStyle.paper)
                                     .background { OriginalSurface(tone: playback.speed == speed ? .accent : .pine) }
                                     .accessibilityAddTraits(playback.speed == speed ? .isSelected : [])
