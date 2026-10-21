@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class LibraryStore: ObservableObject {
-    @Published private(set) var snapshot = LibrarySnapshot()
+    @Published private(set) var snapshot = LessonLibrarySnapshot()
     @Published var error: String?
     private let root: URL
     private let snapshotURL: URL
@@ -17,19 +17,19 @@ final class LibraryStore: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             if FileManager.default.fileExists(atPath: snapshotURL.path) {
-                snapshot = try JSONDecoder().decode(LibrarySnapshot.self, from: Data(contentsOf: snapshotURL))
+                snapshot = try JSONDecoder().decode(LessonLibrarySnapshot.self, from: Data(contentsOf: snapshotURL))
             }
         } catch {
             readable = false
             self.error = "Your local library could not be read. Existing files have been preserved."
         }
     }
-    var movies: [LocalMovie] { snapshot.movies }
-    var favorites: [Clip] { snapshot.favorites }
-    var history: [LinkVisit] { snapshot.history }
-    func url(for movie: LocalMovie) -> URL { root.appendingPathComponent(movie.filename) }
-    func isSaved(_ clip: Clip) -> Bool { favorites.contains { $0.id == clip.id } }
-    func toggle(_ clip: Clip) {
+    var movies: [PracticeRecording] { snapshot.movies }
+    var favorites: [LessonClip] { snapshot.favorites }
+    var history: [LessonLinkVisit] { snapshot.history }
+    func url(for movie: PracticeRecording) -> URL { root.appendingPathComponent(movie.filename) }
+    func isSaved(_ clip: LessonClip) -> Bool { favorites.contains { $0.id == clip.id } }
+    func toggle(_ clip: LessonClip) {
         var next = snapshot
         if isSaved(clip) { next.favorites.removeAll { $0.id == clip.id } }
         else { next.favorites.insert(clip, at: 0) }
@@ -38,7 +38,7 @@ final class LibraryStore: ObservableObject {
     func record(link: String, title: String) {
         var next = snapshot
         next.history.removeAll { $0.link == link }
-        next.history.insert(LinkVisit(id: UUID(), link: link, title: title, date: Date()), at: 0)
+        next.history.insert(LessonLinkVisit(id: UUID(), link: link, title: title, date: Date()), at: 0)
         next.history = Array(next.history.prefix(100))
         save(next)
     }
@@ -47,16 +47,16 @@ final class LibraryStore: ObservableObject {
         next.history = []
         save(next)
     }
-    func removeVisit(_ visit: LinkVisit) {
+    func removeVisit(_ visit: LessonLinkVisit) {
         var next = snapshot
         next.history.removeAll { $0.id == visit.id }
         save(next)
     }
-    func importMovie(_ source: URL, exported: Bool = false, title: String? = nil) async throws -> LocalMovie {
+    func importMovie(_ source: URL, exported: Bool = false, title: String? = nil) async throws -> PracticeRecording {
         guard readable else { throw ClipoError.storage }
         let id = UUID()
         let ext = source.pathExtension.lowercased().nilIfBlank ?? "mov"
-        let item = LocalMovie(id: id, filename: id.uuidString + "." + ext,
+        let item = PracticeRecording(id: id, filename: id.uuidString + "." + ext,
                               title: title ?? source.deletingPathExtension().lastPathComponent,
                               date: Date(), isExport: exported)
         let destination = url(for: item)
@@ -71,7 +71,7 @@ final class LibraryStore: ObservableObject {
         catch { try? FileManager.default.removeItem(at: destination); throw error }
         return item
     }
-    func delete(_ movie: LocalMovie) {
+    func delete(_ movie: PracticeRecording) {
         // Commit index removal first; a failed file deletion leaves an orphan, not a broken library entry.
         var next = snapshot
         next.movies.removeAll { $0.id == movie.id }
@@ -81,10 +81,10 @@ final class LibraryStore: ObservableObject {
             if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
         } catch { self.error = error.localizedDescription }
     }
-    private func save(_ next: LibrarySnapshot) {
+    private func save(_ next: LessonLibrarySnapshot) {
         do { try persist(next) } catch { self.error = error.localizedDescription }
     }
-    private func persist(_ next: LibrarySnapshot) throws {
+    private func persist(_ next: LessonLibrarySnapshot) throws {
         guard readable else { throw ClipoError.storage }
         let data = try JSONEncoder().encode(next)
         try data.write(to: snapshotURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

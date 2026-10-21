@@ -227,7 +227,7 @@ struct ChannelView: View {
     @EnvironmentObject private var api: APIClient
     @Environment(\.dismiss) private var dismiss
     let route: ChannelRoute
-    @State private var items: [DiskItem] = []
+    @State private var items: [RemoteLessonFile] = []
     @State private var page = 1
     @State private var hasMore = true
     @State private var loading = false
@@ -277,7 +277,7 @@ struct ChannelView: View {
             page += 1
         } catch { self.error = error.localizedDescription }
     }
-    private func open(_ item: DiskItem) {
+    private func open(_ item: RemoteLessonFile) {
         if item.isFolder == true, let link = item.landingPage?.nilIfBlank {
             child = ChannelRoute(link: link, title: item.name ?? "Folder")
         } else if let clip = item.clip(channel: route.title) {

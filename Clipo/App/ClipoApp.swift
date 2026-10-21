@@ -145,7 +145,7 @@ struct ClipoRootView: View {
     @EnvironmentObject private var offline: OfflineStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab: ClipoTab = .home
-    @State private var editing: LocalMovie?
+    @State private var editing: PracticeRecording?
     var body: some View {
         ZStack {
             ClipoStyle.background.ignoresSafeArea()

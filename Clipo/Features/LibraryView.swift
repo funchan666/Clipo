@@ -3,11 +3,11 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var offline: OfflineStore
-    var edit: (LocalMovie) -> Void
+    var edit: (PracticeRecording) -> Void
     @State private var filter = "Saved"
     @State private var player: PlayerRoute?
     @State private var sharing: SharedFile?
-    @State private var removing: LocalMovie?
+    @State private var removing: PracticeRecording?
     private var itemCount: Int {
         if filter == "Downloads" { return offline.videos.count }
         return filter == "Saved" ? library.favorites.count : library.movies.filter { $0.isExport == (filter == "Exports") }.count
@@ -77,7 +77,7 @@ struct LibraryView: View {
                 ForEach(offline.videos) { video in
                     HStack(spacing: 14) {
                         Button {
-                            let clips = offline.videos.compactMap { item -> Clip? in
+                            let clips = offline.videos.compactMap { item -> LessonClip? in
                                 offline.cached(item.id) == nil ? nil : offline.playable(item.clip)
                             }
                             if clips.contains(where: { $0.id == video.id }) {
@@ -163,7 +163,7 @@ struct LibraryView: View {
 
 // Uses the existing original bitmap action surfaces; no new system artwork.
 struct OfflineDownloadButton: View {
-    let clip: Clip
+    let clip: LessonClip
     @EnvironmentObject private var offline: OfflineStore
     @EnvironmentObject private var quota: QuotaStore
     @EnvironmentObject private var commerce: CommerceStore

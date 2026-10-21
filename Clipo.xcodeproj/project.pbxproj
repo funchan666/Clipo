@@ -14,7 +14,7 @@
 		1AC010000000000000000065 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1AC010000000000000000064 /* Localizable.strings */; };
 		1AC0100000000000000000C9 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1AC0100000000000000000C8 /* InfoPlist.strings */; };
 		260CF880F17F5608D6824066 /* Clipo/Core/CommerceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */; };
-		3208069C8A2559AFC43D06AE /* Clipo/Features/EditorWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17682BB59D393EEB797E5420 /* Clipo/Features/EditorWorkspace.swift */; };
+		3208069C8A2559AFC43D06AE /* Clipo/Features/PracticeVideoWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17682BB59D393EEB797E5420 /* Clipo/Features/PracticeVideoWorkspace.swift */; };
 		327A09A6877BA42DD80120D2 /* Clipo/Core/PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2CDBB4A80FB9A168C05E16E /* Clipo/Core/PlaybackController.swift */; };
 		4059FBA1D75B10A9F68ABDC0 /* Clipo/App/ClipoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20B58A99F1A929AA77A8B9E3 /* Clipo/App/ClipoApp.swift */; };
 		445B4DAFB0E123A139308F4D /* Clipo/Resources/Commerce.json in Resources */ = {isa = PBXBuildFile; fileRef = 1E86FD4AD3FF9F970DB0B719 /* Clipo/Resources/Commerce.json */; };
@@ -31,7 +31,7 @@
 		A44A83298DFF881F87AA0F94 /* Clipo/Core/VideoEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A756C8C59952EE6C3FB7A7E /* Clipo/Core/VideoEditor.swift */; };
 		ACCE55100000000000000001 /* Clipo/Features/AccountAccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCE55100000000000000002 /* Clipo/Features/AccountAccessViews.swift */; };
 		C68F5643B660D6177C54038C /* Clipo/Core/LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */; };
-		C7F5D928DE552FB7782E6664 /* Clipo/Core/Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/Models.swift */; };
+		C7F5D928DE552FB7782E6664 /* Clipo/Core/LessonContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */; };
 		D0DFDA960A87B68556723DA1 /* Clipo/Features/DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */; };
 		FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */; };
 		C71000000000000000000001 /* Clipo/App/CourtTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000002 /* Clipo/App/CourtTypography.swift */; };
@@ -42,7 +42,7 @@
 
 /* Begin PBXFileReference section */
 		0FF11E000000000000000002 /* OfflineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/OfflineStore.swift; sourceTree = SOURCE_ROOT; };
-		17682BB59D393EEB797E5420 /* Clipo/Features/EditorWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/EditorWorkspace.swift; sourceTree = SOURCE_ROOT; };
+		17682BB59D393EEB797E5420 /* Clipo/Features/PracticeVideoWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/PracticeVideoWorkspace.swift; sourceTree = SOURCE_ROOT; };
 		1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LibraryStore.swift; sourceTree = SOURCE_ROOT; };
 		198C628051C30B581DC8DE92 /* Clipo/Features/HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		1A756C8C59952EE6C3FB7A7E /* Clipo/Core/VideoEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/VideoEditor.swift; sourceTree = SOURCE_ROOT; };
@@ -65,7 +65,7 @@
 		20B58A99F1A929AA77A8B9E3 /* Clipo/App/ClipoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/App/ClipoApp.swift; sourceTree = SOURCE_ROOT; };
 		29492C6D58CC63AE5CCF1383 /* Config/Clipo.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Clipo.xcconfig; sourceTree = SOURCE_ROOT; };
 		47A27C0CD55779B5085CB27B /* Clipo/Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Clipo/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
-		4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/Models.swift; sourceTree = SOURCE_ROOT; };
+		4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LessonContracts.swift; sourceTree = SOURCE_ROOT; };
 		62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/DiscoverView.swift; sourceTree = SOURCE_ROOT; };
 		675FC4243CA06F6ED86F21AC /* Clipo/Core/RewardedAds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/RewardedAds.swift; sourceTree = SOURCE_ROOT; };
 		7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/LibraryView.swift; sourceTree = SOURCE_ROOT; };
@@ -124,13 +124,13 @@
 				EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */,
 				1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */,
 				0FF11E000000000000000002 /* OfflineStore.swift */,
-				4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/Models.swift */,
+				4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */,
 				F2CDBB4A80FB9A168C05E16E /* Clipo/Core/PlaybackController.swift */,
 				B2E822DCE2A437F4FCB346A9 /* Clipo/Core/QuotaStore.swift */,
 				675FC4243CA06F6ED86F21AC /* Clipo/Core/RewardedAds.swift */,
 				1A756C8C59952EE6C3FB7A7E /* Clipo/Core/VideoEditor.swift */,
 				62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */,
-				17682BB59D393EEB797E5420 /* Clipo/Features/EditorWorkspace.swift */,
+				17682BB59D393EEB797E5420 /* Clipo/Features/PracticeVideoWorkspace.swift */,
 				7EAA15000000000000000002 /* Clipo/Features/TennisGuideView.swift */,
 				198C628051C30B581DC8DE92 /* Clipo/Features/HomeView.swift */,
 				7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */,
@@ -244,13 +244,13 @@
 				260CF880F17F5608D6824066 /* Clipo/Core/CommerceStore.swift in Sources */,
 				C68F5643B660D6177C54038C /* Clipo/Core/LibraryStore.swift in Sources */,
 				0FF11E000000000000000001 /* OfflineStore.swift in Sources */,
-				C7F5D928DE552FB7782E6664 /* Clipo/Core/Models.swift in Sources */,
+				C7F5D928DE552FB7782E6664 /* Clipo/Core/LessonContracts.swift in Sources */,
 				327A09A6877BA42DD80120D2 /* Clipo/Core/PlaybackController.swift in Sources */,
 				6AF10A27CB2DD141266F1710 /* Clipo/Core/QuotaStore.swift in Sources */,
 				7B7855892215464D7C4CB60A /* Clipo/Core/RewardedAds.swift in Sources */,
 				A44A83298DFF881F87AA0F94 /* Clipo/Core/VideoEditor.swift in Sources */,
 				D0DFDA960A87B68556723DA1 /* Clipo/Features/DiscoverView.swift in Sources */,
-				3208069C8A2559AFC43D06AE /* Clipo/Features/EditorWorkspace.swift in Sources */,
+				3208069C8A2559AFC43D06AE /* Clipo/Features/PracticeVideoWorkspace.swift in Sources */,
 				7EAA15000000000000000001 /* Clipo/Features/TennisGuideView.swift in Sources */,
 				8C78E63A9D2775413DFCA438 /* Clipo/Features/HomeView.swift in Sources */,
 				FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */,

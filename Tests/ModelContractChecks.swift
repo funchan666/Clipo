@@ -16,12 +16,12 @@ enum ModelContractChecks {
         for invalid in ["", "   ", "https://example.com/", "file:///private/code"] {
             precondition(WebAddress.landingCode(invalid) == nil)
         }
-        func disk(_ json: String) throws -> DiskItem {
-            try decoder.decode(DiskItem.self, from: Data(json.utf8))
+        func disk(_ json: String) throws -> RemoteLessonFile {
+            try decoder.decode(RemoteLessonFile.self, from: Data(json.utf8))
         }
-        let numeric = try disk(#"{"id":123,"name":"Clip","length":50,"fileSize":1024,"isFolder":false}"#)
+        let numeric = try disk(#"{"id":123,"name":"LessonClip","length":50,"fileSize":1024,"isFolder":false}"#)
         precondition(numeric.id?.value == "123" && numeric.length == 50 && numeric.fileSize == 1024)
-        let strings = try disk(#"{"id":"123","name":"Clip","length":"50","fileSize":" 1024 "}"#)
+        let strings = try disk(#"{"id":"123","name":"LessonClip","length":"50","fileSize":" 1024 "}"#)
         precondition(strings.length == numeric.length && strings.fileSize == numeric.fileSize)
         let missing = try disk(#"{"length":null,"fileSize":null}"#)
         precondition(missing.length == nil && missing.fileSize == nil)
@@ -34,7 +34,7 @@ enum ModelContractChecks {
         let nestedFolder = try disk(#"{"isFolder":true,"extraInfo":{"childrenFileNum":6}}"#)
         let directFolder = try disk(#"{"childrenFileNum":2,"extraInfo":{"childrenFileNum":6}}"#)
         precondition(nestedFolder.childrenFileNum == 6 && directFolder.childrenFileNum == 2)
-        let clip = try disk(#"{"id":"clip","name":"Clip","isFolder":false,"m3u8Url":"https://example.com/a.m3u8"}"#)
+        let clip = try disk(#"{"id":"clip","name":"LessonClip","isFolder":false,"m3u8Url":"https://example.com/a.m3u8"}"#)
         precondition(clip.clip(channel: "Test")?.id == "clip")
         for raw in ["file:///private/token", "javascript:alert(1)", "relative/path", ""] {
             precondition(WebAddress.media(raw) == nil)

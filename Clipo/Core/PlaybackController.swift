@@ -217,9 +217,9 @@ final class PlaybackController: ObservableObject {
 final class PlaybackPool: ObservableObject {
     @Published private(set) var controllers: [String: PlaybackController] = [:]
     private var selectedID: String?
-    private var nextClip: Clip?
+    private var nextClip: LessonClip?
 
-    func update(clips: [Clip], selectedID: String?) {
+    func update(clips: [LessonClip], selectedID: String?) {
         guard let selectedID, let index = clips.firstIndex(where: { $0.id == selectedID }) else {
             releaseAll()
             return

@@ -3,7 +3,7 @@ import AVFoundation
 import Combine
 
 struct OfflineVideo: Codable, Identifiable {
-    let clip: Clip
+    let clip: LessonClip
     let relativePath: String
     let isHLS: Bool
     let owner: String
@@ -13,7 +13,7 @@ struct OfflineVideo: Codable, Identifiable {
 
 private struct OfflineTransfer: Codable {
     let id: UUID
-    let clip: Clip
+    let clip: LessonClip
     let owner: String
     let premium: Bool
     let isHLS: Bool
@@ -79,9 +79,9 @@ final class OfflineStore: NSObject, ObservableObject {
     func cached(_ id: String) -> OfflineVideo? {
         videos.first { $0.id == id && $0.owner == api.session?.userId.value && FileManager.default.fileExists(atPath: $0.url.path) }
     }
-    func playable(_ clip: Clip) -> Clip {
+    func playable(_ clip: LessonClip) -> LessonClip {
         guard let video = cached(clip.id) else { return clip }
-        return Clip(id: clip.id, title: clip.title, playbackURL: video.url, coverURL: clip.coverURL,
+        return LessonClip(id: clip.id, title: clip.title, playbackURL: video.url, coverURL: clip.coverURL,
                     shortLink: clip.shortLink, channel: clip.channel, duration: clip.duration)
     }
     func resumePending() async {
@@ -106,7 +106,7 @@ final class OfflineStore: NSObject, ObservableObject {
         else if matching.isEmpty { fail(transfer.id, message: "Download interrupted. Please try again.") }
         else { matching.forEach { $0.resume() } }
     }
-    func download(_ clip: Clip) async {
+    func download(_ clip: LessonClip) async {
         await resumePending()
         guard readable, !busy, cached(clip.id) == nil,
               let owner = api.session?.userId.value, !clip.playbackURL.isFileURL else { return }

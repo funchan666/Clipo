@@ -2,7 +2,7 @@ import SwiftUI
 
 @MainActor
 final class FeedStore: ObservableObject {
-    @Published private(set) var clips: [Clip] = []
+    @Published private(set) var clips: [LessonClip] = []
     @Published private(set) var loading = false
     @Published private(set) var hasMore = true
     @Published var error: String?
@@ -40,9 +40,9 @@ final class FeedStore: ObservableObject {
 struct DiscoverView: View {
     @Environment(\.dismiss) private var dismiss
     private let canDismiss: Bool
-    private let onSearchResult: ((String, Clip) -> Void)?
+    private let onSearchResult: ((String, LessonClip) -> Void)?
     @EnvironmentObject private var offline: OfflineStore
-    private var displayClips: [Clip] { feed.clips.map { offline.playable($0) } }
+    private var displayClips: [LessonClip] { feed.clips.map { offline.playable($0) } }
     @EnvironmentObject private var api: APIClient
     @StateObject private var feed = FeedStore()
     @StateObject private var players = PlaybackPool()
@@ -52,7 +52,7 @@ struct DiscoverView: View {
     @State private var activeID: String?
     @State private var recordedQuery: String?
     init(initialSearch: String = "", canDismiss: Bool = false,
-         onSearchResult: ((String, Clip) -> Void)? = nil) {
+         onSearchResult: ((String, LessonClip) -> Void)? = nil) {
         self.canDismiss = canDismiss
         self.onSearchResult = onSearchResult
         _search = State(initialValue: initialSearch)
@@ -173,7 +173,7 @@ struct DiscoverView: View {
 
 struct PlayerScreen: View {
     @EnvironmentObject private var offline: OfflineStore
-    private var displayClips: [Clip] { route.clips.map { offline.playable($0) } }
+    private var displayClips: [LessonClip] { route.clips.map { offline.playable($0) } }
     @Environment(\.dismiss) private var dismiss
     let route: PlayerRoute
     @State private var activeID: String?
@@ -225,7 +225,7 @@ struct ClipPage: View {
     @EnvironmentObject private var quota: QuotaStore
     @EnvironmentObject private var ads: RewardedAds
     @Environment(\.scenePhase) private var phase
-    let clip: Clip
+    let clip: LessonClip
     let active: Bool
     // Read from the enclosing safe container; video fills the expanded viewport.
     var controlInsets = EdgeInsets()

@@ -170,7 +170,7 @@ final class APIClient: ObservableObject {
         try await perform("/app-api/flow/land-page/list_by_links_page", query: [
             "externalLinks": link, "pageNo": String(max(1, page)), "pageSize": "20", "packageName": configuration.bundleID])
     }
-    func feed(query: String, feedID: String?, cursor: String?) async throws -> FeedResponse {
+    func feed(query: String, feedID: String?, cursor: String?) async throws -> LessonFeedPage {
         guard let session else { throw ClipoError.unauthorized }
         var queryItems = ["userId": session.userId.value, "packageName": configuration.bundleID, "pageSize": "10"]
         if let feedID { queryItems["feedId"] = feedID }
