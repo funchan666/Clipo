@@ -29,12 +29,18 @@ import Foundation
         precondition(quota.recordWatch("watch-0", premium: false))
         precondition(!quota.mayWatch("new", premium: false))
         precondition(quota.canRequestReward(for: .watch, premium: false))
+        precondition(quota.claimWatchLimitPrompt(premium: false))
+        precondition(!quota.claimWatchLimitPrompt(premium: false))
+        precondition(!quota.claimWatchLimitPrompt(premium: true))
         // No-fill gifts stay in the same phase; a second exhausted request has no cooldown.
         for round in 0..<2 {
             let id = UUID()
             precondition(tryValue { try quota.rewardNoFill(id, owner: "test", kind: .watch) } != nil)
             precondition(quota.watchesLeft == 3 && quota.completedAds(.watch) == 0)
+            precondition(!quota.claimWatchLimitPrompt(premium: false))
             for n in 0..<3 { precondition(quota.recordWatch("gift-\(round)-\(n)", premium: false)) }
+            precondition(quota.claimWatchLimitPrompt(premium: false))
+            precondition(!quota.claimWatchLimitPrompt(premium: false))
             precondition(tryValue { try quota.rewardNoFill(id, owner: "test", kind: .watch) } == nil)
         }
         do { try quota.reward(UUID(), owner: "other", kind: .watch); fatalError("Owner bypassed") } catch { }

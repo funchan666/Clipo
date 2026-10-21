@@ -404,9 +404,13 @@ struct ClipPage: View {
               !gate, !options, !editor, !share else { return }
         recorded = false
         allowed = clip.playbackURL.isFileURL || quota.mayWatch(clip.id, premium: commerce.premium)
-        // Lifecycle checks only update the inline gate. Present Plus exclusively
-        // from the explicit "Get more views" action, never on dismissal/re-entry.
-        if !allowed { playback.pause(); return }
+        if !allowed {
+            playback.pause()
+            // First arrival at an exhausted video prompts once across the feed.
+            // Dismissal and subsequent pages retain the inline manual action.
+            if quota.claimWatchLimitPrompt(premium: commerce.premium) { gate = true }
+            return
+        }
         if playback.loadedURL != clip.playbackURL || reload { playback.load(clip.playbackURL, autoplay: true) }
         else { playback.play() }
     }

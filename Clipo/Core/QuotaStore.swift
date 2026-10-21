@@ -32,6 +32,9 @@ final class QuotaStore: ObservableObject {
     private var policy: CommerceConfiguration?
     private var remote: QuotaConfiguration?
     private var storageOK = true
+    // Shared by all player pages, so lazy-page recycling and swiping cannot
+    // reopen a dismissed prompt during the same exhausted-allowance period.
+    private var watchLimitPromptClaimed = false
     var unlimited: Bool { isUnlimited(.watch) }
     var downloadsUnlimited: Bool { isUnlimited(.download) }
     var watchesLeft: Int { max(0, (remote?.dailyWatchLimit ?? policy?.dailyWatchLimit ?? 0) + (usage?.extraWatches ?? 0) - (usage?.watchSpend ?? usage?.watched.count ?? 0)) }
@@ -56,9 +59,11 @@ final class QuotaStore: ObservableObject {
     func configure(userID: String?, policy: CommerceConfiguration?, remote: QuotaConfiguration?) {
         self.policy = policy
         self.remote = remote
+        if watchesLeft > 0 || unlimited { watchLimitPromptClaimed = false }
         guard self.userID != userID || usage == nil else { resetIfNeeded(); return }
         self.userID = userID
         usage = nil
+        watchLimitPromptClaimed = false
         storageOK = true
         error = nil
         guard userID != nil else { return }
@@ -118,6 +123,12 @@ final class QuotaStore: ObservableObject {
     func canRequestReward(for kind: AllowanceKind, premium: Bool) -> Bool {
         return !premium && storageOK && userID != nil && policy != nil && !isUnlimited(kind) && remaining(kind) == 0
     }
+    func claimWatchLimitPrompt(premium: Bool) -> Bool {
+        resetIfNeeded()
+        guard canRequestReward(for: .watch, premium: premium), !watchLimitPromptClaimed else { return false }
+        watchLimitPromptClaimed = true
+        return true
+    }
     func reward(_ id: UUID, owner: String, kind: AllowanceKind) throws {
         guard owner == userID, storageOK else { throw ClipoError.storage }
         resetIfNeeded()
@@ -168,6 +179,7 @@ final class QuotaStore: ObservableObject {
     private func commit(_ value: DailyUsage) throws {
         try SecureStorage.write(JSONEncoder().encode(value), key: key)
         usage = value
+        if watchesLeft > 0 || unlimited { watchLimitPromptClaimed = false }
     }
 }
 extension Array {
