@@ -35,8 +35,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ClipoAPIHost</key>
 	<string>$(CLIPO_API_HOST)</string>
-	<key>ClipoAdsTestMode</key>
-	<string>$(CLIPO_ADS_TEST_MODE)</string>
+	<key>ClipoServicePackageName</key>
+	<string>$(CLIPO_SERVICE_PACKAGE_NAME)</string>
 	<key>ClipoPrivacyURL</key>
 	<string>$(CLIPO_PRIVACY_URL)</string>
 	<key>ClipoTermsURL</key>

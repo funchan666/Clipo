@@ -108,6 +108,8 @@ struct EditorSheet: View {
     }
 }
 struct EditorWorkspace: View {
+    @EnvironmentObject private var commerce: CommerceStore
+    @State private var showingExportMembership = false
     @EnvironmentObject private var departure: ExportDeparture
     @EnvironmentObject private var library: LibraryStore
     @Environment(\.scenePhase) private var scenePhase
@@ -263,6 +265,7 @@ struct EditorWorkspace: View {
                 }
             }
             .sheet(item: $shareURL) { ShareSheet(items: [$0.url]) }
+            .sheet(isPresented: $showingExportMembership) { MembershipView(exportRequired: true) }
             .task { if let initialMovie, selected == nil { selected = initialMovie; await editor.open(library.url(for: initialMovie)) } }
             .onChange(of: scenePhase) { _, phase in if phase != .active { editor.preview.pause() } }
             .onDisappear { editor.close(); exportTask?.cancel() }
@@ -332,15 +335,17 @@ struct EditorWorkspace: View {
     }
     private func export(audio: Bool, title: String) {
         guard exportTask == nil else { return }
+        guard commerce.canExportMedia else { showingExportMembership = true; return }
         error = nil
         exportTask = Task {
             defer { exportTask = nil; departure.finish() }
             guard let output = await editor.export(audioOnly: audio) else { return }
             if Task.isCancelled { try? FileManager.default.removeItem(at: output); return }
             do {
+                defer { try? FileManager.default.removeItem(at: output) }
+                try commerce.requireMediaExport()
                 let saved = try await library.importMovie(output, exported: true, title: title + (audio ? " · Audio" : " · Edit"))
-                try? FileManager.default.removeItem(at: output)
-                let share = try await library.shareFile(for: saved)
+                let share = try await library.shareFile(for: saved, commerce: commerce)
                 if !Task.isCancelled { shareURL = SharedFile(url: share) }
             } catch is CancellationError { }
             catch { self.error = "The export finished but could not be added to your library. \(error.localizedDescription)" }

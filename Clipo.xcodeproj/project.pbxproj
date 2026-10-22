@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E8A0A1000000000000000001 /* Clipo/Core/LessonStreamExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A0A1000000000000000002 /* Clipo/Core/LessonStreamExport.swift */; };
 		0A80A0B8549C3D5AB3BBC1FC /* Clipo/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47A27C0CD55779B5085CB27B /* Clipo/Resources/Assets.xcassets */; };
 		0FF11E000000000000000001 /* Clipo/Core/OfflineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF11E000000000000000002 /* Clipo/Core/OfflineStore.swift */; };
 		16EB816FD26D57C86FA63242 /* Clipo/Resources/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B01A9BEACE5275588553E5AD /* Clipo/Resources/PrivacyInfo.xcprivacy */; };
@@ -38,11 +37,11 @@
 		C71000000000000000000007 /* Clipo/Resources/Fonts in Resources */ = {isa = PBXBuildFile; fileRef = C71000000000000000000008 /* Clipo/Resources/Fonts */; };
 		C7F5D928DE552FB7782E6664 /* Clipo/Core/LessonContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C66D3BCB0711DB84F1A3B /* Clipo/Core/LessonContracts.swift */; };
 		D0DFDA960A87B68556723DA1 /* Clipo/Features/DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B7ED2C47711EEDC253A7BD /* Clipo/Features/DiscoverView.swift */; };
+		E8A0A1000000000000000001 /* Clipo/Core/LessonStreamExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A0A1000000000000000002 /* Clipo/Core/LessonStreamExport.swift */; };
 		FDC33C2406605B5455C36984 /* Clipo/Features/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7641F37159249EE8BA2436D1 /* Clipo/Features/LibraryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		E8A0A1000000000000000002 /* Clipo/Core/LessonStreamExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LessonStreamExport.swift; sourceTree = SOURCE_ROOT; };
 		0FF11E000000000000000002 /* Clipo/Core/OfflineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/OfflineStore.swift; sourceTree = SOURCE_ROOT; };
 		17682BB59D393EEB797E5420 /* Clipo/Features/PracticeVideoWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/PracticeVideoWorkspace.swift; sourceTree = SOURCE_ROOT; };
 		1983D2A3DA5E7E885A18C42A /* Clipo/Core/LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LibraryStore.swift; sourceTree = SOURCE_ROOT; };
@@ -84,6 +83,7 @@
 		C71000000000000000000008 /* Clipo/Resources/Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Clipo/Resources/Fonts; sourceTree = SOURCE_ROOT; };
 		E3B808EADBFC1086054EA47A /* Clipo/Core/APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/APIClient.swift; sourceTree = SOURCE_ROOT; };
 		E4BD89A549F49134CAB0C817 /* Clipo/App/DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/App/DesignSystem.swift; sourceTree = SOURCE_ROOT; };
+		E8A0A1000000000000000002 /* Clipo/Core/LessonStreamExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/LessonStreamExport.swift; sourceTree = SOURCE_ROOT; };
 		EC62DF084BD6179B0CD0BFAA /* Clipo/Features/MembershipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Features/MembershipView.swift; sourceTree = SOURCE_ROOT; };
 		EFC3AA166887DDAA8FB0EBD0 /* Clipo/Core/CommerceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/CommerceStore.swift; sourceTree = SOURCE_ROOT; };
 		F2CDBB4A80FB9A168C05E16E /* Clipo/Core/PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipo/Core/PlaybackController.swift; sourceTree = SOURCE_ROOT; };

@@ -244,6 +244,34 @@ enum AppOpenTiming {
     }
 }
 struct AdUnitConfiguration: Decodable { let appId: String?; let adUnitId: String? }
+
+struct GoogleAdPlacement {
+    let appID: String
+    let unitID: String
+    let isOfficialDemo: Bool
+}
+extension ReleaseConfiguration {
+    // App ID comes from getV2 and must agree with the SDK's packaged identity.
+    // Never substitute a sample ad unit for a missing or invalid server value.
+    func googlePlacement(for type: Int, packagedAppID: String?) -> GoogleAdPlacement? {
+        let matches = (adList ?? []).filter {
+            $0.adType == type && $0.advertiser?.lowercased() == "google"
+        }
+        guard matches.count == 1, let unit = matches.first,
+              let appID = unit.config.appId?.nilIfBlank,
+              let unitID = unit.config.adUnitId?.nilIfBlank,
+              appID == packagedAppID,
+              appID.range(of: #"^ca-app-pub-[0-9]{16}~[0-9]{10}$"#, options: .regularExpression) != nil,
+              unitID.range(of: #"^ca-app-pub-[0-9]{16}/[0-9]{10}$"#, options: .regularExpression) != nil,
+              appID.split(separator: "~").first == unitID.split(separator: "/").first else { return nil }
+        let demoApp = appID == "ca-app-pub-3940256099942544~1458002511"
+        let demoUnit = (type == 1 && unitID == "ca-app-pub-3940256099942544/5575463023")
+            || (type == 5 && unitID == "ca-app-pub-3940256099942544/1712485313")
+        if demoApp && !demoUnit { return nil }
+        return GoogleAdPlacement(appID: appID, unitID: unitID, isOfficialDemo: demoApp && demoUnit)
+    }
+}
+
 struct UserRights: Decodable {
     let rightExpireTime: ServiceID?
     var expiration: Date? {

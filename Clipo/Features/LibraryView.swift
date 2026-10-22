@@ -4,6 +4,8 @@ import AVFoundation
 struct LibraryView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var offline: OfflineStore
+    @EnvironmentObject private var commerce: CommerceStore
+    @State private var showingExportMembership = false
     var edit: (PracticeRecording) -> Void
     @Binding var filter: String
     @State private var player: PlayerRoute?
@@ -28,6 +30,7 @@ struct LibraryView: View {
                 }
             }.ignoresSafeArea(.container, edges: .top)
         }.clipoScreenBackground().sheet(item: $sharing) { ShareSheet(items: [$0.url]) }
+            .sheet(isPresented: $showingExportMembership) { MembershipView(exportRequired: true) }
             .fullScreenCover(item: $player) { PlayerScreen(route: $0) }
             .sheet(item: $removingDownload) { video in
                 ScrollView {
@@ -134,11 +137,12 @@ struct LibraryView: View {
                                         Button("Edit") { edit(movie) }
                                     }
                                     Button(LocalizedStringKey(sharingMovieID == movie.id ? "Preparing export…" : "Export")) {
+                                        guard commerce.canExportMedia else { showingExportMembership = true; return }
                                         sharingMovieID = movie.id
                                         Task {
                                             defer { sharingMovieID = nil }
-                                            do { sharing = SharedFile(url: try await library.shareFile(for: movie)) }
-                                            catch { library.error = "Video export failed. Please try again." }
+                                            do { sharing = SharedFile(url: try await library.shareFile(for: movie, commerce: commerce)) }
+                                            catch { library.error = error.localizedDescription }
                                         }
                                     }.disabled(sharingMovieID != nil)
                                 }
@@ -241,6 +245,7 @@ struct VideoExportEntry: View {
     let clip: LessonClip
     var compact = false
     @State private var showingExport = false
+    @EnvironmentObject private var commerce: CommerceStore
     var body: some View {
         Group {
             if compact {
@@ -249,7 +254,10 @@ struct VideoExportEntry: View {
                 ActionButton(title: "Export video", primary: false) { showingExport = true }
             }
         }.accessibilityIdentifier("player.openExport")
-            .sheet(isPresented: $showingExport) { OfflineExportSheet(clip: clip) }
+            .sheet(isPresented: $showingExport) {
+                if commerce.canExportMedia { OfflineExportSheet(clip: clip) }
+                else { MembershipView(exportRequired: true) }
+            }
     }
 }
 
@@ -349,7 +357,7 @@ struct DownloadCompletionNotice: View {
 }
 
 // Uncached exports use the same download admission and completion journal.
-// Only the first completed download is charged; exporting a local copy is free.
+// Export is a Plus benefit; cached copies still pass the membership check.
 private struct OfflineExportButton: View {
     let clip: LessonClip
     @EnvironmentObject private var departure: ExportDeparture
@@ -383,12 +391,13 @@ private struct OfflineExportButton: View {
             if let exportError { ErrorNote(message: exportError) }
         }
         .sheet(item: $sharing) { ShareSheet(items: [$0.url]) }
-        .sheet(isPresented: $downloadGate) { MembershipView(rewardKind: .download) }
+        .sheet(isPresented: $downloadGate) { MembershipView(exportRequired: true) }
         .onDisappear { exportTask?.cancel() }
     }
 
     private func startExport() {
         guard exportTask == nil else { return }
+        guard commerce.canExportMedia else { downloadGate = true; return }
         if !clip.playbackURL.isFileURL, offline.cached(clip.id) == nil,
            !quota.mayDownload(clip.id, premium: commerce.premium) {
             downloadGate = true
@@ -404,6 +413,7 @@ private struct OfflineExportButton: View {
             var converted: URL?
             defer { if let converted { try? FileManager.default.removeItem(at: converted) } }
             do {
+                try commerce.requireMediaExport()
                 var source = clip.playbackURL
                 if !source.isFileURL || offline.cached(clip.id)?.isHLS == true {
                     preparingSource = true
@@ -459,8 +469,9 @@ private struct OfflineExportButton: View {
                     output = destination
                 }
                 try Task.checkCancellation()
+                try commerce.requireMediaExport()
                 let recording = try await library.importMovie(output, exported: true, title: clip.title)
-                let url = try await library.shareFile(for: recording)
+                let url = try await library.shareFile(for: recording, commerce: commerce)
                 exportedFile = url
                 if !Task.isCancelled { sharing = SharedFile(url: url) }
             } catch is CancellationError {

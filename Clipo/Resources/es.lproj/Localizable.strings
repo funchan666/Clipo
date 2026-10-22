@@ -535,3 +535,10 @@
 "1. Copy a Clipo link" = "1. Copia un enlace de Clipo";
 "Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "Toca Pegar o introduce el código de clase tal como lo recibiste. Los códigos distinguen mayúsculas y minúsculas.";
 "Tap Open lesson to find matching lessons, then swipe to watch." = "Toca Abrir clase para encontrar clases coincidentes y desliza para verlas.";
+
+"Search in browser" = "Buscar en el navegador";
+"The browser could not open. Please try again." = "No se pudo abrir el navegador. Inténtalo de nuevo.";
+"Connect to verify your Plus membership before exporting." = "Conéctate a internet para verificar tu membresía Plus antes de exportar.";
+"Export is included with Plus." = "La exportación está incluida en Plus.";
+"Unlimited views, downloads and media exports." = "Reproducciones, descargas y exportaciones de medios ilimitadas.";
+"No matching lessons. Search the web with your original input." = "No se encontraron lecciones. Busca en la web con el texto que has introducido.";

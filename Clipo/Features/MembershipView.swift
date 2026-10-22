@@ -3,6 +3,7 @@ import StoreKit
 
 struct MembershipView: View {
     var rewardKind: AllowanceKind? = nil
+    var exportRequired = false
     @Environment(\.locale) private var locale
     @EnvironmentObject private var api: APIClient
     @EnvironmentObject private var commerce: CommerceStore
@@ -34,10 +35,15 @@ struct MembershipView: View {
                     LocalizedText(commerce.premium ? "More court time." : "Keep your game growing.")
                         .font(.court(.title, editorial: true))
                         .foregroundStyle(ClipoStyle.paper)
-                    LocalizedText("Unlimited views. Unlimited downloads.")
+                    LocalizedText("Unlimited views, downloads and media exports.")
                         .font(.court(.subheadline)).foregroundStyle(ClipoStyle.secondary)
                 }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
 
+                if exportRequired {
+                    LocalizedText("Export is included with Plus.")
+                        .font(.court(.subheadline, weight: .semibold)).foregroundStyle(ClipoStyle.paper)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if commerce.premium {
                     VStack(alignment: .leading, spacing: 10) {
                         LocalizedText("Your membership is active").font(.court(.headline))
@@ -78,7 +84,7 @@ struct MembershipView: View {
                     }
                 }
 
-                if !commerce.premium, api.session != nil { rewardOption }
+                if !exportRequired, !commerce.premium, api.session != nil { rewardOption }
 
                 VStack(alignment: .leading, spacing: 4) {
                     LocalizedText("Renews automatically. Cancel in your Apple account at least 24 hours before renewal.")

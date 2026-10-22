@@ -1,11 +1,26 @@
 import SwiftUI
 
+struct BrowserLessonSearch: Identifiable, Equatable {
+    let id = UUID()
+    let query: String
+    var url: URL? {
+        var address = URLComponents(string: "https://www.google.com/search")
+        address?.queryItems = [URLQueryItem(name: "q", value: query)]
+        // Search engines treat an unescaped plus sign as a space.
+        if let encoded = address?.percentEncodedQuery {
+            address?.percentEncodedQuery = encoded.replacingOccurrences(of: "+", with: "%2B")
+        }
+        return address?.url
+    }
+}
+
 @MainActor
 final class FeedStore: ObservableObject {
     @Published private(set) var entries: [PlaybackQueueEntry]
     @Published private(set) var loading = false
     @Published private(set) var hasMore = true
     @Published var error: String?
+    @Published private(set) var emptySearch: BrowserLessonSearch?
     var clips: [LessonClip] { entries.map(\.clip) }
     private var feedID: String?
     private var cursor: String?
@@ -34,6 +49,7 @@ final class FeedStore: ObservableObject {
             generation = UUID()
             entries = []; feedID = nil; cursor = nil; hasMore = true; loading = false
             query = search; requestQuery = search; roundVideoIDs = []
+            emptySearch = nil
         }
         guard !loading else { return }
         let current = generation
@@ -44,6 +60,8 @@ final class FeedStore: ObservableObject {
             // Skip a few duplicate/invalid pages, but never spin on an empty service.
             for _ in 0..<3 {
                 if !hasMore {
+                    // Do not replace an unmatched explicit query with recommendations.
+                    if entries.isEmpty, requestQuery.nilIfBlank != nil { break }
                     feedID = nil; cursor = nil; roundVideoIDs = []
                     requestQuery = "" // Finished search/collection -> fresh recommendation round.
                     hasMore = true
@@ -58,7 +76,13 @@ final class FeedStore: ObservableObject {
                 cursor = response.nextCursor?.nilIfBlank
                 hasMore = response.hasMore && cursor != nil && cursor != previousCursor
                 if !additions.isEmpty { entries += additions; return }
-                if response.list.isEmpty { hasMore = false; break }
+                if response.list.isEmpty {
+                    hasMore = false
+                    if entries.isEmpty, requestQuery.nilIfBlank != nil {
+                        emptySearch = BrowserLessonSearch(query: requestQuery)
+                    }
+                    break
+                }
             }
             if !entries.isEmpty { error = "No more lessons are available right now. Try again." }
         } catch is CancellationError {
@@ -71,6 +95,7 @@ final class FeedStore: ObservableObject {
 struct DiscoverView: View {
     @EnvironmentObject private var library: LibraryStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     private let canDismiss: Bool
     private let onExit: (() -> Void)?
     private let onSearchResult: ((String, LessonClip) -> Void)?
@@ -87,6 +112,7 @@ struct DiscoverView: View {
     @State private var visible = false
     @State private var activeID: String?
     @State private var recordedQuery: String?
+    @State private var openedBrowserSearchID: UUID?
     init(initialSearch: String = "", canDismiss: Bool = false, onExit: (() -> Void)? = nil,
          onSearchResult: ((String, LessonClip) -> Void)? = nil) {
         self.canDismiss = canDismiss
@@ -112,8 +138,11 @@ struct DiscoverView: View {
                         VStack(spacing: 24) {
                             TennisArtwork(kind: .lesson, height: 208)
                             MessagePanel(title: feed.loading ? "Finding your next lesson…" : "Your next session starts here.",
-                                         message: feed.error ?? (feed.loading ? "Loading your lesson feed." : "No lessons are available here yet. Try another search or open a shared lesson link on Home."),
-                                         actionTitle: feed.loading ? nil : "Try again") { Task { await feed.load(api: api, search: search) } }
+                                         message: feed.error ?? (feed.loading ? "Loading your lesson feed." : feed.emptySearch != nil ? "No matching lessons. Search the web with your original input." : "No lessons are available here yet. Try another search or open a shared lesson link on Home."),
+                                         actionTitle: feed.loading ? nil : feed.emptySearch != nil ? "Search in browser" : "Try again") {
+                                if let request = feed.emptySearch { openBrowserSearch(request) }
+                                else { Task { await feed.load(api: api, search: search) } }
+                            }
                         }.clipoPage()
                     }
                 }
@@ -184,8 +213,24 @@ struct DiscoverView: View {
                 }
             }
             .onDisappear { visible = false; feed.invalidatePendingLoad(); players.releaseAll() }
-            .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
+            .onChange(of: feed.emptySearch) { _, _ in openPendingBrowserSearch() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active { players.suspend() }
+                else { openPendingBrowserSearch() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
+    }
+    private func openPendingBrowserSearch() {
+        guard visible, scenePhase == .active, let request = feed.emptySearch,
+              openedBrowserSearchID != request.id else { return }
+        openBrowserSearch(request)
+    }
+    private func openBrowserSearch(_ request: BrowserLessonSearch) {
+        guard let url = request.url else { return }
+        openedBrowserSearchID = request.id
+        openURL(url) { accepted in
+            if !accepted { feed.error = "The browser could not open. Please try again." }
+        }
     }
     private var feedHeader: some View {
         HStack {

@@ -31,7 +31,9 @@ final class LibraryStore: ObservableObject {
     var history: [LessonLinkVisit] { snapshot.history }
     func url(for movie: PracticeRecording) -> URL { root.appendingPathComponent(movie.filename) }
     // Internal IDs stay stable; only the user-facing shared copy gets a readable name.
-    func shareFile(for movie: PracticeRecording) async throws -> URL {
+    func shareFile(for movie: PracticeRecording, commerce: CommerceStore) async throws -> URL {
+        try commerce.requireMediaExport()
+        let exportOwner = commerce.api.session?.userId.value
         let source = url(for: movie)
         let title = movie.title
         let task = Task.detached(priority: .userInitiated) {
@@ -62,9 +64,18 @@ final class LibraryStore: ObservableObject {
                 return destination
             } catch { try? fm.removeItem(at: directory); throw error }
         }
-        return try await withTaskCancellationHandler {
+        let destination = try await withTaskCancellationHandler {
             try await task.value
         } onCancel: { task.cancel() }
+        do {
+            try Task.checkCancellation()
+            try commerce.requireMediaExport()
+            guard exportOwner == commerce.api.session?.userId.value else { throw ClipoError.unauthorized }
+            return destination
+        } catch {
+            try? FileManager.default.removeItem(at: destination.deletingLastPathComponent())
+            throw error
+        }
     }
     func isSaved(_ clip: LessonClip) -> Bool { favorites.contains { $0.id == clip.id } }
     @discardableResult func toggle(_ clip: LessonClip) -> Bool {

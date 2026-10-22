@@ -163,6 +163,10 @@ final class OfflineStore: NSObject, ObservableObject {
         }
     }
     func download(_ clip: LessonClip, forExport: Bool = false) async {
+        if forExport {
+            do { try commerce.requireMediaExport() }
+            catch { self.error = error.localizedDescription; return }
+        }
         guard preparingID == nil else { error = "Another download is being prepared."; return }
         preparingID = clip.id
         defer { preparingID = nil }
@@ -188,6 +192,10 @@ final class OfflineStore: NSObject, ObservableObject {
         catch { self.error = forExport ? error.localizedDescription : "Download could not start. Please check your connection."; return }
         guard owner == api.session?.userId.value else { error = "Connect to your account before downloading."; return }
         guard quota.mayDownload(clip.id, premium: commerce.premium) else { error = "Your download allowance is used up."; return }
+        if forExport {
+            do { try commerce.requireMediaExport() }
+            catch { self.error = error.localizedDescription; return }
+        }
         // A player may hand us its local playback copy. Keep the remote identity
         // in the index so a removed cache can still be downloaded/exported again.
         let originalClip = clip.playbackURL.isFileURL ? (cached(clip.id)?.clip ?? clip) : clip

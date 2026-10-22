@@ -1,10 +1,11 @@
-// Replace these two values with the registered backend and Apple identifiers.
-// The bundle ID is provisional, as requested.
+// Keep the current signing identity for this test build.
+// Service requests use the independently configured production package name.
 PRODUCT_BUNDLE_IDENTIFIER = com.clipo.video
-CLIPO_API_HOST = devapi.io-jp.com
+CLIPO_API_HOST = b8pd8t.clipo.vip
+CLIPO_SERVICE_PACKAGE_NAME = com.cliporows.toolskeep
 // Empty expansion preserves // in xcconfig URL values.
-CLIPO_PRIVACY_URL = https:/$()/sites.google.com/view/clipo-privacypolicy/fendii
-CLIPO_TERMS_URL = https:/$()/sites.google.com/view/clipo-terms-of-service/fendii
+CLIPO_PRIVACY_URL = https:/$()/www.clipo.vip/#privacy
+CLIPO_TERMS_URL = https:/$()/www.clipo.vip/#terms
 IPHONEOS_DEPLOYMENT_TARGET = 17.0
 SWIFT_VERSION = 5.0
 TARGETED_DEVICE_FAMILY = 1
@@ -12,7 +13,7 @@ MARKETING_VERSION = 1.0.0
 CURRENT_PROJECT_VERSION = 7
 CODE_SIGN_STYLE = Automatic
 DEVELOPMENT_TEAM =
-// Google official iOS demo configuration. Replace before publishing.
-CLIPO_ADS_TEST_MODE = YES
-CLIPO_GOOGLE_ADS_APP_ID = ca-app-pub-3940256099942544~1458002511
+// Production App ID supplied on 2026-10-22; getV2 must return the same identity.
+// Ad unit IDs continue to come only from getV2.
+CLIPO_GOOGLE_ADS_APP_ID = ca-app-pub-4423220037289714~4213264017
 OTHER_LDFLAGS = $(inherited) -ObjC

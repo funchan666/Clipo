@@ -37,11 +37,6 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
     private var rewardAttempt: UUID?
     @Published private(set) var completedReward: UUID?
     private var started = false
-    private static let demoAppID = "ca-app-pub-3940256099942544~1458002511"
-    private static let demoRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
-
-    private static let demoAppOpenUnitID = "ca-app-pub-3940256099942544/5575463023"
-
     func watch(commerce: CommerceStore, quota: QuotaStore, kind: AllowanceKind) async {
         guard !busy, !isPresenting, !isPreparingAppOpen else { return }
         quota.resetIfNeeded()
@@ -49,23 +44,13 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         guard commerce.rightsVerified, let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
             error = "Rewarded ads are not available right now. No views have been deducted."; return
         }
-        let demoMode = (Bundle.main.object(forInfoDictionaryKey: "ClipoAdsTestMode") as? String) == "YES"
-        let appID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
-        let unitID: String
-        if demoMode {
-            // Demo mode must never load an account-owned ad unit, even if the backend sends one.
-            guard appID == Self.demoAppID else {
-                error = "Test ads require Google's sample iOS App ID."; return
-            }
-            unitID = Self.demoRewardedUnitID
-        } else {
-            guard let appID, appID.hasPrefix("ca-app-pub-"), appID.contains("~"), appID != Self.demoAppID,
-                  let unit = commerce.release?.adList?.first(where: { $0.adType == policy.rewardedAdType && $0.advertiser?.lowercased() == "google" }),
-                  let configuredUnitID = unit.config.adUnitId?.nilIfBlank, unit.config.appId == appID else {
-                error = "Rewarded ads are not available right now. No views have been deducted."; return
-            }
-            unitID = configuredUnitID
+        let packagedAppID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
+        guard let placement = commerce.release?.googlePlacement(for: policy.rewardedAdType, packagedAppID: packagedAppID) else {
+            appOpenLog.error("Rewarded ad configuration missing, invalid or inconsistent with the packaged App ID")
+            error = "Rewarded ads are not available right now. No views have been deducted."; return
         }
+        let unitID = placement.unitID
+        let demoMode = placement.isOfficialDemo
         let attemptID = UUID()
         rewardAttempt = attemptID
         busy = true
@@ -178,7 +163,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             guard ConsentInformation.shared.canRequestAds else { throw ClipoError.service("Ads are unavailable with your current privacy choices.") }
         } else {
             // Google's demo app has no Clipo-owned UMP message configuration.
-            // This branch is restricted to the exact official demo App ID and ad unit above.
+            // This branch is restricted to the exact official demo App ID and ad unit returned by getV2.
             privacyOptionsRequired = false
         }
         try Task.checkCancellation()
@@ -276,14 +261,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         scheduleAppOpenDeadline(attempt: attempt, seconds: waitingBudget)
         appOpenTask = Task { [weak self] in
             guard let self else { return }
-            let demoMode = (Bundle.main.object(forInfoDictionaryKey: "ClipoAdsTestMode") as? String) == "YES"
-            let appID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
-            if demoMode, appID == Self.demoAppID {
-                // Official test inventory needs no account configuration. Actual
-                // presentation still waits for verified rights and the interval.
-                self.startSDKIfNeeded()
-                Task { try? await self.preloadAppOpen(unitID: Self.demoAppOpenUnitID) }
-            }
+            let packagedAppID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
             do {
                 try await commerce.api.prepareVisitor()
                 try Task.checkCancellation()
@@ -301,33 +279,26 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
                 let unit = commerce.release?.adList?.first {
                     $0.adType == 1 && $0.advertiser?.lowercased() == "google"
                 }
-                // Only official demo mode can run without package ad configuration.
-                let interval = unit?.displayInterval ?? (demoMode ? 0 : nil)
-                let unitID: String
-                if demoMode, appID == Self.demoAppID { unitID = Self.demoAppOpenUnitID }
-                else if !demoMode, let appID, appID != Self.demoAppID,
-                        let unit, unit.config.appId == appID,
-                        let configured = unit.config.adUnitId?.nilIfBlank,
-                        configured.hasPrefix("ca-app-pub-"), configured.contains("/") {
-                    unitID = configured
-                } else { self.finishAppOpen(attempt: attempt, reason: "ad-configuration-unavailable"); return }
-                let key = "app-open.last-impression.\(commerce.api.configuration.bundleID).\(commerce.api.configuration.apiBaseURL?.host ?? "none").\(demoMode ? "demo" : "production")"
+                guard let placement = commerce.release?.googlePlacement(for: 1, packagedAppID: packagedAppID) else {
+                    self.appOpenLog.error("App-open configuration missing, invalid or inconsistent with the packaged App ID")
+                    self.finishAppOpen(attempt: attempt, reason: "ad-configuration-unavailable"); return
+                }
+                let interval = unit?.displayInterval
+                let unitID = placement.unitID
+                let key = "app-open.last-impression.\(commerce.api.configuration.servicePackageName).\(commerce.api.configuration.apiBaseURL?.host ?? "none").\(placement.isOfficialDemo ? "demo" : "production")"
                 self.appOpenLog.info("App-open rights/configuration ready; intervalMinutes=\(interval ?? -1)")
                 if self.appOpenAttempt == attempt { self.appOpenStage = "ad-preparation" }
-                if !demoMode {
-                    // Do not open consent UI after the startup opportunity has
-                    // ended. Already-consented inventory may still be preloaded.
-                    let mayPresentConsent = self.appOpenAttempt == attempt
-                    try await self.prepareSDK(demoMode: false,
-                        mayPresentConsent: mayPresentConsent,
-                        mayContinue: { !mayPresentConsent || self.appOpenAttempt == attempt },
-                        consentPresentation: { [weak self] presenting in
-                            guard let self, self.appOpenAttempt == attempt else { return }
-                            self.appOpenConsentPresented = presenting
-                            if presenting { self.appOpenDeadline?.cancel() }
-                            else { self.scheduleAppOpenDeadline(attempt: attempt, seconds: waitingBudget) }
-                        })
-                }
+                // Late inventory may be retained, but consent/presentation may not interrupt Home.
+                let mayPresentConsent = self.appOpenAttempt == attempt
+                try await self.prepareSDK(demoMode: placement.isOfficialDemo,
+                    mayPresentConsent: mayPresentConsent,
+                    mayContinue: { !mayPresentConsent || self.appOpenAttempt == attempt },
+                    consentPresentation: { [weak self] presenting in
+                        guard let self, self.appOpenAttempt == attempt else { return }
+                        self.appOpenConsentPresented = presenting
+                        if presenting { self.appOpenDeadline?.cancel() }
+                        else { self.scheduleAppOpenDeadline(attempt: attempt, seconds: waitingBudget) }
+                    })
                 guard AppOpenTiming.isDue(intervalMinutes: interval,
                     lastShown: UserDefaults.standard.object(forKey: key) as? Date) else {
                     Task { try? await self.preloadAppOpen(unitID: unitID) }

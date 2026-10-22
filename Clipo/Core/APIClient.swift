@@ -6,7 +6,8 @@ import OSLog
 
 struct ClipoConfiguration {
     let apiBaseURL: URL?
-    let bundleID: String
+    let bundleID: String // Installed identity: signing and background transfers.
+    let servicePackageName: String // Backend registration, independent of this test build.
     let version: String
     let privacyURL: URL?
     let termsURL: URL?
@@ -15,12 +16,14 @@ struct ClipoConfiguration {
         let host = (bundle.object(forInfoDictionaryKey: "ClipoAPIHost") as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let base = host.isEmpty || host.contains("$(") ? nil : URL(string: "https://" + host)
         return Self(apiBaseURL: base, bundleID: bundle.bundleIdentifier ?? "",
+                    servicePackageName: (bundle.object(forInfoDictionaryKey: "ClipoServicePackageName") as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
                     version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0",
                     privacyURL: WebAddress.media(bundle.object(forInfoDictionaryKey: "ClipoPrivacyURL") as? String),
                     termsURL: WebAddress.media(bundle.object(forInfoDictionaryKey: "ClipoTermsURL") as? String))
     }
     var isReady: Bool {
         apiBaseURL?.host != nil && !bundleID.isEmpty && !bundleID.contains("unconfigured")
+            && !servicePackageName.isEmpty && !servicePackageName.contains("$(")
     }
 }
 
@@ -139,7 +142,7 @@ final class APIClient: ObservableObject {
             }
             let publicIPv4 = try await loginPublicIPv4()
             try Task.checkCancellation()
-            let body = try JSONSerialization.data(withJSONObject: ["deviceCode": device, "source": configuration.bundleID, "uniqueId": publicIPv4])
+            let body = try JSONSerialization.data(withJSONObject: ["deviceCode": device, "source": configuration.servicePackageName, "uniqueId": publicIPv4])
             // Diagnose the wire payload without logging the IP, UUID or credentials.
             diagnostics.debug("Guest login payload: uniqueId IPv4 present \(!publicIPv4.isEmpty)")
             let result: VisitorSession = try await perform("/app-api/member/auth/app_tourist_login", method: "POST", body: body, authenticated: false)
@@ -217,22 +220,22 @@ final class APIClient: ObservableObject {
         let codes = links.compactMap { WebAddress.landingCode($0) }
         guard !codes.isEmpty else { return [] }
         let body = try JSONSerialization.data(withJSONObject: codes.map {
-            ["externalLinks": $0, "packageName": configuration.bundleID]
+            ["externalLinks": $0, "packageName": configuration.servicePackageName]
         })
         return try await perform("/app-api/flow/land-page/info_by_links_list", method: "POST", body: body, authenticated: false)
     }
     func resolve(_ link: String, password: String) async throws -> LandingInfo {
         try await perform("/app-api/flow/land-page/info_by_links", query: [
-            "externalLinks": link, "password": password, "packageName": configuration.bundleID],
+            "externalLinks": link, "password": password, "packageName": configuration.servicePackageName],
             missingDataMessage: "No content was returned for this link. Check the code, including uppercase and lowercase letters, or try again later.")
     }
     func channelPage(link: String, page: Int) async throws -> ChannelPage {
         try await perform("/app-api/flow/land-page/list_by_links_page", query: [
-            "externalLinks": link, "pageNo": String(max(1, page)), "pageSize": "20", "packageName": configuration.bundleID])
+            "externalLinks": link, "pageNo": String(max(1, page)), "pageSize": "20", "packageName": configuration.servicePackageName])
     }
     func feed(query: String, feedID: String?, cursor: String?) async throws -> LessonFeedPage {
         guard let session else { throw ClipoError.unauthorized }
-        var queryItems = ["userId": session.userId.value, "packageName": configuration.bundleID, "pageSize": "10"]
+        var queryItems = ["userId": session.userId.value, "packageName": configuration.servicePackageName, "pageSize": "10"]
         if let feedID = feedID?.nilIfBlank { queryItems["feedId"] = feedID }
         if let cursor = cursor?.nilIfBlank { queryItems["cursor"] = cursor }
         if let query = query.nilIfBlank { queryItems["query"] = query }

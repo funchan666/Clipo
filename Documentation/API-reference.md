@@ -129,7 +129,7 @@ GET /app-api/flow/release-package/getV2?platform=IOS&name=Clipo&version=1.0.0&la
     },
     "adList": [
       {
-        "adType": 1,     //类型1是开屏广告，类型2是激励广告  广告使用Google中介器接入 详情见官方接入文档：https://developers.google.com/admob/android/mediation?hl=zh-cn
+        "adType": 1,     //类型1是开屏广告，类型5是激励广告；iOS 接入：https://developers.google.com/admob/ios/quick-start
         "advertiser": "google",
         "config": {
           "appId": "string",   //appid
@@ -643,3 +643,12 @@ coverImage
 | 非 JSON | 按响应格式错误处理 |
 | 网络不可用 | 提示网络异常 |
 
+
+
+## 客户端广告配置同步（2026-10-22）
+
+- 运行时只使用 getV2.adList 返回的 google 配置：adType=1 开屏、adType=5 激励；无配置时不回退本地示例广告。
+- appId 必须是同一 AdMob 应用的 ca-app-pub-…~…，adUnitId 是该应用对应广告位的 ca-app-pub-…/…；开屏 displayInterval 按分钟读取。
+- Google iOS SDK 还要求 Info.plist 的 GADApplicationIdentifier 与接口 appId 一致。Archive 前执行 `python3 scripts/sync_admob_app_id.py --user-id <当前游客登录返回的userId>`，由接口自动同步到 xcconfig。该命令不构建应用；数据缺失／格式错误／两种广告的 App ID 不一致时不修改配置并报错。
+- 后台更换广告位 ID 可在下一次配置读取时使用；更换 App ID 需重新同步并打包。不要修改已签名 IPA 的 Info.plist。
+- 2026-10-22 使用此前提供的 userId=1246 查询 Clipo 的配置成功，但响应没有 adList；尚不能确认实际广告账号配置。

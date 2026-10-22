@@ -535,3 +535,10 @@
 "1. Copy a Clipo link" = "1. Clipo 링크 복사";
 "Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "붙여넣기를 누르거나 받은 레슨 코드를 그대로 입력하세요. 코드는 대소문자를 구분합니다.";
 "Tap Open lesson to find matching lessons, then swipe to watch." = "레슨 열기를 눌러 일치하는 레슨을 찾은 뒤 스와이프하여 시청하세요.";
+
+"Search in browser" = "브라우저에서 검색";
+"The browser could not open. Please try again." = "브라우저를 열 수 없습니다. 다시 시도해 주세요.";
+"Connect to verify your Plus membership before exporting." = "내보내기 전에 인터넷에 연결해 Plus 멤버십을 확인해 주세요.";
+"Export is included with Plus." = "내보내기는 Plus 멤버십에 포함됩니다.";
+"Unlimited views, downloads and media exports." = "시청, 다운로드, 미디어 내보내기를 무제한으로.";
+"No matching lessons. Search the web with your original input." = "일치하는 레슨이 없습니다. 입력한 내용으로 웹을 검색하세요.";

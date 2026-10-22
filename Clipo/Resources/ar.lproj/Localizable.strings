@@ -535,3 +535,10 @@
 "1. Copy a Clipo link" = "1. انسخ رابط Clipo";
 "Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "اضغط على لصق أو أدخل رمز الدرس كما وصلك تمامًا. الرموز حساسة لحالة الأحرف.";
 "Tap Open lesson to find matching lessons, then swipe to watch." = "اضغط على فتح الدرس للعثور على الدروس المطابقة، ثم اسحب للمشاهدة.";
+
+"Search in browser" = "البحث في المتصفح";
+"The browser could not open. Please try again." = "تعذر فتح المتصفح. يرجى المحاولة مجددًا.";
+"Connect to verify your Plus membership before exporting." = "اتصل بالإنترنت للتحقق من عضوية Plus قبل التصدير.";
+"Export is included with Plus." = "التصدير متاح ضمن عضوية Plus.";
+"Unlimited views, downloads and media exports." = "مشاهدات وتنزيلات وتصدير وسائط بلا حدود.";
+"No matching lessons. Search the web with your original input." = "لا توجد دروس مطابقة. ابحث في الويب باستخدام النص الذي أدخلته.";

@@ -51,6 +51,15 @@ final class CommerceStore: NSObject, ObservableObject {
     private var refreshTask: Task<Void, Never>?
     private var refreshingOwner: String?
     var premium: Bool { expiration.map { $0 > Date() } ?? false }
+    var canExportMedia: Bool {
+        rightsVerified && premium && ownerID != nil && ownerID == api.session?.userId.value
+    }
+    func requireMediaExport() throws {
+        guard rightsVerified, ownerID != nil, ownerID == api.session?.userId.value else {
+            throw ClipoError.service("Connect to verify your Plus membership before exporting.")
+        }
+        guard premium else { throw ClipoError.service("Export is included with Plus.") }
+    }
     var purchasesAllowed: Bool { release != nil && release?.NB01 != true && api.session != nil && api.configuration.isReady && ledgerAvailable }
 
     init(api: APIClient, quota: QuotaStore) {
@@ -206,7 +215,7 @@ final class CommerceStore: NSObject, ObservableObject {
         message = nil
         do {
             let payload: [String: Any] = ["rightsName": product.productIdentifier, "price": product.price.stringValue,
-                "usdPrice": entry.usdPrice, "packageName": api.configuration.bundleID,
+                "usdPrice": entry.usdPrice, "packageName": api.configuration.servicePackageName,
                 "versionCode": api.configuration.version, "payType": "1", "source": "ios"]
             let data = try await api.paymentRequest(path: "/app-api/flow/rights-order/buy", body: payload, owner: owner)
             let response = try JSONDecoder().decode(APIEnvelope<ServiceID>.self, from: data)
