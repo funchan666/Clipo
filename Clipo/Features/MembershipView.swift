@@ -286,8 +286,8 @@ struct AccountView: View {
                     }
                     membershipCard
                     allowance
-                    AccountSettingsSection()
                 } else { ConnectionPanel() }
+                AccountSettingsSection()
                 LocalizedText("Version \(api.configuration.version)")
                     .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 4)

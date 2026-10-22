@@ -240,6 +240,8 @@ struct PolicyWebView: UIViewRepresentable {
 }
 
 struct AccountSettingsSection: View {
+    @Environment(\.openURL) private var openURL
+    @State private var websiteError: String?
     @AppStorage(AppLanguage.preferenceKey) private var languageCode = AppLanguage.systemSelection
     @State private var languagePicker = false
     @EnvironmentObject private var api: APIClient
@@ -270,8 +272,19 @@ struct AccountSettingsSection: View {
                             AccountMenuRow(title: "Terms of Use")
                         }
                     }
-                    if ads.privacyOptionsRequired {
+                    if let website = URL(string: "https://www.clipo.vip") {
                         if api.configuration.privacyURL != nil || api.configuration.termsURL != nil { rowDivider }
+                        Button {
+                            websiteError = nil
+                            openURL(website) { accepted in
+                                if !accepted { websiteError = "The browser could not open. Please try again." }
+                            }
+                        } label: {
+                            AccountMenuRow(title: "Official website")
+                        }.accessibilityIdentifier("account.officialWebsite")
+                    }
+                    if ads.privacyOptionsRequired {
+                        rowDivider
                         Button { Task { await ads.privacyOptions() } } label: {
                             AccountMenuRow(title: "Advertising privacy")
                         }
@@ -279,6 +292,7 @@ struct AccountSettingsSection: View {
                 }.background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                     .buttonStyle(PressStyle()).disabled(unavailable)
             }
+            if let websiteError { ErrorNote(message: websiteError) }
             if let error = ads.error { ErrorNote(message: error) }
         }
             .sheet(item: $document) { PolicyBrowser(document: $0) }
