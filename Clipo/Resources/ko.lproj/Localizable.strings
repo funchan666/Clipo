@@ -524,3 +524,14 @@
 "Finish this ad for unlimited views today." = "이 광고를 끝까지 보면 오늘 무제한으로 시청할 수 있습니다.";
 "Finish this ad for unlimited downloads today." = "이 광고를 끝까지 보면 오늘 무제한으로 다운로드할 수 있습니다.";
 "Connect to refresh your allowance." = "이용 한도를 새로고침하려면 인터넷에 연결하세요.";
+
+// Clipo lesson link entry.
+"Open a tennis lesson" = "테니스 레슨 열기";
+"Clipo link or lesson code" = "Clipo 링크 또는 레슨 코드";
+"Paste" = "붙여넣기";
+"Open lesson" = "레슨 열기";
+"Use a lesson link or code shared through Clipo." = "Clipo를 통해 공유받은 레슨 링크나 코드를 사용하세요.";
+"Copy a Clipo link or lesson code first, then tap Paste." = "먼저 Clipo 링크나 레슨 코드를 복사한 뒤 붙여넣기를 누르세요.";
+"1. Copy a Clipo link" = "1. Clipo 링크 복사";
+"Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "붙여넣기를 누르거나 받은 레슨 코드를 그대로 입력하세요. 코드는 대소문자를 구분합니다.";
+"Tap Open lesson to find matching lessons, then swipe to watch." = "레슨 열기를 눌러 일치하는 레슨을 찾은 뒤 스와이프하여 시청하세요.";

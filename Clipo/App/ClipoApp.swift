@@ -74,7 +74,7 @@ struct ClipoStartupHost: View {
         .onReceive(ads.$startupFinished) { complete in
             if complete, !finished {
                 Logger(subsystem: "com.clipo.video", category: "Startup")
-                    .debug("Home became interactive after \(startupBegan.duration(to: .now).description, privacy: .public)")
+                    .info("Home became interactive after \(startupBegan.duration(to: .now).description, privacy: .public)")
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { finished = true }
             }
         }

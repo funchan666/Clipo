@@ -32,7 +32,6 @@ struct HomeView: View {
                 }
                 TennisCourtBanner()
                 linkComposer
-                linkGuide
                 TennisGuideEntry(compact: true) { showingTennisGuide = true }
                 if let error { ErrorNote(message: error) }
                 if api.session == nil { ConnectionPanel() }
@@ -96,16 +95,17 @@ struct HomeView: View {
                 Glyph(symbol: .link, size: 20)
                     .frame(width: 40, height: 40)
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
-                LocalizedText("Open a lesson").font(.court(.headline)).foregroundStyle(ClipoStyle.ink)
+                LocalizedText("Open a tennis lesson").font(.court(.headline))
+                    .foregroundStyle(ClipoStyle.ink).fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 0) {
-                TextField("Lesson link or short code", text: $link, axis: .vertical)
+                TextField("Clipo link or lesson code", text: $link, axis: .vertical)
                     .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .focused($focused).font(.court(.subheadline)).foregroundStyle(ClipoStyle.ink)
                     .tint(ClipoStyle.ink)
                     .padding(.leading, 14).padding(.vertical, 14)
                     .frame(maxWidth: .infinity)
-                    .accessibilityLabel("Lesson or collection link")
+                    .accessibilityLabel(LocalizedStringKey("Clipo link or lesson code"))
                 if !link.isEmpty {
                     Button {
                         link = ""
@@ -138,7 +138,7 @@ struct HomeView: View {
                 }
             }
             Button(action: resolve) {
-                LocalizedText("Open link")
+                LocalizedText("Open lesson")
                     .font(.court(.subheadline, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.75)
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .frame(maxWidth: .infinity, minHeight: 48)
@@ -146,6 +146,21 @@ struct HomeView: View {
                     .background { MatteSurface(tone: canOpenLink ? .pineOnPaper : .sageOnPaper) }
                     .contentShape(Rectangle())
             }.buttonStyle(ComposerPressStyle()).disabled(!canOpenLink)
+                .accessibilityIdentifier("home.openLesson")
+            HStack(alignment: .center, spacing: 12) {
+                LocalizedText("Use a lesson link or code shared through Clipo.")
+                    .font(.court(.caption)).foregroundStyle(ClipoStyle.paperSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button { showingLinkGuide = true } label: {
+                    LocalizedText("How to").font(.court(.caption, weight: .semibold))
+                        .underline().foregroundStyle(ClipoStyle.ink)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }.buttonStyle(ComposerPressStyle())
+                    .accessibilityIdentifier("home.linkHelp")
+            }
         }.padding(20).background(ClipoStyle.paper, in: RoundedRectangle(cornerRadius: 26))
     }
     private var canOpenLink: Bool { searchRequest == nil && link.nilIfBlank != nil }
@@ -157,27 +172,23 @@ struct HomeView: View {
         }
     }
     private var pasteButton: some View {
-        Button("Paste link") {
-            pasteCopiedLink()
-        }.buttonStyle(MatteActionStyle(onPaper: true))
+        Button(action: pasteCopiedLink) {
+            LocalizedText("Paste").font(.court(.footnote, weight: .semibold))
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 18).padding(.vertical, 10)
+                .frame(minHeight: 44)
+                .foregroundStyle(ClipoStyle.paper)
+                .background { MatteSurface(tone: .pineOnPaper) }
+                .contentShape(Rectangle())
+        }.buttonStyle(ComposerPressStyle())
+            .accessibilityIdentifier("home.pasteLink")
     }
     private func pasteCopiedLink() {
         guard let text = UIPasteboard.general.string, text.nilIfBlank != nil else {
-            showLinkFailure("Copy a video link or short code first, then tap Paste link.")
+            showLinkFailure("Copy a Clipo link or lesson code first, then tap Paste.")
             return
         }
         link = text
-    }
-    private var linkGuide: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                LocalizedText("Have a lesson link?").font(.court(.subheadline, weight: .semibold))
-                LocalizedText("Paste the link or code shared with you.")
-                    .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
-            }.frame(maxWidth: .infinity, alignment: .leading)
-            Button("How to") { showingLinkGuide = true }
-                .buttonStyle(MatteActionStyle())
-        }
     }
     @ViewBuilder private var recentLinks: some View {
         if !library.history.isEmpty {
@@ -315,9 +326,9 @@ struct LinkGuideSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     TennisArtwork(kind: .lesson, height: 150)
-                    FeatureRow(symbol: .link, title: "1. Copy your shared link", detail: "Use a tennis lesson link or short code shared with you.")
-                    FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste link or enter the code exactly as received. Uppercase and lowercase letters matter.")
-                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open link to find matching lessons, then swipe to watch.")
+                    FeatureRow(symbol: .link, title: "1. Copy a Clipo link", detail: "Use a lesson link or code shared through Clipo.")
+                    FeatureRow(symbol: .search, title: "2. Paste it above", detail: "Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive.")
+                    FeatureRow(symbol: .play, title: "3. Open and watch", detail: "Tap Open lesson to find matching lessons, then swipe to watch.")
                     LocalizedText("No results? Check your input, or ask the sender for a new link.")
                         .font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
                     ActionButton(title: "Got it") { dismiss() }

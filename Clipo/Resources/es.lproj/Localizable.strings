@@ -524,3 +524,14 @@
 "Finish this ad for unlimited views today." = "Completa este anuncio para ver sin límites hoy.";
 "Finish this ad for unlimited downloads today." = "Completa este anuncio para descargar sin límites hoy.";
 "Connect to refresh your allowance." = "Conéctate para actualizar tu cupo.";
+
+// Clipo lesson link entry.
+"Open a tennis lesson" = "Abrir una clase de tenis";
+"Clipo link or lesson code" = "Enlace de Clipo o código de clase";
+"Paste" = "Pegar";
+"Open lesson" = "Abrir clase";
+"Use a lesson link or code shared through Clipo." = "Usa un enlace o código de clase compartido a través de Clipo.";
+"Copy a Clipo link or lesson code first, then tap Paste." = "Primero copia un enlace de Clipo o código de clase y toca Pegar.";
+"1. Copy a Clipo link" = "1. Copia un enlace de Clipo";
+"Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "Toca Pegar o introduce el código de clase tal como lo recibiste. Los códigos distinguen mayúsculas y minúsculas.";
+"Tap Open lesson to find matching lessons, then swipe to watch." = "Toca Abrir clase para encontrar clases coincidentes y desliza para verlas.";

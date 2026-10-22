@@ -524,3 +524,14 @@
 "Finish this ad for unlimited views today." = "広告を最後まで見ると、今日は無制限で視聴できます。";
 "Finish this ad for unlimited downloads today." = "広告を最後まで見ると、今日は無制限でダウンロードできます。";
 "Connect to refresh your allowance." = "利用回数を更新するには接続してください。";
+
+// Clipo lesson link entry.
+"Open a tennis lesson" = "テニスレッスンを開く";
+"Clipo link or lesson code" = "Clipoのリンクまたはレッスンコード";
+"Paste" = "ペースト";
+"Open lesson" = "レッスンを開く";
+"Use a lesson link or code shared through Clipo." = "Clipoで共有されたレッスンのリンクまたはコードを使ってください。";
+"Copy a Clipo link or lesson code first, then tap Paste." = "先にClipoのリンクまたはレッスンコードをコピーしてから「ペースト」をタップしてください。";
+"1. Copy a Clipo link" = "1. Clipoのリンクをコピー";
+"Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "「ペースト」をタップするか、受け取ったレッスンコードをそのまま入力してください。大文字と小文字は区別されます。";
+"Tap Open lesson to find matching lessons, then swipe to watch." = "「レッスンを開く」をタップして該当するレッスンを探し、スワイプして視聴します。";

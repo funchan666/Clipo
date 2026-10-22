@@ -524,3 +524,14 @@
 "Finish this ad for unlimited views today." = "أكمل هذا الإعلان لمشاهدات غير محدودة اليوم.";
 "Finish this ad for unlimited downloads today." = "أكمل هذا الإعلان لتنزيلات غير محدودة اليوم.";
 "Connect to refresh your allowance." = "اتصل بالإنترنت لتحديث حصتك.";
+
+// Clipo lesson link entry.
+"Open a tennis lesson" = "فتح درس تنس";
+"Clipo link or lesson code" = "رابط Clipo أو رمز الدرس";
+"Paste" = "لصق";
+"Open lesson" = "فتح الدرس";
+"Use a lesson link or code shared through Clipo." = "استخدم رابط درس أو رمزًا تمت مشاركته عبر Clipo.";
+"Copy a Clipo link or lesson code first, then tap Paste." = "انسخ رابط Clipo أو رمز الدرس أولًا، ثم اضغط على لصق.";
+"1. Copy a Clipo link" = "1. انسخ رابط Clipo";
+"Tap Paste or enter the lesson code exactly as received. Codes are case-sensitive." = "اضغط على لصق أو أدخل رمز الدرس كما وصلك تمامًا. الرموز حساسة لحالة الأحرف.";
+"Tap Open lesson to find matching lessons, then swipe to watch." = "اضغط على فتح الدرس للعثور على الدروس المطابقة، ثم اسحب للمشاهدة.";
