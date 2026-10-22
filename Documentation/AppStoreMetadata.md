@@ -46,7 +46,7 @@ Privacy Policy: https://www.clipo.vip/#privacy
 
 No username or password is required. The app starts an authenticated guest session automatically. Open Tools to review an imported practice video, read Tennis field notes or use Serve practice. Open Get Plus to view subscriptions.
 
-审核需要由后端提供持续可用的网球课程链接或短码，不能用虚构账号代替访问资料。当前生产 getV2 查询仍返回分发包不存在，需修复后再验证购买。
+审核需要由后端提供持续可用的网球课程链接或短码，不能用虚构账号代替访问资料。最新生产 getV2 查询已成功，但缺少 ios 购买配置，需后台补齐后再验证购买。
 
 ## 用户协议
 
@@ -58,17 +58,17 @@ https://www.clipo.vip/#privacy
 
 ## 内购填写资料
 
-两项均为现有自动续订会员，不是金币。为避免与 Apple 尚未核实的周期不一致，以下展示名称不写死周、月或年；周期和金额由 Apple 商品信息显示。
+两项均为自动续订会员，放入同一个 Clipo Plus 订阅组，提供相同会员权益。
 
 | 项目 | 第一项 | 第二项 |
 | --- | --- | --- |
-| 商品 ID | coins_1.99 | conis_4.99 |
-| 显示名称 | Clipo Plus Access | Clipo Plus Access |
+| 商品 ID | clipo.plus.monthly | clipo.plus.yearly |
+| 参考名称及英文显示名称 | Clipo Plus Monthly | Clipo Plus Yearly |
 | 描述 | Unlimited views, downloads and media exports. | Unlimited views, downloads and media exports. |
-| 本地历史美元参考金额 | 9.99 | 99.99 |
-| Apple 当前正式金额和周期 | 本轮未取得，不能确认为历史参考价 | 本轮未取得，不能确认为历史参考价 |
+| 订阅周期 | 1 month | 1 year |
+| 确认的美元定价 | 9.99 | 99.99，全年预付 |
 
-显示名称 17 字符，描述 45 字符。Apple 商品当前登记价格及周期必须在 App Store Connect 核实；商品 ID 的数字不代表售价。此前截图曾返回 1.99 每 7 天及 4.99 每月，最新提供的另一截图又显示 9.99 每月及 99.99 每年，不能据此替你确定最终登记。
+两个显示名称分别为 18、17 字符，描述均为 45 字符。客户端商品配置已同步；界面实际显示及交易金额以 Apple 返回的本地化商品信息为准。本轮未运行商品加载、购买或恢复验证，后台商品映射尚待管理员同步。用户已确认旧商品配置可以删除，仅保留上述两项新商品。
 
 ## 真实内购检查
 

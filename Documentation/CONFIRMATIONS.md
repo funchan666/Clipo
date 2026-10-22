@@ -13,8 +13,9 @@
 
 ## 已确认的业务约定
 
-- 不做金币钱包。Apple 商品 ID 保持 coins_1.99、conis_4.99；显示名称、金额及订阅周期以 Apple 实际商品为准，不按 ID 中的数字推断。
-- Commerce.json 中 9.99 和 99.99 是本地历史参考价；usdPrice 999 和 9999 是原后端订单契约，未擅自更改。正式商品最终登记结果仍需核对。
+- 不做金币钱包。用户已创建 Clipo Plus 订阅组及两项自动续订商品，并授权同步客户端：clipo.plus.monthly（月付，9.99 美元）、clipo.plus.yearly（年付，99.99 美元，全年预付）。两项提供同级 Plus 权益；界面的名称、金额及周期仍以 Apple 实际商品为准。
+- Commerce.json 已同步新商品 ID；usdPrice 999 和 9999 保留原后端订单契约。StoreKit 查询和新订单 rightsName 使用新 ID，不修改 Keychain 中历史订单的商品 ID、订单号、归属和验单配置。
+- 后台待同步商品映射：clipo.plus.monthly 对应月度 Plus、usdPrice 999；clipo.plus.yearly 对应年度 Plus、usdPrice 9999。用户已明确确认旧商品配置可以删除，仅保留这两项新商品；此确认不涉及清空设备交易队列或历史订单。当前没有后台管理写入入口，尚未修改生产后台。
 - VIP 才能导出媒体，覆盖播放器、资料库、视频编辑和音频导出；发球记录 CSV 不属于媒体导出限制。
 - 收藏不扣下载次数。观看与下载额度独立；getV2 的广告奖励立即更新，已消耗的每日基础额度配置次日生效。完整广告推进奖励轮次，幸运奖励不推进。
 - 无观看额度时，首次进入受限新视频提示一次；关闭后不循环弹出。主动切到受限新视频或点击获取更多次数时可再次提示。
@@ -27,10 +28,10 @@
 ## 本轮检查及发布依赖
 
 - 已检查真实 StoreKit 请求、支付队列、Apple 收据与服务端确认调用。共享 Scheme 没有 StoreKitConfigurationFileReference，工程无 .storekit 文件和 StoreKitTest 模拟商品依赖。
-- 2026-10-22 使用用户提供的 765732 只读查询生产 getV2，name Clipo、platform IOS、version 1.0.0，仍返回 code 1002000001，The distribution package does not exist。未收到 ios 购买配置，真实购买目前不能据此认定可用。需要后端修复配置匹配或发布状态。
+- 2026-10-22 同步商品时，使用用户提供的 765732 只读复查生产 getV2，name Clipo、platform IOS、version 1.0.0，已返回 code 0，取代此前“分发包不存在”的结果。但 data 没有 ios 购买配置，monthlyPayment、annualPayment、monthlyPrice、annualPrice 均为 null，尚不能据此认定真实购买可用。需后台补齐购买配置及新商品映射；客户端未向后台执行写入或下单。
 - 应用自动创建游客会话，没有账号密码登录表单，因此不编造审核测试账号。审核备注应说明无需账号密码；还需准备真实可用的网球课程短码。
 - Apple 审核及 TestFlight 使用 Apple 沙盒交易是正常流程，不等于 Xcode 本地模拟商品。服务端必须支持审核沙盒收据；本轮未改变 sandBoxTest 后端契约。
-- App Store Connect 商品登记、最终金额与周期、有效付费协议、Sandbox 购买和恢复仍未在本轮验证。不同 Bundle ID 下的商品必须属于对应 App 记录。
+- 用户截图确认 Clipo Plus 组内已创建两项订阅，月度商品 ID 为 clipo.plus.monthly、周期为 1 month；客户端已按确认方案同步。Apple 实际返回的两项商品、年度详情、有效付费协议、Sandbox 购买和恢复尚未运行验证。不同 Bundle ID 下的商品必须属于对应 App 记录。
 - 最新已存在 IPA 约 12.73 MB、解压 Payload 约 17.27 MB，均低于 50 MB；这些是旧包测量，不是本轮新包。
 - 资源采用无损 PNG 重压缩，22 张图片与原图逐像素核对，尺寸、透明度及 ICC 保持一致。未降低 JPEG 品质或图片分辨率。
 - 本轮仅静态检查和现有 IPA 内容检查，未编译、运行应用、下单购买、打包或上传。
