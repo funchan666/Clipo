@@ -95,7 +95,6 @@ final class FeedStore: ObservableObject {
 struct DiscoverView: View {
     @EnvironmentObject private var library: LibraryStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
     private let canDismiss: Bool
     private let onExit: (() -> Void)?
     private let onSearchResult: ((String, LessonClip) -> Void)?
@@ -113,6 +112,7 @@ struct DiscoverView: View {
     @State private var activeID: String?
     @State private var recordedQuery: String?
     @State private var openedBrowserSearchID: UUID?
+    @State private var browserSearch: PolicyDocument?
     init(initialSearch: String = "", canDismiss: Bool = false, onExit: (() -> Void)? = nil,
          onSearchResult: ((String, LessonClip) -> Void)? = nil) {
         self.canDismiss = canDismiss
@@ -213,6 +213,9 @@ struct DiscoverView: View {
                 }
             }
             .onDisappear { visible = false; feed.invalidatePendingLoad(); players.releaseAll() }
+            .fullScreenCover(item: $browserSearch) { document in
+                PolicyBrowser(document: document, webSearch: true)
+            }
             .onChange(of: feed.emptySearch) { _, _ in openPendingBrowserSearch() }
             .onChange(of: scenePhase) { _, phase in
                 if phase != .active { players.suspend() }
@@ -228,9 +231,8 @@ struct DiscoverView: View {
     private func openBrowserSearch(_ request: BrowserLessonSearch) {
         guard let url = request.url else { return }
         openedBrowserSearchID = request.id
-        openURL(url) { accepted in
-            if !accepted { feed.error = "The browser could not open. Please try again." }
-        }
+        players.suspend()
+        browserSearch = PolicyDocument(title: "Web search", url: url)
     }
     private var feedHeader: some View {
         HStack {

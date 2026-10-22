@@ -135,18 +135,33 @@ final class PolicyBrowserState: ObservableObject {
     @Published var loading = true
     @Published var error: String?
     @Published var requestID = 0
+    @Published var canGoBack = false
+    @Published var currentURL: URL?
+    weak var webView: WKWebView?
     func retry() { error = nil; loading = true; requestID += 1 }
+    func goBack() { webView?.goBack() }
 }
 
 struct PolicyBrowser: View {
     let document: PolicyDocument
+    var webSearch = false
     @Environment(\.dismiss) private var dismiss
     @StateObject private var state = PolicyBrowserState()
     var body: some View {
         VStack(spacing: 0) {
             SheetHeading(title: document.title) { dismiss() }
+            if webSearch {
+                HStack(spacing: 12) {
+                    IconButton(symbol: .back, label: "Back") { state.goBack() }
+                        .disabled(!state.canGoBack)
+                    Text(verbatim: state.currentURL?.host ?? document.url.host ?? "")
+                        .font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                    Spacer(minLength: 0)
+                }.padding(.horizontal, 16).padding(.bottom, 8)
+            }
             ZStack {
-                PolicyWebView(url: document.url, state: state)
+                PolicyWebView(url: document.url, state: state, webSearch: webSearch)
                     .accessibilityHidden(state.loading || state.error != nil)
                 if let error = state.error {
                     ClipoStyle.background
@@ -156,7 +171,7 @@ struct PolicyBrowser: View {
                     }
                 } else if state.loading {
                     ClipoStyle.background
-                    AccountLoadingIndicator(title: "Opening document…").padding(24)
+                    AccountLoadingIndicator(title: webSearch ? "Opening page…" : "Opening document…").padding(24)
                 }
             }
         }.clipoScreenBackground().foregroundStyle(.white)
@@ -166,7 +181,8 @@ struct PolicyBrowser: View {
 struct PolicyWebView: UIViewRepresentable {
     let url: URL
     @ObservedObject var state: PolicyBrowserState
-    func makeCoordinator() -> Coordinator { Coordinator(state: state) }
+    var webSearch = false
+    func makeCoordinator() -> Coordinator { Coordinator(state: state, webSearch: webSearch) }
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
@@ -175,24 +191,27 @@ struct PolicyWebView: UIViewRepresentable {
         view.uiDelegate = context.coordinator
         view.allowsBackForwardNavigationGestures = true
         view.isOpaque = false
+        state.webView = view
         return view
     }
     func updateUIView(_ view: WKWebView, context: Context) {
         guard context.coordinator.requestID != state.requestID else { return }
         context.coordinator.requestID = state.requestID
-        view.load(URLRequest(url: url, timeoutInterval: 30))
+        view.load(URLRequest(url: state.currentURL ?? url, timeoutInterval: 30))
     }
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         view.navigationDelegate = nil
         view.uiDelegate = nil
         view.stopLoading()
+        coordinator.state.webView = nil
     }
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let state: PolicyBrowserState
+        let webSearch: Bool
         var requestID: Int?
-        init(state: PolicyBrowserState) { self.state = state }
-        // Legal documents have no camera or microphone use case.
+        init(state: PolicyBrowserState, webSearch: Bool) { self.state = state; self.webSearch = webSearch }
+        // Documents and search results have no camera or microphone use case.
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
                      initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
                      decisionHandler: @escaping (WKPermissionDecision) -> Void) {
@@ -202,7 +221,15 @@ struct PolicyWebView: UIViewRepresentable {
             state.loading = true
             state.error = nil
         }
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { state.loading = false }
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            state.currentURL = webView.url
+            state.canGoBack = webView.canGoBack
+        }
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            state.loading = false
+            state.currentURL = webView.url
+            state.canGoBack = webView.canGoBack
+        }
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { fail(error) }
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { fail(error) }
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
@@ -217,10 +244,10 @@ struct PolicyWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
-            if url.scheme == "mailto", navigationAction.navigationType == .linkActivated {
+            if !webSearch, url.scheme == "mailto", navigationAction.navigationType == .linkActivated {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
-            } else if url.scheme == "https" || url.absoluteString == "about:blank" {
+            } else if url.scheme == "https" || (webSearch && url.scheme == "http") || url.absoluteString == "about:blank" {
                 if navigationAction.targetFrame == nil {
                     webView.load(navigationAction.request)
                     decisionHandler(.cancel)

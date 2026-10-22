@@ -33,24 +33,18 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
     private var appOpenConsentPresented = false
     private var appOpenAd: AppOpenAd?
     private var rewarded: RewardedAd?
+    private var unavailableReward: (() -> Void)?
     private var rewardGranted = false
     private var rewardAttempt: UUID?
     @Published private(set) var completedReward: UUID?
     private var started = false
     func watch(commerce: CommerceStore, quota: QuotaStore, kind: AllowanceKind) async {
-        guard !busy, !isPresenting, !isPreparingAppOpen else { return }
+        guard !Task.isCancelled, !busy, !isPresenting, !isPreparingAppOpen else { return }
         quota.resetIfNeeded()
         guard quota.canRequestReward(for: kind, premium: commerce.premium) else { return }
         guard commerce.rightsVerified, let policy = commerce.policy, let owner = commerce.api.session?.userId.value else {
             error = "Rewarded ads are not available right now. No views have been deducted."; return
         }
-        let packagedAppID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
-        guard let placement = commerce.release?.googlePlacement(for: policy.rewardedAdType, packagedAppID: packagedAppID) else {
-            appOpenLog.error("Rewarded ad configuration missing, invalid or inconsistent with the packaged App ID")
-            error = "Rewarded ads are not available right now. No views have been deducted."; return
-        }
-        let unitID = placement.unitID
-        let demoMode = placement.isOfficialDemo
         let attemptID = UUID()
         rewardAttempt = attemptID
         busy = true
@@ -61,7 +55,15 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         message = nil
         luckyReward = nil
         rewardGranted = false
-        var loadingRewarded = false
+        unavailableReward = nil
+        let packagedAppID = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
+        guard let placement = commerce.release?.googlePlacement(for: policy.rewardedAdType, packagedAppID: packagedAppID) else {
+            appOpenLog.error("Rewarded ad configuration missing, invalid or inconsistent with the packaged App ID")
+            grantUnavailableReward(attemptID, owner: owner, commerce: commerce, quota: quota, kind: kind)
+            return
+        }
+        let unitID = placement.unitID
+        let demoMode = placement.isOfficialDemo
         var timeout: Task<Void, Never>?
         func armDeadline() {
             timeout?.cancel()
@@ -70,11 +72,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
                 guard let self, self.rewardAttempt == attemptID, !self.isPresenting else { return }
                 self.rewardAttempt = nil
                 self.busy = false
-                if loadingRewarded {
-                    self.grantUnavailableReward(attemptID, owner: owner, commerce: commerce, quota: quota, kind: kind)
-                } else {
-                    self.error = "Rewarded ads are not available right now. No views have been deducted."
-                }
+                self.grantUnavailableReward(attemptID, owner: owner, commerce: commerce, quota: quota, kind: kind)
             }
         }
         // Include SDK preparation in the wait budget. Only the real privacy
@@ -89,14 +87,15 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             }
             try Task.checkCancellation()
             guard rewardAttempt == attemptID else { return }
-            loadingRewarded = true
             let ad = try await RewardedAd.load(with: unitID, request: Request())
-            loadingRewarded = false
             try Task.checkCancellation()
             guard rewardAttempt == attemptID, UIApplication.shared.applicationState == .active else { return }
             try ad.canPresent(from: nil)
             guard commerce.api.session?.userId.value == owner, !commerce.premium else { throw ClipoError.unauthorized }
             rewarded = ad
+            unavailableReward = { [weak self] in
+                self?.grantUnavailableReward(attemptID, owner: owner, commerce: commerce, quota: quota, kind: kind)
+            }
             ad.fullScreenContentDelegate = self
             let rewardID = UUID()
             isPresenting = true
@@ -112,16 +111,12 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             guard rewardAttempt == attemptID else { return }
             isPresenting = false
             let failure = error as NSError
-            // A cancelled request is not an unavailable-ad result. Once an actual
-            // SDK load fails without an ad (including network/timeout/mediation),
-            // apply the documented lucky gift, not only Google's no-fill code.
+            // Preparation, consent configuration and load failures all mean no ad.
+            // Explicit cancellation never earns a gift or bypasses consent.
             if Task.isCancelled || error is CancellationError ||
                 (failure.domain == NSURLErrorDomain && failure.code == NSURLErrorCancelled) { return }
-            if loadingRewarded {
-                grantUnavailableReward(attemptID, owner: owner, commerce: commerce, quota: quota, kind: kind)
-            } else {
-                self.error = "An ad could not be loaded. Please try again later. \(error.localizedDescription)"
-            }
+            appOpenLog.error("Rewarded ad unavailable; domain=\(failure.domain, privacy: .public), code=\(failure.code)")
+            grantUnavailableReward(attemptID, owner: owner, commerce: commerce, quota: quota, kind: kind)
         }
     }
     func cancelRewardLoading() {
@@ -136,6 +131,8 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             guard commerce.api.session?.userId.value == owner else { throw ClipoError.unauthorized }
             guard !commerce.premium else { return }
             if let gift = try quota.rewardNoFill(attempt, owner: owner, kind: kind) {
+                error = nil
+                message = nil
                 luckyReward = LuckyRewardNotice(message: gift)
             }
         } catch { self.error = error.localizedDescription }
@@ -390,6 +387,7 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         }
         guard let current = rewarded, ad === current else { return }
         rewarded = nil
+        unavailableReward = nil
         isPresenting = false
         if rewardGranted { completedReward = UUID() }
         else if error == nil { message = "No reward was received. Finish the ad to receive your reward." }
@@ -399,7 +397,9 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
         guard let current = rewarded, ad === current else { return }
         rewarded = nil
         isPresenting = false
-        self.error = error.localizedDescription
+        let fallback = unavailableReward
+        unavailableReward = nil
+        if !rewardGranted { fallback?() }
     }
 }
 
