@@ -652,3 +652,12 @@ coverImage
 - Google iOS SDK 还要求 Info.plist 的 GADApplicationIdentifier 与接口 appId 一致。Archive 前执行 `python3 scripts/sync_admob_app_id.py --user-id <当前游客登录返回的userId>`，由接口自动同步到 xcconfig。该命令不构建应用；数据缺失／格式错误／两种广告的 App ID 不一致时不修改配置并报错。
 - 后台更换广告位 ID 可在下一次配置读取时使用；更换 App ID 需重新同步并打包。不要修改已签名 IPA 的 Info.plist。
 - 2026-10-22 使用此前提供的 userId=1246 查询 Clipo 的配置成功，但响应没有 adList；尚不能确认实际广告账号配置。
+
+
+## 生产 API 与打包标识分离（2026-10-22）
+
+当前生产基址 `https://b8pd8t.clipo.vip`。`CLIPO_SERVICE_PACKAGE_NAME=com.cliporows.toolskeep` 是后端登记身份：游客登录 body.source，search-check 和落地页／频道的 packageName，以及新建权益订单 packageName 均取此值。`getV2.name` 保持 `Clipo`，不是打包标识。
+
+测试阶段安装包 Bundle ID 仍为 `im.seex.lobo`；仅本机后台下载会话等安装身份场景继续使用 Bundle.main.bundleIdentifier。正式签名与 Apple 商品验收需最终对应正确的 App 登记，本轮没有修改 Apple 登记或 SKU。
+
+用户指定的正式广告 App ID 为 `ca-app-pub-4423220037289714~4213264017`；运行时接口配置必须与之相同。2026-10-22 样例 userId=1246 的生产 getV2 请求返回 code=1002000001，尚未获得正式广告单元配置，不代表已完成生产广告验收。
