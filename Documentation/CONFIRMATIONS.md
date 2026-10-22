@@ -408,6 +408,10 @@ iCloud Drive/Clipo/Clipo-1.0.0-build7.ipa 已确认 uploaded=true、uploading=fa
 ## 购买配置拦截排查（2026-10-22，未运行／未购买）
 
 - 用户截图已显示 Apple 实际返回每 7 天 $1.99、每月 $4.99，旧周期不一致错误未再出现。截图新提示对应 buy() 下单前的综合条件，不足以单独判断是哪个条件失败。
-- 生产 getV2 只读复查仍使用历史样例 userId=1246、name=Clipo、IOS、1.0.0、lang=en、Asia/Shanghai、input=en-US，返回 code=1002000001 / The distribution package does not exist；没有创建订单或请求扣款。此结果不代表用户当前账号，已请求当前用户 ID 以进一步核对，尚未收到。
+- 生产 getV2 只读复查仍使用历史样例 userId=1246、name=Clipo、IOS、1.0.0、lang=en、Asia/Shanghai、input=en-US，返回 code=1002000001 / The distribution package does not exist；没有创建订单或请求扣款。此结果不代表用户当前账号，后续已收到当前用户 ID，复查结果见下方记录。
 - 客户端不再覆盖 getV2 原始失败信息；分别提示配置未加载、后台 NB01 暂停、缺少 ios 配置、商品缺失、登录与本地订单存储异常。配置刷新失败时禁止用旧配置发起新扣款，权益核验失败时同样不继续新购买。
 - 保留后台开关、订单归属和验单机制，没有绕过后台直接支付。七语文案、diff 静态检查完成，尚未证明实际购买可用。
+
+## 当前用户生产配置复查（2026-10-22）
+
+使用用户本轮提供的当前用户 ID 只读请求生产 getV2：name=Clipo、platform=IOS、version=1.0.0、lang=en、time=Asia/Shanghai、input=en-US。返回 code=1002000001、msg=The distribution package does not exist，未取得发布配置或 ios 支付配置。未创建订单、未请求 Apple 扣款。当前设备的实际键盘／时区参数尚未抓取；此结果证明上述请求组合无法匹配发布配置，不足以判断后台程序缺陷还是登记／请求参数不匹配。客户端继续使用已确认 name=Clipo，不擅自替换名称或绕过配置校验。需后台核对该请求组合与生产分发包登记及发布状态。
