@@ -114,6 +114,7 @@ struct LessonFeedPage: Decodable {
     let nextCursor: String?
     let hasMore: Bool
     let list: [RecommendedLesson]
+    static let empty = LessonFeedPage(feedId: nil, nextCursor: nil, hasMore: false, list: [])
 }
 struct RecommendedLesson: Decodable {
     let videoId: ServiceID

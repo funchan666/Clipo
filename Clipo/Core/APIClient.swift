@@ -239,7 +239,7 @@ final class APIClient: ObservableObject {
         if let feedID = feedID?.nilIfBlank { queryItems["feedId"] = feedID }
         if let cursor = cursor?.nilIfBlank { queryItems["cursor"] = cursor }
         if let query = query.nilIfBlank { queryItems["query"] = query }
-        return try await perform("/app-api/flow/search-check", query: queryItems)
+        return try await perform("/app-api/flow/search-check", query: queryItems, emptyDataValue: LessonFeedPage.empty)
     }
 
     func rights() async throws -> UserRights {
@@ -266,7 +266,7 @@ final class APIClient: ObservableObject {
 
     private func perform<Value: Decodable>(_ path: String, method: String = "GET", query: [String: String] = [:],
                                            body: Data? = nil, authenticated: Bool = true, retry: Bool = true,
-                                           missingDataMessage: String? = nil) async throws -> Value {
+                                           missingDataMessage: String? = nil, emptyDataValue: Value? = nil) async throws -> Value {
         guard configuration.isReady, let base = configuration.apiBaseURL,
               var components = URLComponents(url: base.appendingPathComponent(path), resolvingAgainstBaseURL: false) else { throw ClipoError.configuration }
         var effectiveQuery = query
@@ -305,7 +305,7 @@ final class APIClient: ObservableObject {
             guard retry else { throw ClipoError.unauthorized }
             if session?.accessToken == usedToken { try await signIn() }
             return try await perform(path, method: method, query: query, body: body, authenticated: true, retry: false,
-                                     missingDataMessage: missingDataMessage)
+                                     missingDataMessage: missingDataMessage, emptyDataValue: emptyDataValue)
         }
         guard (200..<300).contains(response.statusCode) else {
             throw ClipoError.service("The service is unavailable (\(response.statusCode)). Please try again.")
@@ -322,7 +322,7 @@ final class APIClient: ObservableObject {
         diagnostics.debug("\(path, privacy: .public): business code \(result.code), data present \(result.data != nil)")
         #endif
         guard result.code == 0 else { throw ClipoError.service(result.msg?.nilIfBlank ?? "The request could not be completed.") }
-        guard let value = result.data else {
+        guard let value = result.data ?? emptyDataValue else {
             if let missingDataMessage { throw ClipoError.service(missingDataMessage) }
             throw ClipoError.invalidResponse
         }

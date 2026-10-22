@@ -62,8 +62,18 @@ import Foundation
         precondition(quota.downloadsLeft == 0)
         precondition(!quota.mayDownload("new", premium: false))
         precondition(quota.canRequestReward(for: .download, premium: false))
-        _ = try quota.rewardNoFill(UUID(), owner: "test", kind: .download)
+        let downloadGift = UUID()
+        _ = try quota.rewardNoFill(downloadGift, owner: "test", kind: .download)
         precondition(quota.downloadsLeft == 5 && quota.completedAds(.download) == 0)
+        for n in 0..<5 { try quota.recordDownload("gift-download-\(n)", owner: "test", premium: false) }
+        precondition(quota.downloadsLeft == 0)
+        precondition(tryValue { try quota.rewardNoFill(downloadGift, owner: "test", kind: .download) } == nil)
+        precondition(quota.downloadsLeft == 0 && quota.completedAds(.download) == 0)
+        do { _ = try quota.rewardNoFill(UUID(), owner: "other", kind: .download); fatalError("Gift owner bypassed") } catch { }
+        SecureStorage.failWrites = true
+        do { _ = try quota.rewardNoFill(UUID(), owner: "test", kind: .download); fatalError("Unsaved gift accepted") } catch { }
+        precondition(quota.downloadsLeft == 0 && quota.completedAds(.download) == 0)
+        SecureStorage.failWrites = false
         for _ in 0..<4 { try quota.reward(UUID(), owner: "test", kind: .download) }
         precondition(quota.downloadsUnlimited && store().downloadsUnlimited)
         // UTC day rollover resets both counters but preserves downloaded identities.

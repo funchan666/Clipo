@@ -84,6 +84,9 @@ final class FeedStore: ObservableObject {
                     break
                 }
             }
+            if entries.isEmpty, requestQuery.nilIfBlank != nil {
+                emptySearch = BrowserLessonSearch(query: requestQuery)
+            }
             if !entries.isEmpty { error = "No more lessons are available right now. Try again." }
         } catch is CancellationError {
             // Leaving a screen/search is not a service failure.

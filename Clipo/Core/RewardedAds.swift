@@ -152,10 +152,13 @@ final class RewardedAds: NSObject, ObservableObject, FullScreenContentDelegate {
             privacyOptionsRequired = ConsentInformation.shared.privacyOptionsRequirementStatus == .required
             try Task.checkCancellation()
             guard mayContinue() else { throw CancellationError() }
-            if mayPresentConsent {
+            if mayPresentConsent, ConsentInformation.shared.consentStatus == .required {
+                let form = try await ConsentForm.load()
+                try Task.checkCancellation()
+                guard mayContinue() else { throw CancellationError() }
                 consentPresentation?(true)
                 defer { consentPresentation?(false) }
-                try await ConsentForm.loadAndPresentIfRequired(from: nil)
+                try await form.present(from: nil)
             }
             guard ConsentInformation.shared.canRequestAds else { throw ClipoError.service("Ads are unavailable with your current privacy choices.") }
         } else {
