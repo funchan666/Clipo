@@ -31,6 +31,8 @@ final class CommerceStore: NSObject, ObservableObject {
     @Published private(set) var busy = false
     @Published private(set) var loadingProducts = false
     @Published private(set) var preparingPurchase = false
+    @Published private(set) var loadingPlans = false
+    @Published private(set) var plansError: String?
     @Published var message: String?
     @Published var error: String?
     private(set) var policy: CommerceConfiguration?
@@ -117,13 +119,34 @@ final class CommerceStore: NSObject, ObservableObject {
         } catch { if refreshID == id, self.error == nil { self.error = error.localizedDescription } }
         retryPending()
     }
-    // Called only by an explicit purchase action, never when the paywall appears.
+    // Fetch metadata when the paywall opens; this never creates an order or payment.
+    func loadPlans() async {
+        guard !loadingPlans, !preparingPurchase, !busy else { return }
+        loadingPlans = true
+        plansError = nil
+        products = []
+        defer { loadingPlans = false }
+        for entry in policy?.products ?? [] {
+            do {
+                let product = try await requestProduct(entry.id)
+                try Task.checkCancellation()
+                products.append(product)
+            } catch is CancellationError { return }
+            catch { plansError = error.localizedDescription }
+        }
+        if products.isEmpty, plansError == nil {
+            plansError = "This plan isn’t available from Apple yet. Please try again later."
+        }
+    }
+
+    // Payment still requires an explicit action after Apple terms are visible.
     func purchase(planID: String) async {
-        guard !busy, !preparingPurchase else { return }
+        guard !busy, !preparingPurchase, !loadingPlans else { return }
         error = nil
         message = nil
         guard let owner = api.session else { error = "Your connection is not ready. Please try again shortly."; return }
-        guard ledgerAvailable, let entry = policy?.products.first(where: { $0.id == planID }) else {
+        guard ledgerAvailable, policy?.products.contains(where: { $0.id == planID }) == true,
+              let displayedProduct = products.first(where: { $0.productIdentifier == planID }) else {
             error = "Purchases are temporarily unavailable. Please try again later."; return
         }
         guard SKPaymentQueue.canMakePayments() else { error = "Purchases are not allowed on this device."; return }
@@ -133,12 +156,15 @@ final class CommerceStore: NSObject, ObservableObject {
             let product = try await requestProduct(planID)
             try Task.checkCancellation()
             guard api.session?.userId.value == owner.userId.value else { throw ClipoError.unauthorized }
-            guard let period = product.subscriptionPeriod, period.numberOfUnits == 1,
-                  (entry.period == .month && period.unit == .month) || (entry.period == .year && period.unit == .year) else {
-                throw ClipoError.service("Apple returned a different subscription period. Please try again later.")
-            }
             products.removeAll { $0.productIdentifier == product.productIdentifier }
             products.append(product)
+            // If Apple changed the offer after display, show it before another purchase tap.
+            guard displayedProduct.price == product.price,
+                  displayedProduct.priceLocale == product.priceLocale,
+                  displayedProduct.subscriptionPeriod?.unit == product.subscriptionPeriod?.unit,
+                  displayedProduct.subscriptionPeriod?.numberOfUnits == product.subscriptionPeriod?.numberOfUnits else {
+                throw ClipoError.service("Apple updated this plan. Review the price and billing period, then continue.")
+            }
             await refresh()
             try Task.checkCancellation()
             guard api.session?.userId.value == owner.userId.value else { throw ClipoError.unauthorized }
@@ -191,11 +217,24 @@ final class CommerceStore: NSObject, ObservableObject {
         formatter.locale = product.priceLocale
         return formatter.string(from: product.price) ?? product.price.stringValue
     }
-    func period(_ product: SKProduct) -> String {
+    func period(_ product: SKProduct, locale: Locale) -> String {
         guard let period = product.subscriptionPeriod else { return "" }
-        let unit: String
-        switch period.unit { case .day: unit = "day"; case .week: unit = "week"; case .month: unit = "month"; case .year: unit = "year"; @unknown default: unit = "period" }
-        return period.numberOfUnits == 1 ? "per \(unit)" : "every \(period.numberOfUnits) \(unit)s"
+        var components = DateComponents()
+        let unit: NSCalendar.Unit
+        switch period.unit {
+        case .day: unit = .day; components.day = period.numberOfUnits
+        case .week: unit = .weekOfMonth; components.weekOfMonth = period.numberOfUnits
+        case .month: unit = .month; components.month = period.numberOfUnits
+        case .year: unit = .year; components.year = period.numberOfUnits
+        @unknown default: return ""
+        }
+        let formatter = DateComponentsFormatter()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        formatter.calendar = calendar
+        formatter.allowedUnits = unit
+        formatter.unitsStyle = .full
+        return formatter.string(from: components) ?? ""
     }
     private func buy(_ product: SKProduct) async {
         guard !busy else { return }
@@ -232,7 +271,7 @@ final class CommerceStore: NSObject, ObservableObject {
         } catch { self.error = error.localizedDescription; busy = false }
     }
     func restore() {
-        guard !busy, !preparingPurchase else { return }
+        guard !busy, !preparingPurchase, !loadingPlans else { return }
         guard api.session != nil, ledgerAvailable else { error = "Your connection or purchase records are not ready. Please try again shortly."; return }
         busy = true
         error = nil
@@ -342,7 +381,7 @@ extension CommerceStore: SKProductsRequestDelegate, SKRequestDelegate, SKPayment
     nonisolated func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
         Task { @MainActor in
             guard request === productsRequest else { return }
-            guard let product = response.products.first(where: { $0.productIdentifier == requestedProductID }), product.subscriptionPeriod != nil else {
+            guard let product = response.products.first(where: { $0.productIdentifier == requestedProductID }), product.subscriptionPeriod.map({ $0.numberOfUnits > 0 }) == true else {
                 finishProductRequest(request, result: .failure(ClipoError.service("This plan isn’t available from Apple yet. Please try again later.")))
                 return
             }

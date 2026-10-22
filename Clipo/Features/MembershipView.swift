@@ -19,12 +19,16 @@ struct MembershipView: View {
     @State private var requestedReward = false
     @State private var acknowledgedLuckyReward = false
 
-    private var plans: [CommerceConfiguration.Product] { commerce.policy?.products ?? [] }
-    private var selectedPlan: CommerceConfiguration.Product? {
-        plans.first(where: { $0.id == selectedID }) ?? plans.first
+    private var plans: [SKProduct] {
+        (commerce.policy?.products ?? []).compactMap { entry in
+            commerce.products.first { $0.productIdentifier == entry.id }
+        }
+    }
+    private var selectedPlan: SKProduct? {
+        plans.first(where: { $0.productIdentifier == selectedID }) ?? plans.first
     }
     private var purchasing: Bool { commerce.preparingPurchase || commerce.busy || purchaseTask != nil }
-    private var interactionLocked: Bool { purchasing || ads.busy || ads.isPresenting }
+    private var interactionLocked: Bool { purchasing || commerce.loadingPlans || ads.busy || ads.isPresenting }
 
     var body: some View {
         ScrollView {
@@ -56,9 +60,14 @@ struct MembershipView: View {
                 } else {
                     if api.session == nil { ConnectionPanel() }
                     VStack(spacing: 12) {
-                        ForEach(plans) { plan in
+                        ForEach(plans, id: \.productIdentifier) { plan in
                             planRow(plan)
                         }
+                    }
+                    if let error = commerce.plansError {
+                        ErrorNote(message: error)
+                        Button("Retry") { Task { await commerce.loadPlans() } }
+                            .buttonStyle(CompactActionStyle()).disabled(interactionLocked)
                     }
                     VStack(spacing: 12) {
                         ActionButton(title: purchaseButtonTitle) { subscribe() }
@@ -114,7 +123,11 @@ struct MembershipView: View {
                 .clipoScreenBackground()
         }
         .clipoScreenBackground().foregroundStyle(.white)
-        .task { await commerce.refresh() }
+        .task {
+            async let rights: Void = commerce.refresh()
+            await commerce.loadPlans()
+            await rights
+        }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in quota.resetIfNeeded() }
         .onDisappear {
             purchaseTask?.cancel(); purchaseTask = nil
@@ -136,51 +149,53 @@ struct MembershipView: View {
     }
 
     private var purchaseButtonTitle: String {
-        if commerce.loadingProducts { return "Checking with Apple…" }
+        if commerce.loadingProducts || commerce.loadingPlans { return "Checking with Apple…" }
         if commerce.preparingPurchase { return "Preparing your subscription…" }
         if commerce.busy { return "Confirming your purchase…" }
-        return "Continue with \(selectedPlan?.label ?? "Plus")"
+        return "Subscribe"
     }
 
-    private func planRow(_ plan: CommerceConfiguration.Product) -> some View {
-        let selected = selectedPlan?.id == plan.id
-        // The card remains a USD reference; purchase() requests the current Apple product.
-        let price = "US$\(plan.displayPriceUSD)"
+    private func planRow(_ product: SKProduct) -> some View {
+        let selected = selectedPlan?.productIdentifier == product.productIdentifier
+        let price = commerce.price(product)
+        let period = commerce.period(product, locale: locale)
         let foreground = selected ? ClipoStyle.ink : ClipoStyle.paper
         let secondary = selected ? ClipoStyle.paperSecondary : ClipoStyle.secondary
-        return Button { selectedID = plan.id } label: {
+        return Button { selectedID = product.productIdentifier } label: {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .center, spacing: 20) {
-                    planName(plan, selected: selected, foreground: foreground, secondary: secondary)
+                    planName(product, selected: selected, foreground: foreground, secondary: secondary)
                     Spacer(minLength: 0)
-                    planPrice(price, plan: plan, foreground: foreground, secondary: secondary)
+                    planPrice(price, period: period, foreground: foreground, secondary: secondary)
                 }
                 VStack(alignment: .leading, spacing: 12) {
-                    planName(plan, selected: selected, foreground: foreground, secondary: secondary)
-                    planPrice(price, plan: plan, foreground: foreground, secondary: secondary)
+                    planName(product, selected: selected, foreground: foreground, secondary: secondary)
+                    planPrice(price, period: period, foreground: foreground, secondary: secondary)
                 }
             }
             .padding(16).frame(maxWidth: .infinity, alignment: .leading)
             .background { OriginalSurface(tone: selected ? .ivory : .pine) }
             .contentShape(.interaction, RoundedRectangle(cornerRadius: 22))
         }.buttonStyle(PressStyle()).disabled(interactionLocked)
-            .accessibilityLabel(Text(verbatim: L10n.display("\(plan.label), \(price) per \(plan.period.rawValue)", language: AppLanguage.from(locale))))
             .accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityIdentifier("membership.plan.\(plan.period.rawValue)")
+            .accessibilityIdentifier("membership.plan.\(product.productIdentifier)")
     }
 
-    private func planName(_ plan: CommerceConfiguration.Product, selected: Bool, foreground: Color, secondary: Color) -> some View {
+    private func planName(_ product: SKProduct, selected: Bool, foreground: Color, secondary: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            LocalizedText(plan.label).font(.court(.headline)).foregroundStyle(foreground)
-            LocalizedText(selected ? "Selected" : (plan.period == .year ? "A full year of Plus" : "One month of Plus"))
-                .font(.court(.caption)).foregroundStyle(secondary)
+            Text(verbatim: product.localizedTitle).font(.court(.headline)).foregroundStyle(foreground)
+            if selected {
+                LocalizedText("Selected").font(.court(.caption)).foregroundStyle(secondary)
+            }
         }.fixedSize(horizontal: false, vertical: true)
     }
 
-    private func planPrice(_ price: String, plan: CommerceConfiguration.Product, foreground: Color, secondary: Color) -> some View {
+    private func planPrice(_ price: String, period: String, foreground: Color, secondary: Color) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text(verbatim: price).environment(\.layoutDirection, .leftToRight).font(.court(.title2, weight: .bold)).foregroundStyle(foreground).fixedSize()
-            LocalizedText("per \(plan.period.rawValue)").font(.court(.caption)).foregroundStyle(secondary)
+            Text(verbatim: price).environment(\.layoutDirection, .leftToRight)
+                .font(.court(.title2, weight: .bold)).foregroundStyle(foreground).fixedSize()
+            LocalizedText("Billed every %@", period).font(.court(.caption)).foregroundStyle(secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -188,7 +203,7 @@ struct MembershipView: View {
         guard !interactionLocked, let plan = selectedPlan else { return }
         attemptedPurchaseAction = true
         purchaseTask = Task {
-            await commerce.purchase(planID: plan.id)
+            await commerce.purchase(planID: plan.productIdentifier)
             purchaseTask = nil
         }
     }
