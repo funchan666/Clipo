@@ -91,7 +91,8 @@ struct RemoteLessonFile: Decodable, Identifiable {
               let source = WebAddress.media(m3u8Url) ?? WebAddress.media(fileUrl) ?? WebAddress.media(originUrl) else { return nil }
         return LessonClip(id: stableID.isEmpty ? source.absoluteString : stableID, title: name,
                     playbackURL: source, coverURL: WebAddress.media(coverImage),
-                    shortLink: landingPage, channel: channel, duration: length)
+                    shortLink: landingPage, channel: channel, duration: length,
+                    exportSources: [fileUrl, originUrl].compactMap { WebAddress.media($0) })
     }
 }
 private extension KeyedDecodingContainer {
@@ -120,10 +121,14 @@ struct RecommendedLesson: Decodable {
     let m3u8Url: String
     let videoName: String?
     let coverUrl: String?
+    // Optional original-file fields, when supplied. HLS remains the playback source.
+    let fileUrl: String?
+    let originUrl: String?
     var clip: LessonClip? {
         guard !videoId.value.isEmpty, let url = WebAddress.media(m3u8Url) else { return nil }
         return LessonClip(id: videoId.value, title: videoName?.nilIfBlank ?? "Untitled clip", playbackURL: url,
-                    coverURL: WebAddress.media(coverUrl), shortLink: shortLink, channel: "Discover", duration: nil)
+                    coverURL: WebAddress.media(coverUrl), shortLink: shortLink, channel: "Discover", duration: nil,
+                    exportSources: [fileUrl, originUrl].compactMap { WebAddress.media($0) })
     }
 }
 struct LessonClip: Codable, Identifiable, Hashable {
@@ -134,6 +139,8 @@ struct LessonClip: Codable, Identifiable, Hashable {
     let shortLink: String?
     let channel: String
     let duration: Double?
+    // Optional for compatibility with existing favorites and offline indexes.
+    var exportSources: [URL]? = nil
 }
 struct LessonLinkVisit: Codable, Identifiable {
     let id: UUID

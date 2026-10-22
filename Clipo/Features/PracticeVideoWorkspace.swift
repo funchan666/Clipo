@@ -97,14 +97,18 @@ struct EditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     var initialMovie: PracticeRecording? = nil
     var initialTool: VideoTool = .studio
+    @StateObject private var departure = ExportDeparture()
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeading(title: initialTool.title) { dismiss() }
+            SheetHeading(title: initialTool.title) { departure.request { dismiss() } }
             EditorWorkspace(initialMovie: initialMovie, initialTool: initialTool)
         }.clipoScreenBackground().foregroundStyle(.white)
+            .environmentObject(departure)
+            .modifier(ExportDepartureProtection(departure: departure))
     }
 }
 struct EditorWorkspace: View {
+    @EnvironmentObject private var departure: ExportDeparture
     @EnvironmentObject private var library: LibraryStore
     @Environment(\.scenePhase) private var scenePhase
     var initialMovie: PracticeRecording? = nil
@@ -135,7 +139,7 @@ struct EditorWorkspace: View {
                     HStack {
                         LocalizedText(selected.title).font(.court(.subheadline)).lineLimit(1)
                         Spacer()
-                        if !editor.isExporting, !editor.isPreparingPreview {
+                        if !departure.running, !editor.isExporting, !editor.isPreparingPreview {
                             Button("Change") { self.selected = nil; editor.close() }
                                 .buttonStyle(CompactActionStyle())
                         }
@@ -159,17 +163,18 @@ struct EditorWorkspace: View {
                             }
                         }
                     }
-                    controls.disabled(editor.isExporting || editor.isLoading || editor.isPreparingPreview)
+                    controls.disabled(departure.running || editor.isExporting || editor.isLoading || editor.isPreparingPreview)
                     if let error = editor.error { ErrorNote(message: error) }
                     if let error { ErrorNote(message: error) }
-                    if editor.isExporting {
+                    if departure.running {
                         VStack(spacing: 14) {
-                            LocalizedText("Exporting · \(Int(editor.progress * 100))%").font(.headline.monospacedDigit())
+                            LocalizedText(editor.isExporting ? "Exporting · \(Int(editor.progress * 100))%" : "Preparing export…")
+                                .font(.court(.subheadline)).monospacedDigit()
                             GeometryReader { geometry in
                                 Color.clear.background(ClipoStyle.raised)
                                     .overlay(alignment: .leading) { ClipoStyle.accent.frame(width: geometry.size.width * CGFloat(editor.progress)) }
                             }.frame(height: 4)
-                            ActionButton(title: "Cancel export", primary: false) { editor.cancelExport() }
+                            ActionButton(title: "Cancel export", primary: false) { departure.request() }
                         }
                     } else {
                         ActionButton(title: initialTool == .audio ? "Export audio as M4A" : "Export video") {
@@ -326,16 +331,21 @@ struct EditorWorkspace: View {
         }
     }
     private func export(audio: Bool, title: String) {
+        guard exportTask == nil else { return }
         error = nil
         exportTask = Task {
+            defer { exportTask = nil; departure.finish() }
             guard let output = await editor.export(audioOnly: audio) else { return }
             if Task.isCancelled { try? FileManager.default.removeItem(at: output); return }
             do {
                 let saved = try await library.importMovie(output, exported: true, title: title + (audio ? " · Audio" : " · Edit"))
                 try? FileManager.default.removeItem(at: output)
-                shareURL = SharedFile(url: library.url(for: saved))
-            } catch { self.error = "The export finished but could not be added to your library. \(error.localizedDescription)" }
+                let share = try await library.shareFile(for: saved)
+                if !Task.isCancelled { shareURL = SharedFile(url: share) }
+            } catch is CancellationError { }
+            catch { self.error = "The export finished but could not be added to your library. \(error.localizedDescription)" }
         }
+        departure.begin { exportTask?.cancel(); editor.cancelExport() }
     }
 }
 struct PreviewButton: View {

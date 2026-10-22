@@ -7,6 +7,8 @@ import UniformTypeIdentifiers
 final class LibraryStore: ObservableObject {
     @Published private(set) var snapshot = LessonLibrarySnapshot()
     @Published var error: String?
+    @Published private(set) var downloadsRequest: UUID?
+    func openDownloads() { downloadsRequest = UUID() }
     private let root: URL
     private let snapshotURL: URL
     private var readable = true
@@ -28,12 +30,49 @@ final class LibraryStore: ObservableObject {
     var favorites: [LessonClip] { snapshot.favorites }
     var history: [LessonLinkVisit] { snapshot.history }
     func url(for movie: PracticeRecording) -> URL { root.appendingPathComponent(movie.filename) }
+    // Internal IDs stay stable; only the user-facing shared copy gets a readable name.
+    func shareFile(for movie: PracticeRecording) async throws -> URL {
+        let source = url(for: movie)
+        let title = movie.title
+        let task = Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            let root = fm.temporaryDirectory.appendingPathComponent("ClipoSharedVideos", isDirectory: true)
+            try fm.createDirectory(at: root, withIntermediateDirectories: true)
+            // Expired staged copies are disposable; never touch the media library.
+            for old in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.creationDateKey])) ?? [] {
+                if let created = try? old.resourceValues(forKeys: [.creationDateKey]).creationDate,
+                   created < Date().addingTimeInterval(-7 * 86_400) { try? fm.removeItem(at: old) }
+            }
+            let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+            let forbidden = CharacterSet.controlCharacters.union(CharacterSet(charactersIn: "/\\:*?\"<>|"))
+            var name = title.components(separatedBy: forbidden).filter { !$0.isEmpty }.joined(separator: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if ["mp4", "mov", "m4v", "m4a"].contains((name as NSString).pathExtension.lowercased()) {
+                name = (name as NSString).deletingPathExtension
+            }
+            name = name.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+            while name.utf8.count > 160 { name.removeLast() }
+            if name.isEmpty { name = "Clipo video" }
+            let destination = directory.appendingPathComponent(name).appendingPathExtension(source.pathExtension)
+            do {
+                try Task.checkCancellation()
+                try fm.copyItem(at: source, to: destination)
+                try Task.checkCancellation()
+                return destination
+            } catch { try? fm.removeItem(at: directory); throw error }
+        }
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: { task.cancel() }
+    }
     func isSaved(_ clip: LessonClip) -> Bool { favorites.contains { $0.id == clip.id } }
-    func toggle(_ clip: LessonClip) {
+    @discardableResult func toggle(_ clip: LessonClip) -> Bool {
         var next = snapshot
         if isSaved(clip) { next.favorites.removeAll { $0.id == clip.id } }
         else { next.favorites.insert(clip, at: 0) }
-        save(next)
+        do { try persist(next); return true }
+        catch { self.error = "Favorites could not be updated. Please try again."; return false }
     }
     func record(link: String, title: String) {
         var next = snapshot

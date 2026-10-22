@@ -8,7 +8,7 @@ struct HomeView: View {
     var openAccount: () -> Void
     var discover: () -> Void
     var openTools: () -> Void
-    @State private var link = ""
+    @Binding var link: String
     @State private var error: String?
     @State private var linkFailure = ""
     @State private var showingLinkFailure = false
@@ -98,14 +98,33 @@ struct HomeView: View {
                     .background(ClipoStyle.ink, in: RoundedRectangle(cornerRadius: 12))
                 LocalizedText("Open a lesson").font(.court(.headline)).foregroundStyle(ClipoStyle.ink)
             }
-            TextField("Lesson link or short code", text: $link, axis: .vertical)
+            HStack(spacing: 0) {
+                TextField("Lesson link or short code", text: $link, axis: .vertical)
+                    .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .focused($focused).font(.court(.subheadline)).foregroundStyle(ClipoStyle.ink)
+                    .tint(ClipoStyle.ink)
+                    .padding(.leading, 14).padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Lesson or collection link")
+                if !link.isEmpty {
+                    Button {
+                        link = ""
+                        focused = true
+                    } label: {
+                        Glyph(symbol: .close, size: 13, tint: ClipoStyle.ink.opacity(0.65))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }.buttonStyle(ComposerPressStyle())
+                        .accessibilityLabel(LocalizedStringKey("Clear link"))
+                        .accessibilityIdentifier("home.clearLink")
+                }
+            }
+                // Link input and its clear action stay together, including when
+                // the outside-tap handler decides whether to dismiss the keyboard.
+                .padding(.trailing, link.isEmpty ? 14 : 6)
                 .environment(\.layoutDirection, .leftToRight)
-                .lineLimit(1...3).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                .focused($focused).font(.court(.subheadline)).foregroundStyle(ClipoStyle.ink)
-                .tint(ClipoStyle.ink).padding(14)
                 .background(Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 14))
                 .environment(\.colorScheme, .light)
-                .accessibilityLabel("Lesson or collection link")
                 .keyboardInputRegion("home-link-input")
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
@@ -132,7 +151,7 @@ struct HomeView: View {
     private var canOpenLink: Bool { searchRequest == nil && link.nilIfBlank != nil }
     @ViewBuilder private var allowanceLabel: some View {
         if api.session != nil {
-            LocalizedText(commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
+            LocalizedText(quota.usage == nil ? "Loading…" : commerce.premium || quota.unlimited ? "Unlimited viewing today" : "\(quota.watchesLeft) views left today")
                 .font(.court(.caption)).foregroundStyle(ClipoStyle.paperSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

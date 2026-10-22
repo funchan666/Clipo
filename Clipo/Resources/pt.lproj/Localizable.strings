@@ -469,3 +469,58 @@
 "Cache" = "Baixar";
 
 "Cached" = "Salvo";
+
+"Swipe to change videos" = "Deslize para trocar de vídeo";
+"Download location is unavailable. Please try again." = "O local de download está indisponível. Tente novamente.";
+"Not enough storage. Free up space and try again." = "Espaço insuficiente. Libere espaço e tente novamente.";
+"Download could not be saved. Please try again. (%@)" = "Não foi possível salvar o download. Tente novamente. (%@)";
+"Loading ad…" = "Carregando anúncio…";
+"Exporting…" = "Exportando…";
+"This stream can be watched offline in Clipo but cannot be exported." = "Este vídeo pode ser visto offline no Clipo, mas não pode ser exportado.";
+
+"Finish downloading this video to export it." = "Conclua o download deste vídeo para exportá-lo.";
+
+"Swipe up or down to change videos" = "Deslize para cima ou para baixo para trocar de vídeo";
+
+"Preparing export…" = "Preparando exportação…";
+
+"We download the video before exporting. Existing downloads are reused." = "Baixamos o vídeo antes de exportá-lo. Downloads existentes são reutilizados.";
+
+"The provider has not supplied a downloadable video file. You can still cache this video for offline viewing." = "O fornecedor não disponibilizou um ficheiro de vídeo para download. Pode guardá-lo na aplicação para ver offline.";
+
+"This video format cannot be exported. Please use an MP4 or MOV file." = "Este formato de vídeo não pode ser exportado. Utilize um ficheiro MP4 ou MOV.";
+
+"Video export failed. Please try again." = "Não foi possível exportar o vídeo. Tente novamente.";
+
+"This stream format cannot be exported. Offline playback is still available." = "Este formato de transmissão não pode ser exportado. A reprodução offline continua disponível.";
+
+"The video data is incomplete. Please try exporting again." = "Os dados do vídeo estão incompletos. Tente exportar novamente.";
+
+"This video is too large to export on this device." = "Este vídeo é grande demais para ser exportado neste dispositivo.";
+
+"Video export could not download the stream. Please try again." = "Não foi possível baixar o vídeo para exportação. Tente novamente.";
+
+"Clear link" = "Limpar link";
+
+/* Playback and local library feedback */
+"Favorites" = "Favoritos";
+"Favorite" = "Favoritar";
+"Favorited" = "Favoritado";
+"Offline videos" = "Vídeos offline";
+"Offline" = "Offline";
+"Download" = "Baixar";
+"View" = "Ver";
+"Remove offline video?" = "Remover vídeo offline?";
+"This removes only the offline copy. Your favorite stays saved." = "Apenas a cópia offline será removida. O favorito será mantido.";
+"Stop this export?" = "Parar esta exportação?";
+"The export is still in progress. Leaving now cancels it. Your video stays safe." = "A exportação está em andamento. Sair agora irá cancelá-la. Seu vídeo será preservado.";
+"Keep exporting" = "Continuar exportando";
+"Stop export" = "Parar exportação";
+"Downloaded. Watch offline in Library." = "Download concluído. Assista offline na Biblioteca.";
+"Favorites could not be updated. Please try again." = "Não foi possível atualizar os favoritos. Tente novamente.";
+"Resets %@ (local time)" = "Redefine em %@ (hora local)";
+"Unlimited views today" = "Visualizações ilimitadas hoje";
+"Unlimited downloads today" = "Downloads ilimitados hoje";
+"Finish this ad for unlimited views today." = "Assista a este anúncio até o fim para ter visualizações ilimitadas hoje.";
+"Finish this ad for unlimited downloads today." = "Assista a este anúncio até o fim para ter downloads ilimitados hoje.";
+"Connect to refresh your allowance." = "Conecte-se para atualizar sua cota.";

@@ -469,3 +469,58 @@
 "Cache" = "Unduh";
 
 "Cached" = "Tersimpan";
+
+"Swipe to change videos" = "Geser untuk mengganti video";
+"Download location is unavailable. Please try again." = "Lokasi penyimpanan unduhan tidak tersedia. Coba lagi.";
+"Not enough storage. Free up space and try again." = "Ruang penyimpanan tidak cukup. Kosongkan ruang lalu coba lagi.";
+"Download could not be saved. Please try again. (%@)" = "Unduhan tidak dapat disimpan. Coba lagi. (%@)";
+"Loading ad…" = "Memuat iklan…";
+"Exporting…" = "Mengekspor…";
+"This stream can be watched offline in Clipo but cannot be exported." = "Video ini dapat ditonton offline di Clipo, tetapi tidak dapat diekspor.";
+
+"Finish downloading this video to export it." = "Selesaikan unduhan video ini untuk mengekspornya.";
+
+"Swipe up or down to change videos" = "Geser ke atas atau ke bawah untuk mengganti video";
+
+"Preparing export…" = "Menyiapkan ekspor…";
+
+"We download the video before exporting. Existing downloads are reused." = "Video diunduh sebelum diekspor. Unduhan yang sudah ada akan digunakan kembali.";
+
+"The provider has not supplied a downloadable video file. You can still cache this video for offline viewing." = "Penyedia belum menyediakan berkas video yang dapat diunduh. Anda tetap dapat menyimpannya untuk ditonton offline di aplikasi.";
+
+"This video format cannot be exported. Please use an MP4 or MOV file." = "Format video ini tidak dapat diekspor. Gunakan berkas MP4 atau MOV.";
+
+"Video export failed. Please try again." = "Ekspor video gagal. Silakan coba lagi.";
+
+"This stream format cannot be exported. Offline playback is still available." = "Format streaming ini tidak dapat diekspor. Pemutaran offline tetap tersedia.";
+
+"The video data is incomplete. Please try exporting again." = "Data video tidak lengkap. Coba ekspor lagi.";
+
+"This video is too large to export on this device." = "Video ini terlalu besar untuk diekspor di perangkat ini.";
+
+"Video export could not download the stream. Please try again." = "Video untuk ekspor tidak dapat diunduh. Coba lagi.";
+
+"Clear link" = "Hapus tautan";
+
+/* Playback and local library feedback */
+"Favorites" = "Favorit";
+"Favorite" = "Favorit";
+"Favorited" = "Tersimpan";
+"Offline videos" = "Video offline";
+"Offline" = "Offline";
+"Download" = "Unduh";
+"View" = "Lihat";
+"Remove offline video?" = "Hapus video offline?";
+"This removes only the offline copy. Your favorite stays saved." = "Hanya salinan offline yang dihapus. Favorit Anda tetap tersimpan.";
+"Stop this export?" = "Hentikan ekspor ini?";
+"The export is still in progress. Leaving now cancels it. Your video stays safe." = "Ekspor masih berlangsung. Keluar sekarang akan membatalkannya. Video Anda tetap tersimpan.";
+"Keep exporting" = "Lanjutkan ekspor";
+"Stop export" = "Hentikan ekspor";
+"Downloaded. Watch offline in Library." = "Unduhan selesai. Tonton offline di Koleksi.";
+"Favorites could not be updated. Please try again." = "Favorit tidak dapat diperbarui. Coba lagi.";
+"Resets %@ (local time)" = "Direset %@ (waktu setempat)";
+"Unlimited views today" = "Tontonan tanpa batas hari ini";
+"Unlimited downloads today" = "Unduhan tanpa batas hari ini";
+"Finish this ad for unlimited views today." = "Selesaikan iklan ini untuk tontonan tanpa batas hari ini.";
+"Finish this ad for unlimited downloads today." = "Selesaikan iklan ini untuk unduhan tanpa batas hari ini.";
+"Connect to refresh your allowance." = "Hubungkan ke internet untuk memperbarui kuota.";

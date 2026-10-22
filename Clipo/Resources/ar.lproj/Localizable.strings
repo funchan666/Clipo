@@ -469,3 +469,58 @@
 "Cache" = "تنزيل";
 
 "Cached" = "محفوظ";
+
+"Swipe to change videos" = "اسحب لتغيير الفيديو";
+"Download location is unavailable. Please try again." = "مكان حفظ التنزيل غير متاح. حاول مرة أخرى.";
+"Not enough storage. Free up space and try again." = "مساحة التخزين غير كافية. حرر بعض المساحة وحاول مرة أخرى.";
+"Download could not be saved. Please try again. (%@)" = "تعذر حفظ التنزيل. حاول مرة أخرى. (%@)";
+"Loading ad…" = "جارٍ تحميل الإعلان…";
+"Exporting…" = "جارٍ التصدير…";
+"This stream can be watched offline in Clipo but cannot be exported." = "يمكن مشاهدة هذا الفيديو دون اتصال في Clipo، لكن لا يمكن تصديره.";
+
+"Finish downloading this video to export it." = "أكمل تنزيل هذا الفيديو لتصديره.";
+
+"Swipe up or down to change videos" = "اسحب لأعلى أو لأسفل لتبديل الفيديو";
+
+"Preparing export…" = "جارٍ تجهيز التصدير…";
+
+"We download the video before exporting. Existing downloads are reused." = "سننزّل الفيديو قبل تصديره. نستخدم النسخة المنزّلة إن وُجدت.";
+
+"The provider has not supplied a downloadable video file. You can still cache this video for offline viewing." = "لم يوفّر مزوّد المحتوى ملف فيديو قابلاً للتنزيل. لا يزال بإمكانك حفظه للمشاهدة دون اتصال داخل التطبيق.";
+
+"This video format cannot be exported. Please use an MP4 or MOV file." = "لا يمكن تصدير تنسيق الفيديو هذا. يُرجى استخدام ملف MP4 أو MOV.";
+
+"Video export failed. Please try again." = "تعذّر تصدير الفيديو. يُرجى المحاولة مجدداً.";
+
+"This stream format cannot be exported. Offline playback is still available." = "لا يمكن تصدير تنسيق البث هذا. يظل التشغيل دون اتصال متاحًا.";
+
+"The video data is incomplete. Please try exporting again." = "بيانات الفيديو غير مكتملة. حاول التصدير مرة أخرى.";
+
+"This video is too large to export on this device." = "هذا الفيديو كبير جدًا للتصدير على هذا الجهاز.";
+
+"Video export could not download the stream. Please try again." = "تعذّر تنزيل الفيديو للتصدير. حاول مرة أخرى.";
+
+"Clear link" = "مسح الرابط";
+
+/* Playback and local library feedback */
+"Favorites" = "المفضلة";
+"Favorite" = "تفضيل";
+"Favorited" = "مفضّل";
+"Offline videos" = "فيديوهات دون اتصال";
+"Offline" = "دون اتصال";
+"Download" = "تنزيل";
+"View" = "عرض";
+"Remove offline video?" = "إزالة الفيديو المحفوظ؟";
+"This removes only the offline copy. Your favorite stays saved." = "ستُحذف النسخة المحفوظة دون اتصال فقط. سيبقى الفيديو في المفضلة.";
+"Stop this export?" = "إيقاف التصدير؟";
+"The export is still in progress. Leaving now cancels it. Your video stays safe." = "التصدير جارٍ. المغادرة الآن ستلغيه. سيبقى الفيديو محفوظًا.";
+"Keep exporting" = "متابعة التصدير";
+"Stop export" = "إيقاف التصدير";
+"Downloaded. Watch offline in Library." = "اكتمل التنزيل. شاهد دون اتصال من المكتبة.";
+"Favorites could not be updated. Please try again." = "تعذّر تحديث المفضلة. حاول مجددًا.";
+"Resets %@ (local time)" = "تُعاد الحصة %@ (بالتوقيت المحلي)";
+"Unlimited views today" = "مشاهدات غير محدودة اليوم";
+"Unlimited downloads today" = "تنزيلات غير محدودة اليوم";
+"Finish this ad for unlimited views today." = "أكمل هذا الإعلان لمشاهدات غير محدودة اليوم.";
+"Finish this ad for unlimited downloads today." = "أكمل هذا الإعلان لتنزيلات غير محدودة اليوم.";
+"Connect to refresh your allowance." = "اتصل بالإنترنت لتحديث حصتك.";

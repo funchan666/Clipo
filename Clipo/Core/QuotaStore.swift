@@ -52,7 +52,7 @@ final class QuotaStore: ObservableObject {
     func remaining(_ kind: AllowanceKind) -> Int { kind == .watch ? watchesLeft : downloadsLeft }
     func rewardSummary(for kind: AllowanceKind) -> String {
         if completedAds(kind) >= 3 {
-            return kind == .watch ? "Finish this ad for unlimited views until 05:00 UTC." : "Finish this ad for unlimited downloads until 05:00 UTC."
+            return kind == .watch ? "Finish this ad for unlimited views today." : "Finish this ad for unlimited downloads today."
         }
         return kind == .watch ? "Watch a full ad for more views." : "Watch a full ad for more downloads."
     }
@@ -196,10 +196,13 @@ final class QuotaStore: ObservableObject {
         value.nextDownloadBase = value.downloadBaseForDay
         return value
     }
-    private func boundary() -> Date {
+    static func nextReset(after now: Date = Date()) -> Date {
+        boundary(at: now).addingTimeInterval(86_400)
+    }
+    private func boundary() -> Date { Self.boundary(at: Date()) }
+    private static func boundary(at now: Date) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let now = Date()
         let five = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: now)!
         return now >= five ? five : calendar.date(byAdding: .day, value: -1, to: five)!
     }

@@ -87,6 +87,8 @@ enum InstallationIdentity {
 final class APIClient: ObservableObject {
     private let diagnostics = Logger(subsystem: "com.clipo.video", category: "API")
     @Published private(set) var session: VisitorSession?
+    // Local ownership only: never use this as authentication or purchase entitlement.
+    @Published private(set) var offlineOwnerID: String?
     let configuration: ClipoConfiguration
     private let transport: URLSession
     private var loginTask: Task<VisitorSession, Error>?
@@ -101,6 +103,11 @@ final class APIClient: ObservableObject {
         transport = URLSession(configuration: config)
         do {
             try InstallationIdentity.prepare()
+            if let installation = try SecureStorage.read("installation"), !installation.isEmpty,
+               let data = try SecureStorage.read("visitor"),
+               let visitor = try? JSONDecoder().decode(VisitorSession.self, from: data) {
+                offlineOwnerID = visitor.userId.value.nilIfBlank
+            }
             // A persisted token is not a completed login for this process. Every cold
             // start authenticates again with the existing installation UUID. Keep the
             // stored credentials and purchase ledger intact for recovery ownership.
@@ -130,19 +137,72 @@ final class APIClient: ObservableObject {
                 device = UUID().uuidString
                 try SecureStorage.write(Data(device.utf8), key: "installation")
             }
-            // The documented uniqueId may be empty. No third-party IP probe is necessary.
-            let body = try JSONSerialization.data(withJSONObject: ["deviceCode": device, "source": configuration.bundleID, "uniqueId": ""])
+            let publicIPv4 = try await loginPublicIPv4()
+            try Task.checkCancellation()
+            let body = try JSONSerialization.data(withJSONObject: ["deviceCode": device, "source": configuration.bundleID, "uniqueId": publicIPv4])
+            // Diagnose the wire payload without logging the IP, UUID or credentials.
+            diagnostics.debug("Guest login payload: uniqueId IPv4 present \(!publicIPv4.isEmpty)")
             let result: VisitorSession = try await perform("/app-api/member/auth/app_tourist_login", method: "POST", body: body, authenticated: false)
             guard !result.accessToken.isEmpty, !result.userId.value.isEmpty else { throw ClipoError.invalidResponse }
             try Task.checkCancellation()
             guard generation == sessionGeneration else { throw CancellationError() }
             try SecureStorage.write(JSONEncoder().encode(result), key: "visitor")
             session = result
+            offlineOwnerID = result.userId.value
             return result
         }
         loginTask = task
         defer { loginTask = nil }
         return try await task.value
+    }
+
+    private func loginPublicIPv4() async throws -> String {
+        // These public services receive no account credentials or installation ID.
+        // A fresh, uncached lookup follows the current connection on each login.
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 2
+        config.timeoutIntervalForResource = 2
+        config.waitsForConnectivity = false
+        config.urlCache = nil
+        config.httpCookieStorage = nil
+        config.urlCredentialStorage = nil
+        let lookup = URLSession(configuration: config)
+        defer { lookup.invalidateAndCancel() }
+        // Race independent providers: a slow primary must not add its timeout
+        // to the fallback. Only a valid response wins; cancel the other request.
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            for address in ["https://ipv4.icanhazip.com", "https://api.ipify.org/"] {
+                group.addTask { try await Self.readPublicIPv4(address, using: lookup) }
+            }
+            for try await candidate in group where !candidate.isEmpty {
+                group.cancelAll()
+                return candidate
+            }
+            try Task.checkCancellation()
+            return "" // Both failed; the login contract permits an empty value.
+        }
+    }
+
+    private nonisolated static func readPublicIPv4(_ address: String, using lookup: URLSession) async throws -> String {
+        guard let url = URL(string: address) else { return "" }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 2)
+        request.httpMethod = "GET"
+        request.setValue("text/plain", forHTTPHeaderField: "Accept")
+        do {
+            let (data, response) = try await lookup.data(for: request)
+            try Task.checkCancellation()
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+                  data.count <= 64, let text = String(data: data, encoding: .utf8) else { return "" }
+            let candidate = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let octets = candidate.split(separator: ".", omittingEmptySubsequences: false)
+            guard octets.count == 4, octets.allSatisfy({ octet in
+                !octet.isEmpty && octet.utf8.allSatisfy { (48...57).contains($0) } && UInt8(octet) != nil
+            }) else { return "" }
+            return candidate
+        } catch {
+            try Task.checkCancellation()
+            return ""
+        }
     }
 
     func releaseConfiguration() async throws -> ReleaseConfiguration {

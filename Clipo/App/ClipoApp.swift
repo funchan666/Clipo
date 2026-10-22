@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 @main
 struct ClipoApp: App {
@@ -52,26 +53,30 @@ struct ClipoStartupHost: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var finished = false
+    @State private var startupBegan = ContinuousClock.now
 
     var body: some View {
         ZStack {
             Color("LaunchBackground").ignoresSafeArea()
-            if finished {
-                ClipoRootView().transition(.opacity)
-            } else {
+            // Mount once so local content and authentication prepare while the
+            // bounded app-open opportunity runs, without rebuilding navigation.
+            ClipoRootView()
+                .allowsHitTesting(finished)
+                .accessibilityHidden(!finished)
+            if !finished {
                 ClipoStartupView().transition(.opacity)
             }
         }
         .task(id: scenePhase) {
             guard scenePhase == .active, !finished else { return }
-            do {
-                try await Task.sleep(for: .milliseconds(reduceMotion ? 150 : 750))
-                try Task.checkCancellation()
-                ads.beginStartup(commerce: commerce, accountAccess: accountAccess)
-            } catch { /* Leaving the foreground cancels this transition. */ }
+            ads.beginStartup(commerce: commerce, accountAccess: accountAccess)
         }
         .onReceive(ads.$startupFinished) { complete in
-            if complete { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { finished = true } }
+            if complete, !finished {
+                Logger(subsystem: "com.clipo.video", category: "Startup")
+                    .debug("Home became interactive after \(startupBegan.duration(to: .now).description, privacy: .public)")
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { finished = true }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { ads.didEnterBackground() }
@@ -155,16 +160,17 @@ struct ClipoRootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab: ClipoTab = .home
     @State private var editing: PracticeRecording?
+    @State private var linkDraft = ""
+    @State private var libraryFilter = "Saved"
     var body: some View {
         ZStack {
             ClipoStyle.background.ignoresSafeArea()
-            if api.session != nil {
                 Group {
                     switch tab {
-                    case .home: HomeView(openAccount: { tab = .me }, discover: { tab = .discover }, openTools: { tab = .tools })
+                    case .home: HomeView(openAccount: { tab = .me }, discover: { tab = .discover }, openTools: { tab = .tools }, link: $linkDraft)
                     case .discover: DiscoverView(onExit: { tab = .home })
                     case .tools: ToolsView()
-                    case .library: LibraryView { movie in editing = movie }
+                    case .library: LibraryView(edit: { editing = $0 }, filter: $libraryFilter)
                     case .me: AccountView()
                     }
                 }
@@ -173,18 +179,22 @@ struct ClipoRootView: View {
                         tab = item
                     }
                 }
-            } else {
-                GeometryReader { geometry in
-                    ScrollView {
-                        ConnectionPanel().padding(24)
-                            .frame(minHeight: geometry.size.height)
-                    }
-                }
-            }
         }.foregroundStyle(.white)
             .sheet(item: $editing) { EditorSheet(initialMovie: $0) }
+            .overlay(alignment: .top) {
+                if tab != .discover { DownloadCompletionNotice().padding(.top, 8) }
+            }
+            .task(id: library.downloadsRequest) {
+                guard library.downloadsRequest != nil else { return }
+                // Full-screen players dismiss first; then move the underlying tab.
+                do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+                editing = nil
+                libraryFilter = "Downloads"
+                tab = .library
+            }
             .task(id: api.session?.userId.value) {
-                await commerce.refresh()
+                guard api.session != nil else { return }
+                if !commerce.rightsVerified || commerce.release == nil { await commerce.refresh() }
                 await offline.resumePending()
             }
             .onChange(of: scenePhase) { _, phase in

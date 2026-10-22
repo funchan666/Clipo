@@ -14,6 +14,9 @@ struct MembershipView: View {
     @State private var selectedID: String?
     @State private var attemptedPurchaseAction = false
     @State private var purchaseTask: Task<Void, Never>?
+    @State private var rewardTask: Task<Void, Never>?
+    @State private var requestedReward = false
+    @State private var acknowledgedLuckyReward = false
 
     private var plans: [CommerceConfiguration.Product] { commerce.policy?.products ?? [] }
     private var selectedPlan: CommerceConfiguration.Product? {
@@ -97,17 +100,31 @@ struct MembershipView: View {
                 .frame(maxWidth: 560).frame(maxWidth: .infinity)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            SheetHeading(title: "Plus") { dismiss() }
-                .disabled(interactionLocked).padding(.bottom, 8)
+            SheetHeading(title: "Plus") {
+                cancelRewardRequest()
+                dismiss()
+            }
+                .disabled(purchasing || ads.isPresenting).padding(.bottom, 8)
                 .clipoScreenBackground()
         }
         .clipoScreenBackground().foregroundStyle(.white)
         .task { await commerce.refresh() }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in quota.resetIfNeeded() }
-        .onDisappear { purchaseTask?.cancel(); purchaseTask = nil }
-        .interactiveDismissDisabled(interactionLocked)
-        .fullScreenCover(item: $ads.luckyReward) { reward in
-            LuckyRewardView(message: reward.message) { ads.luckyReward = nil }
+        .onDisappear {
+            purchaseTask?.cancel(); purchaseTask = nil
+            if !ads.isPresenting { cancelRewardRequest() }
+        }
+        .onChange(of: ads.completedReward) { _, completion in
+            if requestedReward, completion != nil { dismiss() }
+        }
+        .interactiveDismissDisabled(purchasing || ads.isPresenting)
+        .fullScreenCover(item: $ads.luckyReward, onDismiss: {
+            if acknowledgedLuckyReward && requestedReward { dismiss() }
+        }) { reward in
+            LuckyRewardView(message: reward.message) {
+                acknowledgedLuckyReward = true
+                ads.luckyReward = nil
+            }
                 .presentationBackground(.clear)
         }
     }
@@ -176,14 +193,32 @@ struct MembershipView: View {
             ForEach(rewardKind.map { [$0] } ?? AllowanceKind.allCases) { kind in
                 if quota.canRequestReward(for: kind, premium: commerce.premium) {
                     LocalizedText(quota.rewardSummary(for: kind)).font(.court(.footnote)).foregroundStyle(ClipoStyle.secondary)
+                    if quota.completedAds(kind) >= 3 { AllowanceResetText() }
                     ActionButton(title: kind == .watch ? "Get more views" : "Get more downloads",
                                  primary: false, busy: ads.busy || ads.isPresenting) {
-                        Task { await ads.watch(commerce: commerce, quota: quota, kind: kind) }
-                    }.disabled(purchasing || ads.isPreparingAppOpen)
+                        requestedReward = true
+                        rewardTask = Task { await ads.watch(commerce: commerce, quota: quota, kind: kind) }
+                    }.disabled(purchasing || ads.isPreparingAppOpen || ads.busy || ads.isPresenting)
                 }
             }
-            LocalizedText(quota.unlimited ? "Unlimited views until 05:00 UTC" : "\(quota.watchesLeft) views left today")
-            LocalizedText(quota.downloadsUnlimited ? "Unlimited downloads until 05:00 UTC" : "\(quota.downloadsLeft) downloads left today")
+            if ads.busy {
+                HStack(spacing: 12) {
+                    Image("ClipoLoadingMark").resizable().scaledToFit().frame(width: 28, height: 5)
+                        .phaseAnimator([false, true]) { mark, faded in
+                            mark.opacity(reduceMotion || scenePhase != .active ? 1 : (faded ? 0.35 : 1))
+                        } animation: { _ in
+                            reduceMotion || scenePhase != .active ? nil : .easeInOut(duration: 0.6)
+                        }
+                        .accessibilityHidden(true)
+                    LocalizedText("Loading ad…").font(.court(.footnote))
+                    Spacer(minLength: 12)
+                    Button("Cancel") { cancelRewardRequest() }
+                        .buttonStyle(CompactActionStyle())
+                }
+            }
+            LocalizedText(quota.unlimited ? "Unlimited views today" : "\(quota.watchesLeft) views left today")
+            LocalizedText(quota.downloadsUnlimited ? "Unlimited downloads today" : "\(quota.downloadsLeft) downloads left today")
+            AllowanceResetText()
             LocalizedText("Ad rewards unlock when the corresponding allowance runs out.")
                 .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary).fixedSize(horizontal: false, vertical: true)
             if let error = ads.error { ErrorNote(message: error) }
@@ -193,6 +228,12 @@ struct MembershipView: View {
             }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(ClipoStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+    }
+
+    private func cancelRewardRequest() {
+        rewardTask?.cancel()
+        rewardTask = nil
+        ads.cancelRewardLoading()
     }
 
     private var restoreLink: some View {
@@ -313,8 +354,9 @@ struct AccountView: View {
                 balance(value: commerce.premium || quota.unlimited ? "Unlimited" : "\(quota.watchesLeft)", label: "Views left")
                 balance(value: commerce.premium || quota.downloadsUnlimited ? "Unlimited" : "\(quota.downloadsLeft)", label: "Downloads left")
             }
-            LocalizedText(commerce.premium ? "Included with your membership" : "Daily allowance resets at 05:00 UTC")
-                .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
+            if commerce.premium {
+                LocalizedText("Included with your membership").font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
+            } else { AllowanceResetText() }
         }
     }
 
@@ -353,4 +395,26 @@ struct LuckyRewardView: View {
             .accessibilityAddTraits(.isModal).interactiveDismissDisabled()
             .onAppear { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { appeared = true } }
     }
+}
+
+
+struct AllowanceResetText: View {
+    @Environment(\.locale) private var locale
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let next = QuotaStore.nextReset(after: context.date)
+            LocalizedText("Resets %@ (local time)", localTime(next))
+                .font(.court(.caption)).foregroundStyle(ClipoStyle.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+    private func localTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
 }

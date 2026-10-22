@@ -48,6 +48,8 @@ final class CommerceStore: NSObject, ObservableObject {
     private var processingFailures: Set<String> = []
     private var ownerID: String?
     private var refreshID = UUID()
+    private var refreshTask: Task<Void, Never>?
+    private var refreshingOwner: String?
     var premium: Bool { expiration.map { $0 > Date() } ?? false }
     var purchasesAllowed: Bool { release != nil && release?.NB01 != true && api.session != nil && api.configuration.isReady && ledgerAvailable }
 
@@ -65,16 +67,33 @@ final class CommerceStore: NSObject, ObservableObject {
         SKPaymentQueue.default().add(self)
     }
     func refresh() async {
+        let owner = api.session?.userId.value
+        if let refreshTask, refreshingOwner == owner {
+            await refreshTask.value
+            return
+        }
+        refreshTask?.cancel()
+        refreshingOwner = owner
         let id = UUID()
         refreshID = id
+        let task = Task { await self.refreshRightsAndConfiguration(id: id) }
+        refreshTask = task
+        await task.value
+        if refreshID == id { refreshTask = nil; refreshingOwner = nil }
+    }
+    private func refreshRightsAndConfiguration(id: UUID) async {
+        guard refreshID == id, !Task.isCancelled else { return }
         rightsVerified = false
         let userID = api.session?.userId.value
         if ownerID != userID { expiration = nil; release = nil; ownerID = userID }
         quota.configure(userID: userID, policy: policy, remote: release?.quotaConfig)
         guard userID != nil else { return }
         error = nil
+        // Independent requests share the authenticated session, not each other's latency.
+        async let configurationRequest = api.releaseConfiguration()
+        async let rightsRequest = api.rights()
         do {
-            let configuration = try await api.releaseConfiguration()
+            let configuration = try await configurationRequest
             guard refreshID == id, api.session?.userId.value == userID else { return }
             release = configuration
             quota.configure(userID: userID, policy: policy, remote: configuration.quotaConfig)
@@ -82,7 +101,7 @@ final class CommerceStore: NSObject, ObservableObject {
         guard refreshID == id, api.session?.userId.value == userID else { return }
         // Account rights remain independently refreshable if package configuration fails.
         do {
-            let rights = try await api.rights()
+            let rights = try await rightsRequest
             guard refreshID == id, api.session?.userId.value == userID else { return }
             expiration = rights.expiration
             rightsVerified = true

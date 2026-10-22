@@ -469,3 +469,58 @@
 "Cache" = "Cache";
 
 "Cached" = "Cached";
+
+"Swipe to change videos" = "Swipe to change videos";
+"Download location is unavailable. Please try again." = "Download location is unavailable. Please try again.";
+"Not enough storage. Free up space and try again." = "Not enough storage. Free up space and try again.";
+"Download could not be saved. Please try again. (%@)" = "Download could not be saved. Please try again. (%@)";
+"Loading ad…" = "Loading ad…";
+"Exporting…" = "Exporting…";
+"This stream can be watched offline in Clipo but cannot be exported." = "This stream can be watched offline in Clipo but cannot be exported.";
+
+"Finish downloading this video to export it." = "Finish downloading this video to export it.";
+
+"Swipe up or down to change videos" = "Swipe up or down to change videos";
+
+"Preparing export…" = "Preparing export…";
+
+"We download the video before exporting. Existing downloads are reused." = "We download the video before exporting. Existing downloads are reused.";
+
+"The provider has not supplied a downloadable video file. You can still cache this video for offline viewing." = "The provider has not supplied a downloadable video file. You can still cache this video for offline viewing.";
+
+"This video format cannot be exported. Please use an MP4 or MOV file." = "This video format cannot be exported. Please use an MP4 or MOV file.";
+
+"Video export failed. Please try again." = "Video export failed. Please try again.";
+
+"This stream format cannot be exported. Offline playback is still available." = "This stream format cannot be exported. Offline playback is still available.";
+
+"The video data is incomplete. Please try exporting again." = "The video data is incomplete. Please try exporting again.";
+
+"This video is too large to export on this device." = "This video is too large to export on this device.";
+
+"Video export could not download the stream. Please try again." = "Video export could not download the stream. Please try again.";
+
+"Clear link" = "Clear link";
+
+/* Playback and local library feedback */
+"Favorites" = "Favorites";
+"Favorite" = "Favorite";
+"Favorited" = "Favorited";
+"Offline videos" = "Offline videos";
+"Offline" = "Offline";
+"Download" = "Download";
+"View" = "View";
+"Remove offline video?" = "Remove offline video?";
+"This removes only the offline copy. Your favorite stays saved." = "This removes only the offline copy. Your favorite stays saved.";
+"Stop this export?" = "Stop this export?";
+"The export is still in progress. Leaving now cancels it. Your video stays safe." = "The export is still in progress. Leaving now cancels it. Your video stays safe.";
+"Keep exporting" = "Keep exporting";
+"Stop export" = "Stop export";
+"Downloaded. Watch offline in Library." = "Downloaded. Watch offline in Library.";
+"Favorites could not be updated. Please try again." = "Favorites could not be updated. Please try again.";
+"Resets %@ (local time)" = "Resets %@ (local time)";
+"Unlimited views today" = "Unlimited views today";
+"Unlimited downloads today" = "Unlimited downloads today";
+"Finish this ad for unlimited views today." = "Finish this ad for unlimited views today.";
+"Finish this ad for unlimited downloads today." = "Finish this ad for unlimited downloads today.";
+"Connect to refresh your allowance." = "Connect to refresh your allowance.";

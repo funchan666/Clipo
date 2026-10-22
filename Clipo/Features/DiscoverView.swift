@@ -69,6 +69,7 @@ final class FeedStore: ObservableObject {
     }
 }
 struct DiscoverView: View {
+    @EnvironmentObject private var library: LibraryStore
     @Environment(\.dismiss) private var dismiss
     private let canDismiss: Bool
     private let onExit: (() -> Void)?
@@ -128,7 +129,8 @@ struct DiscoverView: View {
                                             ClipPage(clip: clip, active: activeID == entry.id,
                                                      controlInsets: container.safeAreaInsets, playback: playback,
                                                      didStartPlaying: { players.prepareNext(after: entry.id) },
-                                                     didStopPlaying: { if activeID == entry.id { players.suspend() } })
+                                                     didStopPlaying: { if activeID == entry.id { players.suspend() } },
+                                                     onSwipeExit: exitPlayer)
                                         } else {
                                             PlayerPoster(url: clip.coverURL)
                                         }
@@ -153,6 +155,11 @@ struct DiscoverView: View {
                 feedHeader
             }
         }.clipoScreenBackground(.black)
+            .modifier(PlayerPagingAccess(entries: displayEntries, selectedID: $activeID, tailID: morePageID, players: players))
+            .overlay(alignment: .top) { DownloadCompletionNotice().padding(.top, 56) }
+            .onChange(of: library.downloadsRequest) { _, request in
+                if request != nil { players.releaseAll(); if canDismiss { dismiss() } }
+            }
             .onAppear { visible = true; players.update(entries: displayEntries, selectedID: activeID) }
             .task(id: api.session?.userId.value) {
                 guard api.session != nil else { return }
@@ -184,18 +191,21 @@ struct DiscoverView: View {
         HStack {
             Spacer(minLength: 0)
             if canDismiss || onExit != nil {
-                PlayerExitButton {
-                    players.releaseAll()
-                    if let onExit { onExit() } else { dismiss() }
-                }
+                PlayerExitButton(action: exitPlayer)
             }
         }.environment(\.layoutDirection, .leftToRight)
             .padding(.horizontal, 12).padding(.top, 8)
+    }
+    private func exitPlayer() {
+        guard canDismiss || onExit != nil else { return }
+        players.releaseAll()
+        if let onExit { onExit() } else { dismiss() }
     }
 
 }
 
 struct PlayerScreen: View {
+    @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var offline: OfflineStore
     @EnvironmentObject private var api: APIClient
     @Environment(\.dismiss) private var dismiss
@@ -224,9 +234,11 @@ struct PlayerScreen: View {
                             Group {
                                 if let playback = players.controllers[entry.id] {
                                     ClipPage(clip: clip, active: activeID == entry.id,
+                                             supportsPaging: displayEntries.count > 1 || route.continuesRecommendations,
                                              controlInsets: container.safeAreaInsets, playback: playback,
                                              didStartPlaying: { players.prepareNext(after: entry.id) },
-                                                     didStopPlaying: { if activeID == entry.id { players.suspend() } })
+                                             didStopPlaying: { if activeID == entry.id { players.suspend() } },
+                                             onSwipeExit: exitPlayer)
                                 } else { PlayerPoster(url: clip.coverURL) }
                             }.containerRelativeFrame([.horizontal, .vertical]).clipped().id(entry.id)
                         }
@@ -248,10 +260,13 @@ struct PlayerScreen: View {
         }.clipoScreenBackground(.black).overlay(alignment: .top) {
             HStack {
                 Spacer(minLength: 0)
-                PlayerExitButton { players.releaseAll(); dismiss() }
+                PlayerExitButton(action: exitPlayer)
             }.environment(\.layoutDirection, .leftToRight)
                 .padding(.horizontal, 12).padding(.top, 8)
         }.preferredColorScheme(.dark)
+            .overlay(alignment: .top) { DownloadCompletionNotice().padding(.top, 56) }
+            .onChange(of: library.downloadsRequest) { _, request in if request != nil { exitPlayer() } }
+            .modifier(PlayerPagingAccess(entries: displayEntries, selectedID: $activeID, tailID: morePageID, players: players))
             .onAppear {
                 visible = true
                 players.update(entries: displayEntries, selectedID: activeID)
@@ -270,9 +285,166 @@ struct PlayerScreen: View {
             .onChange(of: scenePhase) { _, phase in if phase != .active { players.suspend() } }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in players.trimMemory() }
     }
+    private func exitPlayer() {
+        players.releaseAll()
+        dismiss()
+    }
     private func continueFeedIfNeeded(_ id: String?) {
         guard visible, route.continuesRecommendations, id == morePageID || feed.isNearEnd(id) else { return }
         Task { guard visible else { return }; await feed.load(api: api) }
+    }
+}
+
+private struct PlaybackGateKey: EnvironmentKey { static let defaultValue = false }
+private extension EnvironmentValues {
+    var playbackGatePresented: Bool {
+        get { self[PlaybackGateKey.self] }
+        set { self[PlaybackGateKey.self] = newValue }
+    }
+}
+
+// Enforce admission at the paging boundary, so denied pages cannot strand the
+// user on a succession of unplayable videos. Returning to admitted clips is free.
+private struct PlayerPagingAccess: ViewModifier {
+    let entries: [PlaybackQueueEntry]
+    @Binding var selectedID: String?
+    let tailID: String
+    @ObservedObject var players: PlaybackPool
+    @EnvironmentObject private var quota: QuotaStore
+    @EnvironmentObject private var commerce: CommerceStore
+    @State private var admittedID: String?
+    @State private var requestedID: String?
+    @State private var showingReward = false
+    @State private var swipeOrigin: String?
+    @State private var trackingSwipe = false
+    @State private var swipeEnded: UUID?
+    @AppStorage("player.completedSwipeHint.v6") private var completedHint = false
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.playbackGatePresented, showingReward)
+            .simultaneousGesture(DragGesture(minimumDistance: 12).onChanged { value in
+                guard !showingReward, abs(value.translation.height) > abs(value.translation.width) else { return }
+                if !trackingSwipe { trackingSwipe = true; swipeOrigin = admittedID; swipeEnded = nil }
+            }.onEnded { _ in swipeEnded = UUID() })
+            .task(id: swipeEnded) {
+                guard swipeEnded != nil else { return }
+                do { try await Task.sleep(for: .milliseconds(700)) } catch { return }
+                trackingSwipe = false; swipeOrigin = nil
+            }
+            .onAppear { admit(selectedID) }
+            .onChange(of: selectedID) { _, value in admit(value) }
+            .sheet(isPresented: $showingReward, onDismiss: finishReward) {
+                MembershipView(rewardKind: .watch)
+            }
+    }
+    private func canWatch(_ id: String) -> Bool {
+        guard let clip = entries.first(where: { $0.id == id })?.clip else { return false }
+        return clip.playbackURL.isFileURL || quota.mayWatch(clip.id, premium: commerce.premium)
+    }
+    private func admit(_ id: String?) {
+        guard !showingReward, let id else { return }
+        if let admittedID, !entries.contains(where: { $0.id == admittedID }) { self.admittedID = nil }
+        let isTail = id == tailID
+        if canWatch(id) || (isTail && !quota.canRequestReward(for: .watch, premium: commerce.premium)) {
+            if !isTail {
+                if trackingSwipe, let swipeOrigin, swipeOrigin != id, admittedID != id {
+                    completedHint = true
+                }
+                admittedID = id
+            }
+            return
+        }
+        guard isTail || entries.contains(where: { $0.id == id }) else { return }
+        requestedID = id
+        players.controllers.values.forEach { $0.pause() }
+        players.suspend()
+        if let admittedID, admittedID != id {
+            // A new deliberate swipe may prompt again; dismissal itself never does.
+            showingReward = true
+            selectedID = admittedID
+        } else {
+            admittedID = id
+            if quota.claimWatchLimitPrompt(premium: commerce.premium) { showingReward = true }
+        }
+    }
+    private func finishReward() {
+        if let requestedID, canWatch(requestedID) { selectedID = requestedID }
+        requestedID = nil
+    }
+}
+
+// Count the cue only after an uninterrupted presentation. The old flag could
+// be consumed by buffering or a sheet before the user had time to read it.
+private struct PlayerSwipeHint: View {
+    let eligible: Bool
+    @AppStorage("player.completedSwipeHint.v6") private var alreadyShown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var phase
+    @State private var showing = false
+    var body: some View {
+        // A persistent host is essential: a task on an empty conditional Group
+        // has no rendered child to start it. Buffering must not gate this cue.
+        GeometryReader { container in
+            // The parent reserves the exit, action rail and bottom captions.
+            // Size the artwork from the remaining viewport, not a device model.
+            let width = max(0, container.size.width)
+            let height = max(0, container.size.height)
+            let artworkHeight = min(width * 1.18, height * 0.64, 520)
+            ZStack {
+                Color.clear
+                if showing && eligible && !alreadyShown && phase == .active {
+                    VStack(spacing: min(24, height * 0.04)) {
+                        Color.clear.frame(width: width, height: artworkHeight)
+                            .phaseAnimator([0, 1, 2, 3, 4]) { host, step in
+                                host.overlay {
+                                    let resting = step == 0 || step == 4
+                                    ZStack {
+                                        Image("ClipoSwipeTrail").resizable().scaledToFit()
+                                            .frame(width: artworkHeight * 0.56, height: artworkHeight)
+                                            .offset(x: -artworkHeight * 0.12)
+                                            .opacity(reduceMotion ? 0.7 : (resting ? 0.25 : 0.9))
+                                            .scaleEffect(reduceMotion || resting ? 0.94 : 1)
+                                        Image("ClipoSwipeGesture").resizable().scaledToFit()
+                                            .frame(width: artworkHeight * 0.48, height: artworkHeight * 0.48)
+                                            .shadow(color: ClipoStyle.accent.opacity(0.25), radius: 6)
+                                            .rotationEffect(.degrees(reduceMotion ? 0 : (step == 2 ? -5 : 3)))
+                                            .offset(x: artworkHeight * 0.1,
+                                                    y: reduceMotion ? 0 : (step == 2 ? -1 : 1) * artworkHeight * 0.22)
+                                            .opacity(reduceMotion ? 1 : (resting ? 0.15 : 1))
+                                    }
+                                }
+                            } animation: { step in
+                                reduceMotion ? nil : .easeInOut(duration: step == 2 || step == 3 ? 0.85 : 0.3)
+                            }
+                        LocalizedText("Swipe up or down to change videos")
+                            .font(.court(.title3, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.95))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .shadow(color: .black.opacity(0.8), radius: 4, y: 1)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .transition(.opacity)
+                }
+            }.frame(width: width, height: height)
+        }
+        .allowsHitTesting(false)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: showing)
+        .task(id: eligible && phase == .active) {
+            showing = false
+            guard eligible, phase == .active, !alreadyShown else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(400))
+                try Task.checkCancellation()
+                showing = true
+                try await Task.sleep(for: .seconds(6))
+                try Task.checkCancellation()
+                alreadyShown = true
+            } catch { }
+            showing = false
+        }
     }
 }
 
@@ -283,13 +455,16 @@ struct ClipPage: View {
     @EnvironmentObject private var quota: QuotaStore
     @EnvironmentObject private var ads: RewardedAds
     @Environment(\.scenePhase) private var phase
+    @Environment(\.playbackGatePresented) private var pagingGate
     let clip: LessonClip
     let active: Bool
+    var supportsPaging = true
     // Read from the enclosing safe container; video fills the expanded viewport.
     var controlInsets = EdgeInsets()
     @ObservedObject var playback: PlaybackController
     var didStartPlaying: () -> Void = {}
     var didStopPlaying: () -> Void = {}
+    var onSwipeExit: () -> Void = {}
     @State private var visible = false
     @State private var firstFrameReady = false
     @State private var accessChecked = false
@@ -304,6 +479,7 @@ struct ClipPage: View {
     @State private var recorded = false
     @State private var allowed = false
     @State private var scrubbing = false
+    @State private var favoriteError: String?
     var body: some View {
         ZStack {
             Color.black
@@ -317,12 +493,38 @@ struct ClipPage: View {
                 guard active, phase == .active, !ads.isPresenting else { return }
                 if allowed, firstFrameReady { playback.toggle() }
             }
+            // Only the video backdrop owns this gesture; controls and the
+            // scrubber above it keep their own touches. Vertical paging wins
+            // unless the completed gesture is decisively leftward.
+            .simultaneousGesture(DragGesture(minimumDistance: 32).onEnded { value in
+                guard active, visible, phase == .active, !ads.isPresenting,
+                      !pagingGate, !gate, !options, !editor, !downloadPanel,
+                      !downloadReward, !scrubbing,
+                      value.translation.width < -90,
+                      abs(value.translation.width) > abs(value.translation.height) * 1.7 else { return }
+                onSwipeExit()
+            })
             // Original raster scrim: a soft fade, never a hard panel across the video.
             Color.clear.overlay {
                 Image("ClipoPlayerScrim").resizable().scaledToFill()
             }.clipped().allowsHitTesting(false).accessibilityHidden(true)
             playerControls
-            if active, visible, !gate, !options, !editor, !downloadPanel, !downloadReward {
+            if active, let favoriteError {
+                VStack {
+                    HStack(spacing: 10) {
+                        LocalizedText(favoriteError).font(.court(.caption))
+                        IconButton(symbol: .close, label: "Dismiss message") { self.favoriteError = nil }
+                    }.padding(12).background { OriginalSurface(tone: .pine) }
+                    Spacer()
+                }.padding(.top, controlInsets.top + 60).padding(.horizontal, 16)
+            }
+            PlayerSwipeHint(eligible: supportsPaging && active && visible && playback.error == nil &&
+                            !pagingGate && !gate && !options && !editor && !downloadPanel && !downloadReward && !ads.isPresenting)
+                .padding(.top, controlInsets.top + 64)
+                .padding(.bottom, controlInsets.bottom + 150)
+                .padding(.leading, controlInsets.leading + 20)
+                .padding(.trailing, controlInsets.trailing + 72)
+            if active, visible, !pagingGate, !gate, !options, !editor, !downloadPanel, !downloadReward {
                 if accessChecked, !allowed {
                     VStack(spacing: 16) {
                         LocalizedText("Keep watching").font(.court(.title3, weight: .semibold))
@@ -343,7 +545,7 @@ struct ClipPage: View {
             .onAppear { visible = true; if active { activate() } }
             .onChange(of: active) { _, active in
                 resumeAfterInterruption = false
-                if active { activate() } else { resumeAfterSheet = false; playback.pause() }
+                if active { activate() } else { favoriteError = nil; resumeAfterSheet = false; playback.pause() }
             }
             .onChange(of: playback.isPlaying) { _, playing in
                 if playing, active, visible, !recorded {
@@ -364,12 +566,19 @@ struct ClipPage: View {
                 if presenting { interruptPlayback() } else { resumeIfNeeded() }
             }
             .onDisappear { visible = false; resumeAfterInterruption = false; playback.pause() }
+            .onChange(of: library.downloadsRequest) { _, request in
+                if request != nil { options = false; downloadPanel = false; editor = false }
+            }
             .onChange(of: gate) { _, presented in if presented { playback.pause() } }
+            .onChange(of: pagingGate) { _, presented in
+                if presented { playback.pause() } else if active { activate() }
+            }
             .sheet(isPresented: $gate, onDismiss: { if active { activate() } }) { MembershipView(rewardKind: .watch) }
             .sheet(isPresented: $options, onDismiss: resumeAfterControls) {
                 ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SheetHeading(title: "Playback") { options = false }
+                    VideoExportEntry(clip: clip)
                     LocalizedText("Speed").font(.court(.headline))
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -419,7 +628,7 @@ struct ClipPage: View {
                 .padding(.bottom, 8)
                 VStack(spacing: 8) {
                     PlayerRailButton(artwork: library.isSaved(clip) ? .saved : .save,
-                                     title: library.isSaved(clip) ? "Saved" : "Save",
+                                     title: library.isSaved(clip) ? "Favorited" : "Favorite",
                                      accessibilityTitle: library.isSaved(clip) ? "Remove saved video" : "Save video",
                                      selected: library.isSaved(clip), action: save)
                     PlayerCacheButton(clip: clip, action: cacheVideo)
@@ -439,16 +648,14 @@ struct ClipPage: View {
         .padding(controlInsets)
     }
     private func activate(reload: Bool = false) {
-        guard active, visible, phase == .active, !ads.isPresenting,
+        guard active, visible, phase == .active, !ads.isPresenting, !pagingGate,
               !gate, !options, !editor, !downloadPanel, !downloadReward else { return }
         recorded = false
         accessChecked = true
         allowed = clip.playbackURL.isFileURL || quota.mayWatch(clip.id, premium: commerce.premium)
         if !allowed {
             playback.pause()
-            // First arrival at an exhausted video prompts once across the feed.
-            // Dismissal and subsequent pages retain the inline manual action.
-            if quota.claimWatchLimitPrompt(premium: commerce.premium) { gate = true }
+            // Paging owns automatic prompts; this page retains the explicit reward action.
             return
         }
         if playback.loadedURL != clip.playbackURL || reload {
@@ -497,7 +704,11 @@ struct ClipPage: View {
         playback.pause(); downloadPanel = true
     }
     private func save() {
-        library.toggle(offline.cached(clip.id)?.clip ?? clip)
+        favoriteError = nil
+        if !library.toggle(offline.cached(clip.id)?.clip ?? clip) {
+            favoriteError = "Favorites could not be updated. Please try again."
+            library.error = nil // This full-screen surface owns the feedback.
+        }
     }
 }
 private struct PlayerExitButton: View {
@@ -534,10 +745,10 @@ private struct PlayerCacheButton: View {
     var body: some View {
         Button(action: action) {
             PlayerRailLabel(artwork: .download, selected: cached) {
-                if cached { LocalizedText("Cached") }
+                if cached { LocalizedText("Offline") }
                 else if offline.preparingID == clip.id { LocalizedText("Loading…") }
                 else if offline.downloadingID == clip.id { Text(verbatim: "\(Int(offline.progress * 100))%") }
-                else { LocalizedText("Cache") }
+                else { LocalizedText("Download") }
             }
         }.buttonStyle(PressStyle())
             .accessibilityLabel(LocalizedStringKey(cached ? "Available offline" : "Download for offline"))

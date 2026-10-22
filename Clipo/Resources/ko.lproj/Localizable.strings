@@ -469,3 +469,58 @@
 "Cache" = "저장";
 
 "Cached" = "저장됨";
+
+"Swipe to change videos" = "밀어서 동영상 전환";
+"Download location is unavailable. Please try again." = "다운로드 저장 위치를 사용할 수 없습니다. 다시 시도해 주세요.";
+"Not enough storage. Free up space and try again." = "저장 공간이 부족합니다. 공간을 확보한 후 다시 시도해 주세요.";
+"Download could not be saved. Please try again. (%@)" = "다운로드를 저장하지 못했습니다. 다시 시도해 주세요. (%@)";
+"Loading ad…" = "광고 불러오는 중…";
+"Exporting…" = "내보내는 중…";
+"This stream can be watched offline in Clipo but cannot be exported." = "이 영상은 Clipo에서 오프라인으로 시청할 수 있지만 내보낼 수는 없습니다.";
+
+"Finish downloading this video to export it." = "다운로드가 완료되면 동영상을 내보낼 수 있습니다.";
+
+"Swipe up or down to change videos" = "위아래로 밀어 동영상을 전환하세요";
+
+"Preparing export…" = "내보내기 준비 중…";
+
+"We download the video before exporting. Existing downloads are reused." = "동영상을 다운로드한 후 내보냅니다. 이미 다운로드한 동영상은 다시 사용합니다.";
+
+"The provider has not supplied a downloadable video file. You can still cache this video for offline viewing." = "제공자가 다운로드 가능한 동영상 파일을 제공하지 않았습니다. 앱에서 오프라인 시청용으로 저장할 수 있습니다.";
+
+"This video format cannot be exported. Please use an MP4 or MOV file." = "이 동영상 형식은 내보낼 수 없습니다. MP4 또는 MOV 파일을 사용해 주세요.";
+
+"Video export failed. Please try again." = "동영상 내보내기에 실패했습니다. 다시 시도해 주세요.";
+
+"This stream format cannot be exported. Offline playback is still available." = "이 스트림 형식은 내보낼 수 없습니다. 오프라인 재생은 계속 이용할 수 있습니다.";
+
+"The video data is incomplete. Please try exporting again." = "동영상 데이터가 불완전합니다. 다시 내보내 주세요.";
+
+"This video is too large to export on this device." = "이 동영상은 너무 커서 이 기기에서 내보낼 수 없습니다.";
+
+"Video export could not download the stream. Please try again." = "내보내기에 필요한 동영상을 다운로드하지 못했습니다. 다시 시도해 주세요.";
+
+"Clear link" = "링크 지우기";
+
+/* Playback and local library feedback */
+"Favorites" = "즐겨찾기";
+"Favorite" = "즐겨찾기";
+"Favorited" = "저장됨";
+"Offline videos" = "오프라인 동영상";
+"Offline" = "오프라인";
+"Download" = "다운로드";
+"View" = "보기";
+"Remove offline video?" = "오프라인 동영상을 삭제할까요?";
+"This removes only the offline copy. Your favorite stays saved." = "오프라인 사본만 삭제됩니다. 즐겨찾기는 유지됩니다.";
+"Stop this export?" = "내보내기를 중단할까요?";
+"The export is still in progress. Leaving now cancels it. Your video stays safe." = "아직 내보내는 중입니다. 지금 나가면 취소됩니다. 동영상은 유지됩니다.";
+"Keep exporting" = "계속 내보내기";
+"Stop export" = "내보내기 중단";
+"Downloaded. Watch offline in Library." = "다운로드 완료. 보관함에서 오프라인으로 시청하세요.";
+"Favorites could not be updated. Please try again." = "즐겨찾기를 업데이트하지 못했습니다. 다시 시도해 주세요.";
+"Resets %@ (local time)" = "%@에 초기화 (현지 시간)";
+"Unlimited views today" = "오늘 무제한 시청";
+"Unlimited downloads today" = "오늘 무제한 다운로드";
+"Finish this ad for unlimited views today." = "이 광고를 끝까지 보면 오늘 무제한으로 시청할 수 있습니다.";
+"Finish this ad for unlimited downloads today." = "이 광고를 끝까지 보면 오늘 무제한으로 다운로드할 수 있습니다.";
+"Connect to refresh your allowance." = "이용 한도를 새로고침하려면 인터넷에 연결하세요.";
