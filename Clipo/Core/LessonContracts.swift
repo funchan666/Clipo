@@ -204,7 +204,17 @@ extension String {
     var nilIfBlank: String? { trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self }
 }
 
-struct IOSBillingConfiguration: Codable { let iosVerifyShareKey: String?; let sandBoxTest: Bool? }
+struct IOSBillingConfiguration: Codable {
+    let iosVerifyShareKey: String?
+    let sandBoxTest: Bool?
+    static let empty = IOSBillingConfiguration(iosVerifyShareKey: nil, sandBoxTest: nil)
+
+    var verificationFields: [String: Any] {
+        var fields: [String: Any] = ["sandBoxTest": sandBoxTest ?? false]
+        if let key = iosVerifyShareKey?.nilIfBlank { fields["iosVerifyShareKey"] = key }
+        return fields
+    }
+}
 struct QuotaConfiguration: Decodable {
     let dailyWatchLimit: Int?
     // Backend field names are misleading; the confirmed API comments define their roles.

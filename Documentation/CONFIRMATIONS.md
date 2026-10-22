@@ -15,6 +15,7 @@
 
 - 不做金币钱包。用户已创建 Clipo Plus 订阅组及两项自动续订商品，并授权同步客户端：clipo.plus.monthly（月付，9.99 美元）、clipo.plus.yearly（年付，99.99 美元，全年预付）。两项提供同级 Plus 权益；界面的名称、金额及周期仍以 Apple 实际商品为准。
 - 当前临时测试配置：用户要求将 Commerce.json 切回 coins_1.99、conis_4.99，供其自行打包联调；测试通过并经用户确认后，再恢复 clipo.plus.monthly、clipo.plus.yearly。仅切换商品 ID，usdPrice 999 和 9999 保留原后端订单契约，实际价格、名称和周期仍取 Apple 返回值。Keychain 历史订单的商品 ID、订单号、归属和验单配置不变。本轮未编译或打包。
+- 用户已向后端确认 buySuccess 的 iosVerifyShareKey 可不传。getV2 未返回 ios 对象时不再阻止购买；校验值缺失、null 或空白时，成功验单及取消/失败状态同步请求均省略该字段，有有效值时继续使用原订单保存的值。sandBoxTest 仍沿用原配置及缺失时 false 的既有行为，未擅自切换测试环境。
 - 正式后台商品映射仍为 clipo.plus.monthly 对应月度 Plus、usdPrice 999；clipo.plus.yearly 对应年度 Plus、usdPrice 9999。此前允许删除旧商品配置的确认在当前临时联调期间暂缓，测试需保留 coins_1.99、conis_4.99 的下单及验单支持。当前没有后台管理写入入口，尚未修改生产后台。
 - VIP 才能导出媒体，覆盖播放器、资料库、视频编辑和音频导出；发球记录 CSV 不属于媒体导出限制。
 - 收藏不扣下载次数。观看与下载额度独立；getV2 的广告奖励立即更新，已消耗的每日基础额度配置次日生效。完整广告推进奖励轮次，幸运奖励不推进。
@@ -29,7 +30,7 @@
 ## 本轮检查及发布依赖
 
 - 已检查真实 StoreKit 请求、支付队列、Apple 收据与服务端确认调用。共享 Scheme 没有 StoreKitConfigurationFileReference，工程无 .storekit 文件和 StoreKitTest 模拟商品依赖。
-- 2026-10-22 同步商品时，使用用户提供的 765732 只读复查生产 getV2，name Clipo、platform IOS、version 1.0.0，已返回 code 0，取代此前“分发包不存在”的结果。但 data 没有 ios 购买配置，monthlyPayment、annualPayment、monthlyPrice、annualPrice 均为 null，尚不能据此认定真实购买可用。需后台补齐购买配置及新商品映射；客户端未向后台执行写入或下单。
+- 2026-10-22 同步商品时，使用用户提供的 765732 只读复查生产 getV2，name Clipo、platform IOS、version 1.0.0，已返回 code 0，取代此前“分发包不存在”的结果。data 未包含 ios，monthlyPayment、annualPayment、monthlyPrice、annualPrice 均为 null；用户随后确认 iosVerifyShareKey 可不传，客户端已移除缺少 ios 的购买阻断，不再将这一缺失单独判为后台故障。实际下单、Apple 支付、验单和权益到账仍未运行验证；未向后台执行写入或下单。
 - 应用自动创建游客会话，没有账号密码登录表单，因此不编造审核测试账号。审核备注应说明无需账号密码；还需准备真实可用的网球课程短码。
 - Apple 审核及 TestFlight 使用 Apple 沙盒交易是正常流程，不等于 Xcode 本地模拟商品。服务端必须支持审核沙盒收据；本轮未改变 sandBoxTest 后端契约。
 - 用户截图确认 Clipo Plus 组内已创建两项订阅，月度商品 ID 为 clipo.plus.monthly、周期为 1 month；客户端已按确认方案同步。Apple 实际返回的两项商品、年度详情、有效付费协议、Sandbox 购买和恢复尚未运行验证。不同 Bundle ID 下的商品必须属于对应 App 记录。

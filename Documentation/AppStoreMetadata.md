@@ -46,7 +46,7 @@ Privacy Policy: https://www.clipo.vip/#privacy
 
 No username or password is required. The app starts an authenticated guest session automatically. Open Tools to review an imported practice video, read Tennis field notes or use Serve practice. Open Get Plus to view subscriptions.
 
-审核需要由后端提供持续可用的网球课程链接或短码，不能用虚构账号代替访问资料。最新生产 getV2 查询已成功，但缺少 ios 购买配置，需后台补齐后再验证购买。
+审核需要由后端提供持续可用的网球课程链接或短码，不能用虚构账号代替访问资料。最近生产 getV2 查询已成功；用户已向后端确认 iosVerifyShareKey 可不传，客户端已允许缺少 ios 配置，并在无校验值时省略该参数。实际购买和恢复仍待运行验证。
 
 ## 用户协议
 

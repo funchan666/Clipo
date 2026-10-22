@@ -260,9 +260,7 @@ final class CommerceStore: NSObject, ObservableObject {
         guard release.NB01 != true else {
             error = "Purchases are currently paused. Please try again later."; return
         }
-        guard let billing = release.ios else {
-            error = "Subscription setup is incomplete. Please contact support."; return
-        }
+        let billing = release.ios ?? .empty
         guard let entry = policy?.products.first(where: { $0.id == product.productIdentifier }) else {
             error = "This plan isn’t available from Apple yet. Please try again later."; return
         }
@@ -328,10 +326,8 @@ final class CommerceStore: NSObject, ObservableObject {
             let owner = api.session?.userId.value == record.owner.userId.value ? (api.session ?? record.owner) : record.owner
             let body: [String: Any] = [
                 "verificationData": failure.receipt, "purchaseID": record.orderID,
-                "status": failure.status, "transactionId": failure.transactionID,
-                "sandBoxTest": record.billing.sandBoxTest ?? false,
-                "iosVerifyShareKey": record.billing.iosVerifyShareKey ?? ""
-            ]
+                "status": failure.status, "transactionId": failure.transactionID
+            ].merging(record.billing.verificationFields) { _, value in value }
             _ = try await api.paymentRequest(path: "/app-api/flow/rights-order/buySuccess", body: body, owner: owner)
             guard let index = records.firstIndex(where: { $0.id == recordID }) else { return }
             var next = records
@@ -374,8 +370,8 @@ final class CommerceStore: NSObject, ObservableObject {
             // A refreshed credential is accepted only for the same original user.
             let owner = api.session?.userId.value == record.owner.userId.value ? (api.session ?? record.owner) : record.owner
             let body: [String: Any] = ["verificationData": receipt.base64EncodedString(), "purchaseID": record.orderID,
-                "status": "purchased", "sandBoxTest": record.billing.sandBoxTest ?? false,
-                "transactionId": transactionID, "iosVerifyShareKey": record.billing.iosVerifyShareKey ?? ""]
+                "status": "purchased", "transactionId": transactionID]
+                .merging(record.billing.verificationFields) { _, value in value }
             _ = try await api.paymentRequest(path: "/app-api/flow/rights-order/buySuccess", body: body, owner: owner)
             var confirmed = records
             confirmed[index].confirmedIDs.insert(transactionID)
