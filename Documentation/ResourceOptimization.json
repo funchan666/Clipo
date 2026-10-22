@@ -1,0 +1,206 @@
+{
+  "png_before_bytes": 10206355,
+  "png_after_bytes": 9033723,
+  "saved_bytes": 1172632,
+  "method": "Lossless PNG recompression; unchanged resolution, RGBA pixels, alpha presence and ICC profiles",
+  "files": [
+    {
+      "file": "Clipo/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+      "before": 837168,
+      "after": 557259,
+      "width": 1024,
+      "height": 1024,
+      "pixels_identical": true,
+      "rgba_sha256": "c4844d8f7f5887dc72507ef83c34b1fe78b6c2c8a815a0937a945701b1dfb3c6"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoCourtControls.imageset/clipo-court-controls.png",
+      "before": 2704314,
+      "after": 2540389,
+      "width": 2172,
+      "height": 724,
+      "pixels_identical": true,
+      "rgba_sha256": "3b4ddbab8360202753c5f478e5030e843bef9bd285e24f8ae2a84db21458a9f2"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoGlyphAtlas.imageset/clipo-glyph-atlas.png",
+      "before": 545149,
+      "after": 491582,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "722dc0e0bad557d7f2eca1bc6094f5d543ac2502bee91436bd7c2e14085c2d5d"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoLaunchMark.imageset/clipo-launch-mark.png",
+      "before": 936019,
+      "after": 862593,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "44852777b045b2c93fed51d56c92dd95ed800bde352712cb3fe4e7e1638d54de"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoLoadingMark.imageset/clipo-loading-mark.png",
+      "before": 93890,
+      "after": 78301,
+      "width": 1774,
+      "height": 887,
+      "pixels_identical": true,
+      "rgba_sha256": "e9a7f6506290de7e0565f7b1482d21c3440e113430c5ed3ddbe8b6ce63e049c2"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoMatteControls.imageset/clipo-matte-controls.png",
+      "before": 1185290,
+      "after": 1081889,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "05885acf4816271127a4cbc10e39b84b395f2fdaae8bb26122fef11227bb919f"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoSwipeGesture.imageset/ClipoSwipeGesture.png",
+      "before": 396095,
+      "after": 331553,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "0bc47abaea35519c1459a6d03ea291a1bdd8b1d47ca87bb0ca498aba29db92d2"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoSwipeTrail.imageset/ClipoSwipeTrail.png",
+      "before": 936304,
+      "after": 741327,
+      "width": 1024,
+      "height": 1536,
+      "pixels_identical": true,
+      "rgba_sha256": "0b70c9d62a8900ea3138598dccd84d776f30eb74bc8dc2167cd0f033a18d8194"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/ClipoTennisKit.imageset/clipo-tennis-kit.png",
+      "before": 1616684,
+      "after": 1540006,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "49e7c3f4e8ed02348ca58852941658520235730c653ffd0b5e41b11442c56196"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/Player/ClipoPlayerActions.imageset/clipo-player-actions.png",
+      "before": 356519,
+      "after": 296737,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "46cf72a9cbb920184b919f59567786f2d638a6d3ebab54f43a6f8864e2df6a94"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/Player/ClipoPlayerScrim.imageset/clipo-player-scrim.png",
+      "before": 260979,
+      "after": 219530,
+      "width": 1254,
+      "height": 1254,
+      "pixels_identical": true,
+      "rgba_sha256": "db7821ea3dc63c543d6c3908cb3569b06da3b0140a32004a2e7508c6d90c2c27"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/Player/CourtExitControl.imageset/court-exit.png",
+      "before": 136296,
+      "after": 111779,
+      "width": 600,
+      "height": 231,
+      "pixels_identical": true,
+      "rgba_sha256": "1b9d44ee8db37c41a6e7b82fd17bb7915de47c5eeeaff4e7d7e5cfd0e4875e43"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabDiscoverNormal.imageset/tab-discover-normal.png",
+      "before": 11636,
+      "after": 9814,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "2f12a5b11347fe985d090085ff3e953bd27750eb14e250f86f0d9c63058c38d6"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabDiscoverSelected.imageset/tab-discover-selected.png",
+      "before": 30839,
+      "after": 28114,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "baf3259027643d25264a2e442adb3d3d6cdfa91b14450d34b4ea9a9940f98dc7"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabHomeNormal.imageset/tab-home-normal.png",
+      "before": 10015,
+      "after": 8496,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "fdaf4d0bb28378e8d95ccfe359a7d9fe7282f66de4d2bcfa435c327b9e6ba14b"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabHomeSelected.imageset/tab-home-selected.png",
+      "before": 32112,
+      "after": 29713,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "81c89407889a370c8be74a9ed2d9005b37c6d6dc7c123475b58e1b2d2943ceaf"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabLibraryNormal.imageset/tab-library-normal.png",
+      "before": 9634,
+      "after": 8235,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "0116bb9a194f1eb18d9512b098ea5cd5f2c87f84d05552e7a5617dd259171dd8"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabLibrarySelected.imageset/tab-library-selected.png",
+      "before": 28876,
+      "after": 26448,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "7c91187c9b9c42b0f34da24224b2226e43a908c1b6150d993e8f75cb48336443"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabMeNormal.imageset/tab-me-normal.png",
+      "before": 8974,
+      "after": 7389,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "a1727bca4131db77a1f136b4c3098c3b007da12dab8f54a3f1bafffd7893a54c"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabMeSelected.imageset/tab-me-selected.png",
+      "before": 29376,
+      "after": 25816,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "c06dcc8cfb957aa8d4e58e4a4504a7fa8c6860d6871b256cfb3152547dd7697d"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabToolsNormal.imageset/tab-tools-normal.png",
+      "before": 10524,
+      "after": 9086,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "5c54a54681eb05aacb4b1a4dcc7a55f41d4da28ef619b15a1fb9c443fedc7f1d"
+    },
+    {
+      "file": "Clipo/Resources/Assets.xcassets/TabBar/TabToolsSelected.imageset/tab-tools-selected.png",
+      "before": 29662,
+      "after": 27667,
+      "width": 252,
+      "height": 252,
+      "pixels_identical": true,
+      "rgba_sha256": "55499a8f3f59889e1f31ea99f642c2cb171c56392c6da92b19253b257155371a"
+    }
+  ]
+}
