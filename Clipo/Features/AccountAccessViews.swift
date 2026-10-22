@@ -137,6 +137,7 @@ final class PolicyBrowserState: ObservableObject {
     @Published var requestID = 0
     @Published var canGoBack = false
     @Published var currentURL: URL?
+    var retryURL: URL?
     weak var webView: WKWebView?
     func retry() { error = nil; loading = true; requestID += 1 }
     func goBack() { webView?.goBack() }
@@ -190,6 +191,7 @@ struct PolicyWebView: UIViewRepresentable {
         view.navigationDelegate = context.coordinator
         view.uiDelegate = context.coordinator
         view.allowsBackForwardNavigationGestures = true
+        view.allowsLinkPreview = !webSearch
         view.isOpaque = false
         state.webView = view
         return view
@@ -197,7 +199,7 @@ struct PolicyWebView: UIViewRepresentable {
     func updateUIView(_ view: WKWebView, context: Context) {
         guard context.coordinator.requestID != state.requestID else { return }
         context.coordinator.requestID = state.requestID
-        view.load(URLRequest(url: state.currentURL ?? url, timeoutInterval: 30))
+        context.coordinator.load(URLRequest(url: state.retryURL ?? url, timeoutInterval: 30), in: view)
     }
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         view.navigationDelegate = nil
@@ -210,7 +212,13 @@ struct PolicyWebView: UIViewRepresentable {
         let state: PolicyBrowserState
         let webSearch: Bool
         var requestID: Int?
+        private var appNavigationURL: URL?
         init(state: PolicyBrowserState, webSearch: Bool) { self.state = state; self.webSearch = webSearch }
+        func load(_ request: URLRequest, in webView: WKWebView) {
+            appNavigationURL = request.url
+            state.retryURL = request.url
+            webView.load(request)
+        }
         // Documents and search results have no camera or microphone use case.
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
                      initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
@@ -248,6 +256,19 @@ struct PolicyWebView: UIViewRepresentable {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
             } else if url.scheme == "https" || (webSearch && url.scheme == "http") || url.absoluteString == "about:blank" {
+                if navigationAction.targetFrame?.isMainFrame != false { state.retryURL = url }
+                if webSearch, navigationAction.targetFrame?.isMainFrame != false {
+                    // Reissue page navigations as app loads so web links stay in this view.
+                    if navigationAction.navigationType == .backForward ||
+                        (navigationAction.targetFrame != nil && appNavigationURL == url) {
+                        appNavigationURL = nil
+                        decisionHandler(.allow)
+                    } else {
+                        decisionHandler(.cancel)
+                        load(navigationAction.request, in: webView)
+                    }
+                    return
+                }
                 if navigationAction.targetFrame == nil {
                     webView.load(navigationAction.request)
                     decisionHandler(.cancel)
