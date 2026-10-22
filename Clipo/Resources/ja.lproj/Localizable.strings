@@ -550,3 +550,11 @@
 "Billed every %@" = "%@ごとに請求";
 
 "Apple updated this plan. Review the price and billing period, then continue." = "Appleのプラン情報が更新されました。価格と請求周期を確認してから続けてください。";
+
+"Purchase configuration could not be loaded. Please try again." = "購入設定を読み込めませんでした。もう一度お試しください。";
+
+"Purchases are currently paused. Please try again later." = "現在、購入は一時停止されています。後ほど再試行してください。";
+
+"Subscription setup is incomplete. Please contact support." = "購読の設定が完了していません。サポートにお問い合わせください。";
+
+"The distribution package does not exist" = "アプリの配信設定が見つかりません。";

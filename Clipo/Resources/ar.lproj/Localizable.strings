@@ -550,3 +550,11 @@
 "Billed every %@" = "تُحصّل الرسوم كل %@";
 
 "Apple updated this plan. Review the price and billing period, then continue." = "حدّثت Apple هذه الخطة. راجع السعر وفترة الفوترة ثم تابع.";
+
+"Purchase configuration could not be loaded. Please try again." = "تعذّر تحميل إعدادات الشراء. يُرجى المحاولة مجددًا.";
+
+"Purchases are currently paused. Please try again later." = "عمليات الشراء متوقفة مؤقتًا. يُرجى المحاولة لاحقًا.";
+
+"Subscription setup is incomplete. Please contact support." = "إعداد الاشتراك غير مكتمل. يُرجى التواصل مع الدعم.";
+
+"The distribution package does not exist" = "لم يتم العثور على إعدادات توزيع التطبيق.";

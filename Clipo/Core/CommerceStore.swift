@@ -40,6 +40,7 @@ final class CommerceStore: NSObject, ObservableObject {
     let quota: QuotaStore
     private var records: [PurchaseRecord] = []
     private var ledgerAvailable = true
+    private var releaseConfigurationError: String?
     private var productsRequest: SKProductsRequest?
     private var productContinuation: CheckedContinuation<SKProduct, Error>?
     private var productTimeout: Task<Void, Never>?
@@ -62,7 +63,6 @@ final class CommerceStore: NSObject, ObservableObject {
         }
         guard premium else { throw ClipoError.service("Export is included with Plus.") }
     }
-    var purchasesAllowed: Bool { release != nil && release?.NB01 != true && api.session != nil && api.configuration.isReady && ledgerAvailable }
 
     init(api: APIClient, quota: QuotaStore) {
         self.api = api
@@ -96,7 +96,7 @@ final class CommerceStore: NSObject, ObservableObject {
         guard refreshID == id, !Task.isCancelled else { return }
         rightsVerified = false
         let userID = api.session?.userId.value
-        if ownerID != userID { expiration = nil; release = nil; ownerID = userID }
+        if ownerID != userID { expiration = nil; release = nil; releaseConfigurationError = nil; ownerID = userID }
         quota.configure(userID: userID, policy: policy, remote: release?.quotaConfig)
         guard userID != nil else { return }
         error = nil
@@ -107,8 +107,14 @@ final class CommerceStore: NSObject, ObservableObject {
             let configuration = try await configurationRequest
             guard refreshID == id, api.session?.userId.value == userID else { return }
             release = configuration
+            releaseConfigurationError = nil
             quota.configure(userID: userID, policy: policy, remote: configuration.quotaConfig)
-        } catch { if refreshID == id { self.error = error.localizedDescription } }
+        } catch {
+            if refreshID == id, api.session?.userId.value == userID {
+                releaseConfigurationError = error.localizedDescription
+                self.error = error.localizedDescription
+            }
+        }
         guard refreshID == id, api.session?.userId.value == userID else { return }
         // Account rights remain independently refreshable if package configuration fails.
         do {
@@ -238,9 +244,31 @@ final class CommerceStore: NSObject, ObservableObject {
     }
     private func buy(_ product: SKProduct) async {
         guard !busy else { return }
-        guard purchasesAllowed, let owner = api.session, let billing = release?.ios,
-              let entry = policy?.products.first(where: { $0.id == product.productIdentifier }) else {
-            error = "Subscriptions are temporarily unavailable. Please try again later."; return
+        guard let owner = api.session, ownerID == owner.userId.value else {
+            error = "Your connection is not ready. Please try again shortly."; return
+        }
+        guard api.configuration.isReady else { error = ClipoError.configuration.localizedDescription; return }
+        guard ledgerAvailable else {
+            error = "Purchase recovery storage is unavailable. Purchases are paused to protect existing orders."; return
+        }
+        // Preserve a failed getV2 response instead of hiding it behind a generic purchase error.
+        // A previous configuration cannot authorize a new charge after refresh failed.
+        if let releaseConfigurationError { error = releaseConfigurationError; return }
+        guard let release else {
+            error = "Purchase configuration could not be loaded. Please try again."; return
+        }
+        guard release.NB01 != true else {
+            error = "Purchases are currently paused. Please try again later."; return
+        }
+        guard let billing = release.ios else {
+            error = "Subscription setup is incomplete. Please contact support."; return
+        }
+        guard let entry = policy?.products.first(where: { $0.id == product.productIdentifier }) else {
+            error = "This plan isn’t available from Apple yet. Please try again later."; return
+        }
+        guard rightsVerified else {
+            if error == nil { error = "Your connection is not ready. Please try again shortly." }
+            return
         }
         guard api.configuration.privacyURL != nil, api.configuration.termsURL != nil else {
             error = "Subscription information is being prepared. Please try again later."; return

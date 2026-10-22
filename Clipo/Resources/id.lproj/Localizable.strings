@@ -550,3 +550,11 @@
 "Billed every %@" = "Ditagih setiap %@";
 
 "Apple updated this plan. Review the price and billing period, then continue." = "Apple memperbarui paket ini. Periksa harga dan periode penagihan, lalu lanjutkan.";
+
+"Purchase configuration could not be loaded. Please try again." = "Konfigurasi pembelian tidak dapat dimuat. Silakan coba lagi.";
+
+"Purchases are currently paused. Please try again later." = "Pembelian sedang dijeda. Silakan coba lagi nanti.";
+
+"Subscription setup is incomplete. Please contact support." = "Pengaturan langganan belum lengkap. Hubungi dukungan.";
+
+"The distribution package does not exist" = "Konfigurasi distribusi aplikasi tidak ditemukan.";

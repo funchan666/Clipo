@@ -550,3 +550,11 @@
 "Billed every %@" = "Billed every %@";
 
 "Apple updated this plan. Review the price and billing period, then continue." = "Apple updated this plan. Review the price and billing period, then continue.";
+
+"Purchase configuration could not be loaded. Please try again." = "Purchase configuration could not be loaded. Please try again.";
+
+"Purchases are currently paused. Please try again later." = "Purchases are currently paused. Please try again later.";
+
+"Subscription setup is incomplete. Please contact support." = "Subscription setup is incomplete. Please contact support.";
+
+"The distribution package does not exist" = "The distribution package does not exist";
