@@ -1,6 +1,6 @@
-// Keep the current signing identity for this test build.
-// Service requests use the independently configured production package name.
-PRODUCT_BUNDLE_IDENTIFIER = im.seex.lobo
+// Match the App Store app record and the native target configuration.
+// Codemagic applies distribution signing profiles during the build.
+PRODUCT_BUNDLE_IDENTIFIER = com.cliporows.toolskeep
 CLIPO_API_HOST = b8pd8t.clipo.vip
 CLIPO_SERVICE_PACKAGE_NAME = com.cliporows.toolskeep
 // Empty expansion preserves // in xcconfig URL values.

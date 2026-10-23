@@ -1,65 +1,110 @@
 workflows:
-  unison-ios-app-store:
-    name: Unison iOS App Store
+  clipo-ios-app-store:
+    name: Clipo iOS App Store
     max_build_duration: 120
     instance_type: mac_mini_m2
 
     integrations:
-      app_store_connect: Unison
+      app_store_connect: Clipo
 
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.unisonvocal.community
+        bundle_identifier: com.cliporows.toolskeep
 
       vars:
-        BUNDLE_ID: "com.unisonvocal.community"
-        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-        XCODE_SCHEME: "Runner"
-        APP_STORE_APPLE_ID: "6802950506"
+        BUNDLE_ID: "com.cliporows.toolskeep"
+        XCODE_PROJECT: "Clipo.xcodeproj"
+        XCODE_SCHEME: "Clipo"
+        APP_STORE_APPLE_ID: "6825652572"
 
-      xcode: latest
+      xcode: "26.5"
 
     scripts:
       - name: Verify native iOS project configuration
         script: |
-          set -e
-          test -d "$CM_BUILD_DIR/$XCODE_WORKSPACE"
-          test -f "$CM_BUILD_DIR/ios/Runner.xcodeproj/xcshareddata/xcschemes/$XCODE_SCHEME.xcscheme"
-          grep -q "PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;" \
-            "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
+          #!/bin/bash
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          test -d "$XCODE_PROJECT"
+          test -f "$XCODE_PROJECT/xcshareddata/xcschemes/$XCODE_SCHEME.xcscheme"
+          grep -Fq "PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;" "$XCODE_PROJECT/project.pbxproj"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          products = json.loads(Path("Clipo/Resources/Commerce.json").read_text())["products"]
+          assert [p["id"] for p in products] == ["clipo.plus.monthly", "clipo.plus.yearly"], "Restore production subscription IDs before publishing"
+          PY
 
       - name: Set up App Store signing
         script: |
-          set -e
-          cd "$CM_BUILD_DIR/ios"
+          #!/bin/bash
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
           xcode-project use-profiles
 
       - name: Set next App Store build number
         script: |
-          set -e
-          cd "$CM_BUILD_DIR/ios"
-
-          LATEST_BUILD_NUMBER="$(
-            app-store-connect get-latest-testflight-build-number \
-              "$APP_STORE_APPLE_ID" 2>/dev/null || true
-          )"
-
-          if echo "$LATEST_BUILD_NUMBER" | grep -Eq '^[0-9]+$'; then
-            NEXT_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-          else
-            NEXT_BUILD_NUMBER="${BUILD_NUMBER:-1}"
-          fi
-
-          echo "Using build number: $NEXT_BUILD_NUMBER"
-          agvtool new-version -all "$NEXT_BUILD_NUMBER"
+          #!/bin/bash
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          # Authentication/API errors must fail the build rather than reuse a number.
+          export LATEST_BUILD_NUMBER="$(app-store-connect get-latest-build-number "$APP_STORE_APPLE_ID" --all-versions --platform IOS)"
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          remote = os.environ["LATEST_BUILD_NUMBER"].strip()
+          if remote and not remote.isdigit():
+              raise SystemExit("App Store Connect returned an unsupported build number: " + remote)
+          config = Path("Config/Clipo.xcconfig")
+          text = config.read_text()
+          pattern = r"(?m)^CURRENT_PROJECT_VERSION\s*=\s*(\d+)\s*$"
+          current = re.search(pattern, text)
+          if current is None:
+              raise SystemExit("CURRENT_PROJECT_VERSION is missing")
+          number = max(int(remote or "0") + 1, int(current.group(1)) + 1, int(os.environ.get("BUILD_NUMBER", "1")))
+          updated, count = re.subn(pattern, "CURRENT_PROJECT_VERSION = " + str(number), text)
+          if count != 1:
+              raise SystemExit("CURRENT_PROJECT_VERSION must be defined exactly once")
+          config.write_text(updated)
+          with open(os.environ["CM_ENV"], "a") as env:
+              env.write("CLIPO_BUILD_NUMBER=" + str(number) + "\n")
+          print("Using build number:", number)
+          PY
 
       - name: Build signed IPA
         script: |
-          set -e
+          #!/bin/bash
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --project "$CM_BUILD_DIR/$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
+
+      - name: Verify exported IPA identity
+        script: |
+          #!/bin/bash
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          python3 - <<'PY'
+          import os
+          import plistlib
+          import re
+          import zipfile
+          from pathlib import Path
+          packages = list(Path("build/ios/ipa").glob("*.ipa"))
+          if len(packages) != 1:
+              raise SystemExit("Expected exactly one exported IPA")
+          with zipfile.ZipFile(packages[0]) as archive:
+              names = [n for n in archive.namelist() if re.fullmatch(r"Payload/[^/]+\.app/Info\.plist", n)]
+              if len(names) != 1:
+                  raise SystemExit("Could not identify the main app in the IPA")
+              info = plistlib.loads(archive.read(names[0]))
+          assert info["CFBundleIdentifier"] == os.environ["BUNDLE_ID"], "IPA Bundle ID does not match Clipo"
+          assert str(info["CFBundleVersion"]) == os.environ["CLIPO_BUILD_NUMBER"], "IPA build number was not updated"
+          print("Verified IPA:", info["CFBundleIdentifier"], info["CFBundleShortVersionString"], info["CFBundleVersion"])
+          PY
 
     artifacts:
       - build/ios/ipa/*.ipa
@@ -76,6 +121,7 @@ workflows:
           failure: true
 
       app_store_connect:
+        # Upload the IPA through the Clipo integration; review submission stays manual.
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
