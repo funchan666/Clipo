@@ -49,7 +49,8 @@ workflows:
           set -euo pipefail
           cd "$CM_BUILD_DIR"
           # Authentication/API errors must fail the build rather than reuse a number.
-          export LATEST_BUILD_NUMBER="$(app-store-connect get-latest-build-number "$APP_STORE_APPLE_ID" --all-versions --platform IOS)"
+          LATEST_BUILD_NUMBER="$(app-store-connect get-latest-build-number "$APP_STORE_APPLE_ID" --all-versions --platform IOS)"
+          export LATEST_BUILD_NUMBER
           python3 - <<'PY'
           import os
           import re

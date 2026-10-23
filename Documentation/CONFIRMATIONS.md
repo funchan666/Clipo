@@ -8,7 +8,8 @@
 - 官网 https://www.clipo.vip，联系邮箱 support@clipo.vip，协议生效日期 2026-10-22。
 - 用户协议 https://www.clipo.vip/#terms，隐私协议 https://www.clipo.vip/#privacy。
 - API https://b8pd8t.clipo.vip，业务包名 com.cliporows.toolskeep，getV2 的 name 为 Clipo。
-- 2026-10-23 用户已将工程目标 Debug 和 Release Bundle ID 改为 com.cliporows.toolskeep；Config/Clipo.xcconfig 后备值仍为 im.seex.lobo。最终归档以实际构建配置为准，必须匹配 App Store Connect 记录。
+- 工程目标 Debug、Release 和 Config/Clipo.xcconfig 的 Bundle ID 均为 com.cliporows.toolskeep。最终归档以实际构建配置为准，必须匹配 App Store Connect 记录。
+- Codemagic 工作流 clipo-ios-app-store 使用 Clipo 集成、Apple App ID 6825652572、Xcode 26.5、Clipo.xcodeproj 和共享 Clipo Scheme。已配置 App Store 分发签名及 publishing.app_store_connect.auth: integration 上传，自动提交 TestFlight/App Store 审核关闭。构建号查询涵盖各版本的 App Store/TestFlight 记录，查询失败直接停止；上传前核对 IPA 包名和构建号。需 Codemagic 中存在同名集成及匹配分发证书/描述文件。本轮仅静态核对，未触发 CI、归档或上传。
 - AdMob App ID ca-app-pub-4423220037289714~4213264017 已写入安装包配置。开屏和激励广告位从 getV2 取得，无缺失配置时的本地测试广告兜底。App ID 与接口必须一致。
 
 ## 已确认的业务约定
@@ -29,7 +30,7 @@
 
 ## 提审检查的用户处理结果
 
-- 第 1 项包名由用户调整，工程目标已见正式 Bundle ID；新加 codemagic.yaml 当前仍是 Unison/Runner 配置，含 com.unisonvocal.community、ios/Runner.xcworkspace、Runner Scheme 和其他 App 的 Apple ID，不能直接用于 Clipo 正式打包。本轮未改动该文件。
+- 第 1 项包名由用户调整；根目录 codemagic.yaml 已按本项目改为 Clipo 原生工程配置，Unison/Runner 及其他 App 的 Apple ID 已移除，实际 CI 签名和上传仍待构建验证。
 - 第 2 项跨设备恢复维持现状；第 3 项删除账号取消实施。第 4、6、7 项协议内容、广告后台和审核内容事项，用户选择暂不处理，不视为已修复或已核验。
 - 用户反馈第 5 项正式支付链路已验证，第 8 项商店提交选项及图片已确认；本机未重复运行验证，不将跨设备恢复或当前新构建的可用性一并认定为通过。
 
