@@ -24,10 +24,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.cliporows.toolskeep</string>
+			<string>clipo</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.cliporows.toolskeep</string>
+				<string>clipo</string>
 			</array>
 		</dict>
 	</array>
