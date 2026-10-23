@@ -8,7 +8,7 @@
 - 官网 https://www.clipo.vip，联系邮箱 support@clipo.vip，协议生效日期 2026-10-22。
 - 用户协议 https://www.clipo.vip/#terms，隐私协议 https://www.clipo.vip/#privacy。
 - API https://b8pd8t.clipo.vip，业务包名 com.cliporows.toolskeep，getV2 的 name 为 Clipo。
-- 实际 Debug 和 Release 打包 Bundle ID 仍是 im.seex.lobo。xcconfig 与目标值已对齐；未切换签名身份。正式提交前必须匹配实际 App Store Connect 记录。
+- 2026-10-23 用户已将工程目标 Debug 和 Release Bundle ID 改为 com.cliporows.toolskeep；Config/Clipo.xcconfig 后备值仍为 im.seex.lobo。最终归档以实际构建配置为准，必须匹配 App Store Connect 记录。
 - AdMob App ID ca-app-pub-4423220037289714~4213264017 已写入安装包配置。开屏和激励广告位从 getV2 取得，无缺失配置时的本地测试广告兜底。App ID 与接口必须一致。
 
 ## 已确认的业务约定
@@ -25,7 +25,13 @@
 - 搜索通过 search-check。主动搜索成功但无可播放结果（包括成功响应 data 为 null）时，以原输入在 App 内 WKWebView 打开 Google 搜索，支持网页后退和关闭返回；新窗口链接也留在 App 内，阻止外部 App scheme。接口报错保留重试。推荐流耗尽重新开始会话。
 - 两个协议和官网入口已配置；七种语言跟随系统，未支持语言回退英语。
 - 播放器缓存与导出分开。支持的未加密 H.264 AAC TS VOD 可客户端封装为 MP4，不承诺任意 HLS 可导出，不绕过 DRM。
-- 既定不做账号删除入口；后端不恢复缺失原订单关联。客户端继续保留原订单归属保护，不伪造删除、恢复或会员权益。
+- 2026-10-23 用户说明后端无法提供删除游客账号接口，随后取消本轮删除账号需求：不新增删除按钮，也不自动切换 ID 代替服务端删除。后端仍不恢复缺失原订单关联，客户端继续保留原订单归属保护。游客账号删除和缺少本地订单时的跨设备恢复仍为已知限制，不能标记已解决。
+
+## 提审检查的用户处理结果
+
+- 第 1 项包名由用户调整，工程目标已见正式 Bundle ID；新加 codemagic.yaml 当前仍是 Unison/Runner 配置，含 com.unisonvocal.community、ios/Runner.xcworkspace、Runner Scheme 和其他 App 的 Apple ID，不能直接用于 Clipo 正式打包。本轮未改动该文件。
+- 第 2 项跨设备恢复维持现状；第 3 项删除账号取消实施。第 4、6、7 项协议内容、广告后台和审核内容事项，用户选择暂不处理，不视为已修复或已核验。
+- 用户反馈第 5 项正式支付链路已验证，第 8 项商店提交选项及图片已确认；本机未重复运行验证，不将跨设备恢复或当前新构建的可用性一并认定为通过。
 
 ## 本轮检查及发布依赖
 

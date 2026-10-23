@@ -1,0 +1,81 @@
+workflows:
+  unison-ios-app-store:
+    name: Unison iOS App Store
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: Unison
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.unisonvocal.community
+
+      vars:
+        BUNDLE_ID: "com.unisonvocal.community"
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+        APP_STORE_APPLE_ID: "6802950506"
+
+      xcode: latest
+
+    scripts:
+      - name: Verify native iOS project configuration
+        script: |
+          set -e
+          test -d "$CM_BUILD_DIR/$XCODE_WORKSPACE"
+          test -f "$CM_BUILD_DIR/ios/Runner.xcodeproj/xcshareddata/xcschemes/$XCODE_SCHEME.xcscheme"
+          grep -q "PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;" \
+            "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
+
+      - name: Set up App Store signing
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/ios"
+          xcode-project use-profiles
+
+      - name: Set next App Store build number
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/ios"
+
+          LATEST_BUILD_NUMBER="$(
+            app-store-connect get-latest-testflight-build-number \
+              "$APP_STORE_APPLE_ID" 2>/dev/null || true
+          )"
+
+          if echo "$LATEST_BUILD_NUMBER" | grep -Eq '^[0-9]+$'; then
+            NEXT_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          else
+            NEXT_BUILD_NUMBER="${BUILD_NUMBER:-1}"
+          fi
+
+          echo "Using build number: $NEXT_BUILD_NUMBER"
+          agvtool new-version -all "$NEXT_BUILD_NUMBER"
+
+      - name: Build signed IPA
+        script: |
+          set -e
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      email:
+        recipients:
+          - funchan@126.com
+        notify:
+          success: true
+          failure: true
+
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
