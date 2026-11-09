@@ -17,7 +17,7 @@ struct ClipoConfiguration {
         let base = host.isEmpty || host.contains("$(") ? nil : URL(string: "https://" + host)
         return Self(apiBaseURL: base, bundleID: bundle.bundleIdentifier ?? "",
                     servicePackageName: (bundle.object(forInfoDictionaryKey: "ClipoServicePackageName") as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-                    version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0",
+                    version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.1",
                     privacyURL: WebAddress.media(bundle.object(forInfoDictionaryKey: "ClipoPrivacyURL") as? String),
                     termsURL: WebAddress.media(bundle.object(forInfoDictionaryKey: "ClipoTermsURL") as? String))
     }
