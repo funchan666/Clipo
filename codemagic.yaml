@@ -103,7 +103,10 @@ workflows:
                   raise SystemExit("Could not identify the main app in the IPA")
               info = plistlib.loads(archive.read(names[0]))
           assert info["CFBundleIdentifier"] == os.environ["BUNDLE_ID"], "IPA Bundle ID does not match Clipo"
-          assert str(info["CFBundleVersion"]) == os.environ["CLIPO_BUILD_NUMBER"], "IPA build number was not updated"
+          actual = str(info["CFBundleVersion"])
+          expected = os.environ["CLIPO_BUILD_NUMBER"]
+          if actual != expected:
+              raise SystemExit(f"IPA build number mismatch: expected {expected}, got {actual}")
           print("Verified IPA:", info["CFBundleIdentifier"], info["CFBundleShortVersionString"], info["CFBundleVersion"])
           PY
 
