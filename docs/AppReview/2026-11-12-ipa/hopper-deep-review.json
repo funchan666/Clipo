@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0",
+  "audit": {
+    "project_label": "Clipo IPA 支付、广告、视频 Hopper 深度复核",
+    "audited_at": "2026-11-12",
+    "skill_version": "1.2.0",
+    "revision": "未审计源码或建立源码与 IPA 的构建对应关系",
+    "target": "Clipo 1.0.1 build 9 / com.cliporows.toolskeep / arm64",
+    "configuration": "用户提供的 IPA，实际提交及签名配置未经确认",
+    "scope": "用户指定 IPA；Hopper 图形界面局部伪代码、交叉引用和关键汇编，结合包体配置与英文资源；未执行 App、请求业务服务或审查后台和 ASC。",
+    "rule_verification": "live",
+    "rule_checked_at": "2026-11-12",
+    "summary": "支付、广告、视频局部逆向未确认 P0/P1；存在视频授权、广告实际追踪及订阅交付的高影响待验证事项。不能由局部代码或未知项推断过审。",
+    "rule_sources": [
+      {
+        "title": "App Review Guidelines",
+        "url": "https://developer.apple.com/app-store/review/guidelines/",
+        "checked_at": "2026-11-12",
+        "status": "reviewed",
+        "scope": "1.2、2.1、3.1.2、5.1.1、5.2.2–5.2.3，按适用前提核对"
+      },
+      {
+        "title": "App Review",
+        "url": "https://developer.apple.com/distribute/app-review/",
+        "checked_at": "2026-11-12",
+        "status": "reviewed",
+        "scope": "审核信息及准备"
+      },
+      {
+        "title": "User Privacy and Data Use",
+        "url": "https://developer.apple.com/app-store/user-privacy-and-data-use/",
+        "checked_at": "2026-11-12",
+        "status": "reviewed",
+        "scope": "SDK 披露和追踪许可"
+      },
+      {
+        "title": "Privacy manifest files",
+        "url": "https://developer.apple.com/documentation/bundleresources/privacy-manifest-files",
+        "checked_at": "2026-11-12",
+        "status": "reviewed",
+        "scope": "隐私清单"
+      },
+      {
+        "title": "Prepare your app for iPhone Duo",
+        "url": "https://developer.apple.com/videos/play/tech-talks/111461/",
+        "checked_at": "2026-11-12",
+        "status": "reviewed",
+        "scope": "SDK 与尺寸/安全区适配；技术指导非自动视作审核强制条款"
+      }
+    ],
+    "coverage": [
+      {
+        "area": "发布配置",
+        "status": "checked",
+        "detail": "仅检查 IPA：Clipo 1.0.1 (9)，com.cliporows.toolskeep，最低 iOS 17，设备 arm64，SDK 标记 iPhoneOS 27.1；无签名有效性或 ASC 校验。SHA-256 e7cfd7d1d24cf675c80e094ec39b332bbee8e1af5c618b62a24f80af60f14613。"
+      },
+      {
+        "area": "二进制与逆向",
+        "status": "needs_evidence",
+        "detail": "主程序 arm64 UUID 3E548CB5-610B-3D85-BC92-6D9A579129E5，cryptid=0。Hopper 演示模式 GUI 完成后台分析并局部检查伪代码、交叉引用及汇编；路径字段显示 unknown path，入口文件偏移 190976 与所提取的目标一致，未由 Hopper 独立哈希核验。早前 REA MCP 会话超时且 cleanup_incomplete，本次 GUI 复核不等同于 REA 成功反编译。Swift 异步状态、间接调用、SDK 内部及未检查函数限制完整追踪。"
+      },
+      {
+        "area": "启动/完整性",
+        "status": "needs_evidence",
+        "detail": "仅见启动及网络错误文案和配置；未启动 App，未核验生产服务、审核访问、崩溃或断网行为。"
+      },
+      {
+        "area": "账户",
+        "status": "needs_evidence",
+        "detail": "文案提及账户与会话；没有匹配源码或运行证据，无法确定是否支持账户创建及删除义务是否适用。"
+      },
+      {
+        "area": "隐私",
+        "status": "needs_evidence",
+        "detail": "sub_1000d9514 在所查看分支检查 UMP canRequestAds，假分支报不可用、真分支在其他条件满足时启动 Google Mobile Ads；奖励处理 sub_1000e4ce8 检查 rewardGranted。UMP 与 Apple ATT 是不同许可机制；主包和 SDK 清单存在不同 tracking 声明，实际数据流未知。"
+      },
+      {
+        "area": "支付",
+        "status": "needs_evidence",
+        "detail": "CommerceStore sub_100068fd0 构造 verificationData 等字段并调用 buySuccess 路径；sub_10006b864 有错误提示待确认与另一分支 finishTransaction（0x10006ba60）；另有 3 处 finishTransaction 引用，未逐一还原。缺后台、ASC 与沙盒证据。"
+      },
+      {
+        "area": "内容安全",
+        "status": "needs_evidence",
+        "detail": "包内视频、链接与分享文案不足以判定是否开放用户生成/发布或是否适用 1.2。服务端内容与功能不可见。"
+      },
+      {
+        "area": "Web/远程行为",
+        "status": "needs_evidence",
+        "detail": "可见 API 主机配置、WKWebView 相关符号和网络错误文案；未访问业务接口，无法验证服务器分组、加载内容与跳转。"
+      },
+      {
+        "area": "依赖/平台API",
+        "status": "checked",
+        "detail": "识别 GoogleMobileAds 和 UserMessagingPlatform 框架及各自清单；未能完成 SDK 内部行为或追踪归因。"
+      },
+      {
+        "area": "产品/版权",
+        "status": "needs_evidence",
+        "detail": "sub_10004a49c 构造视频链接解析请求；sub_1000840a8 创建 AVAssetDownloadConfiguration/assetDownloadTaskWithConfiguration（0x1000850bc）或 downloadTaskWithURL。远端来源、内容权利、实际用户入口和授权无法从局部逆向确定。"
+      },
+      {
+        "area": "Duo",
+        "status": "needs_evidence",
+        "detail": "Info.plist 声明 portrait，SDK 标记 27.1；缺源码和实际 UI，不足以判断布局、折叠遮挡、播放和输入状态连续性。未做设备测试。"
+      },
+      {
+        "area": "提交材料",
+        "status": "needs_evidence",
+        "detail": "未取得 ASC 隐私标签、截图、描述、年龄分级、订阅配置、审核备注与支持页面。"
+      }
+    ]
+  },
+  "findings": [],
+  "validation_gaps": [
+    {
+      "id": "GAP-001",
+      "priority": "P1",
+      "question": "视频来源及下载、转换权限是否足够？",
+      "needed_evidence": "Hopper 的 sub_10004a49c 含链接解析请求，sub_1000840a8 创建 HLS 与文件下载任务，证明下载代码存在但尚未完整追到入口和远端来源。核对实际内容清单、第三方站点和下载/离线/转码授权，提供书面授权；如无授权则限制该来源对应功能。Apple 5.2.2、5.2.3。",
+      "owner": "内容/后台/产品"
+    },
+    {
+      "id": "GAP-002",
+      "priority": "P1",
+      "question": "订阅购买、恢复与服务器权益能否完整交付？",
+      "needed_evidence": "sub_100068fd0 构造 verificationData 等字段请求 buySuccess，sub_10006b864 出错分支提示待确认，另一分支调用 finishTransaction（0x10006ba60）；不证明后台已验单或最终到账。核对 ASC 商品及提交关联，以沙盒覆盖成功、取消、恢复、跨设备、断网、服务端超时和重启补单，确认无重复扣费/丢单且权益正确。Apple 2.1(b)、3.1.2。",
+      "owner": "iOS/后台/ASC"
+    },
+    {
+      "id": "GAP-003",
+      "priority": "P1",
+      "question": "广告实际数据使用是否构成 Apple 定义的 tracking，披露和许可是否一致？",
+      "needed_evidence": "sub_1000d9514 所查分支以 UMP canRequestAds 控制 SDK 启动，UMP 不是 ATT。主包 NSPrivacyTracking=false，GoogleMobileAds 清单包含 tracking=true 设备 ID；主包 Info.plist 未见 NSUserTrackingUsageDescription。SDK 声明不证明实际追踪。核对广告设置、SDK 数据流与 ASC 标签；如实际发生 tracking，先取得 ATT 授权并补目的说明，未授权不追踪。",
+      "owner": "iOS/广告/隐私"
+    },
+    {
+      "id": "GAP-004",
+      "priority": "P1",
+      "question": "审核员能否打开远程内容及所有关键功能？",
+      "needed_evidence": "只有包内主机配置、错误和登录/会话文案，没有运行或后端证据。用待提交 build 验证审查地区网络、启动、播放、离线、协议与需要的测试账号；必要时在审核备注提供路径。Apple 2.1。",
+      "owner": "后台/iOS/ASC"
+    },
+    {
+      "id": "GAP-005",
+      "priority": "P1",
+      "question": "是否支持创建账户以及是否能够删除？",
+      "needed_evidence": "资源包含账户设置和会话文案，未能确认注册或删除入口、匿名身份的具体定义与后台删除结果。若支持账户创建，按 5.1.1(v) 提供应用内发起删除并验证服务端数据处理；否则记录账户模型依据。",
+      "owner": "产品/iOS/后台"
+    },
+    {
+      "id": "GAP-006",
+      "priority": "P2",
+      "question": "隐私政策、条款、ASC 标签是否准确可访问？",
+      "needed_evidence": "Info.plist 有隐私与条款地址，主包和 SDK manifest 有不同数据类型声明；未访问应用网页或 ASC，核对入口、可访问性、收集用途、第三方披露及语言；Apple 5.1.1。",
+      "owner": "隐私/ASC"
+    },
+    {
+      "id": "GAP-007",
+      "priority": "P2",
+      "question": "是否存在 UGC 或社交内容以及相应保护？",
+      "needed_evidence": "播放、分享及输入链接的文案不能证明用户可以公开上传或互动。若开放 UGC，验证过滤、举报、屏蔽、及时处理与联系方式；否则记录内容模型与适用性；Apple 1.2。",
+      "owner": "产品/内容运营/后台"
+    },
+    {
+      "id": "GAP-008",
+      "priority": "P2",
+      "question": "Duo 设备上的布局和状态是否连续？",
+      "needed_evidence": "使用匹配源码检查容器尺寸、不对称安全区、遮挡、导航、键盘和播放/输入状态；经授权后在 Duo 不同姿态及分屏验证。portrait 声明不足以判定缺陷。",
+      "owner": "iOS"
+    }
+  ]
+}
